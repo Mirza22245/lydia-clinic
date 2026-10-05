@@ -5,6 +5,7 @@ import { getPatientPortalData } from "@/functions/getPatientPortalData";
 import { signPatientConsent } from "@/functions/signPatientConsent";
 import { cancelPatientBooking } from "@/functions/cancelPatientBooking";
 import { getBookingRequirements } from "@/functions/getBookingRequirements";
+import HealthDeclarationConsentForm from "@/components/portal/HealthDeclarationConsentForm";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -102,6 +103,7 @@ export default function Portal() {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
   const [reqsByBooking, setReqsByBooking] = useState({});
+  const [showHealthForm, setShowHealthForm] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -191,6 +193,13 @@ export default function Portal() {
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.start_time) >= now && !["cancelled", "no_show"].includes(b.status));
   const past = bookings.filter((b) => new Date(b.start_time) < now || ["cancelled", "no_show"].includes(b.status));
+
+  const refreshPortalData = async () => {
+    try {
+      const res = await getPatientPortalData({});
+      setData(res.data);
+    } catch { /* swallow */ }
+  };
 
   const parseAnswers = (a) => {
     if (!a) return [];
@@ -316,6 +325,18 @@ export default function Portal() {
 
           {/* Hälsodeklarationer */}
           <TabsContent value="health" className="space-y-3">
+            {showHealthForm ? (
+              <HealthDeclarationConsentForm
+                customer={customer}
+                bookings={upcoming}
+                onSubmitted={() => { setShowHealthForm(false); refreshPortalData(); }}
+                onCancel={() => setShowHealthForm(false)}
+              />
+            ) : (
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setShowHealthForm(true)}><Plus className="w-4 h-4 mr-1" />Fyll i ny hälsodeklaration</Button>
+              </div>
+            )}
             {healthDeclarations.length === 0 ? (
               <EmptyState icon={HeartPulse} text="Inga hälsodeklarationer inlämnade." />
             ) : (
