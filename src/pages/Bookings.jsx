@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { getClinicId } from "@/lib/currentUser";
 import { cn } from "@/lib/utils";
 
 const statusLabels = {
@@ -96,11 +97,13 @@ export default function Bookings() {
     if (!form.customer_id || !form.treatment_id || !form.start_time) return;
     setSaving(true);
     try {
+      const clinic_id = await getClinicId();
       const cust = customers.find((x) => x.id === form.customer_id);
       const treat = treatments.find((x) => x.id === form.treatment_id);
       const start = new Date(form.start_time);
       const end = new Date(start.getTime() + (treat?.duration || 30) * 60000);
       const data = {
+        clinic_id,
         customer_id: form.customer_id,
         customer_name: cust?.name || "",
         treatment_id: form.treatment_id,

@@ -26,9 +26,27 @@
       "type": "number",
       "title": "Moms (%)",
       "default": 25
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
     }
   },
   "required": [
     "name"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
 }

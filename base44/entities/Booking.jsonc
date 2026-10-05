@@ -54,11 +54,29 @@
     "notes": {
       "type": "string",
       "title": "Anteckningar"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
     }
   },
   "required": [
     "customer_name",
     "treatment_name",
     "start_time"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
 }

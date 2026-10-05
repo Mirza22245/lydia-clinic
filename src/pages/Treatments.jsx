@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Loader2, Pencil, Trash2, Clock } from "lucide-react";
+import { getClinicId } from "@/lib/currentUser";
 
 const empty = { name: "", description: "", duration: 30, price: 0, category: "", vat: 25 };
 const fmtSEK = (n) => new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n || 0);
@@ -39,7 +40,8 @@ export default function Treatments() {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const data = { ...form, description: form.description || undefined, category: form.category || undefined };
+      const clinic_id = await getClinicId();
+      const data = { ...form, clinic_id, description: form.description || undefined, category: form.category || undefined };
       if (editing) await base44.entities.Treatment.update(editing.id, data);
       else await base44.entities.Treatment.create(data);
       setOpen(false);

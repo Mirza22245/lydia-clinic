@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail } from "lucide-react";
+import { getClinicId } from "@/lib/currentUser";
 
 const empty = { name: "", email: "", phone: "", address: "", birth_date: "", status: "active", tags: "", notes: "" };
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
@@ -42,8 +43,10 @@ export default function Customers() {
     if (!form.name.trim()) return;
     setSaving(true);
     try {
+      const clinic_id = await getClinicId();
       const data = {
         ...form,
+        clinic_id,
         birth_date: form.birth_date || undefined,
         email: form.email || undefined,
         phone: form.phone || undefined,
