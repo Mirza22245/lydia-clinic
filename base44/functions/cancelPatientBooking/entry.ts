@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { notifyWaitingListOnCancellation } from '../../shared/waitingList.ts';
 
 // Låter en inloggad patient avboka sin egen kommande bokning via kundportalen.
 // Accesskontroll: patienten matchas mot Customer via e-post, bokningen måste
@@ -38,6 +39,13 @@ export default async function(req) {
     }
 
     const updated = await svc.entities.Booking.update(booking_id, { status: 'cancelled' });
+
+    // Frigjord tid → erbjud automatiskt plats till matchande väntelistekunder.
+    // Får inte blockera avbokningen om det misslyckas.
+    try {
+      await notifyWaitingListOnCancellation(svc, updated);
+    } catch { /* swallow */ }
+
     return Response.json({ booking: updated });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

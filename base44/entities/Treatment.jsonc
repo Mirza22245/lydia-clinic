@@ -84,6 +84,46 @@
       "title": "Obligatoriska formul\u00e4r (JSON)",
       "description": "JSON-array med FormTemplate-ID:n som kr\u00e4vs f\u00f6r denna behandling"
     },
+    "buffer_before": {
+      "type": "number",
+      "default": 0,
+      "title": "Buffert f\u00f6re (min)",
+      "description": "F\u00f6rberedelsetid innan behandlingen som blockeras i schemat"
+    },
+    "buffer_after": {
+      "type": "number",
+      "default": 0,
+      "title": "Buffert efter (min)",
+      "description": "Uppklarningstid efter behandlingen som blockeras i schemat"
+    },
+    "min_lead_hours": {
+      "type": "number",
+      "default": 0,
+      "title": "Minsta framf\u00f6rh\u00e5llning (timmar)",
+      "description": "Tidigaste bokning = nu + min_lead_hours"
+    },
+    "max_lead_days": {
+      "type": "number",
+      "default": 0,
+      "title": "Max bokningsframf\u00f6rh\u00e5llning (dagar)",
+      "description": "0 = ingen gr\u00e4ns. Hur l\u00e5ngt fram kunden f\u00e5r boka"
+    },
+    "room_id": {
+      "type": "string",
+      "title": "Kr\u00e4ver rum",
+      "description": "Valfritt rum-ID som m\u00e5ste vara ledigt f\u00f6r behandlingen"
+    },
+    "required_resource_ids": {
+      "type": "string",
+      "title": "Kr\u00e4ver resurser (JSON)",
+      "description": "JSON-array med Resource-ID:n som m\u00e5ste vara tillg\u00e4ngliga"
+    },
+    "deposit_amount": {
+      "type": "number",
+      "default": 0,
+      "title": "Deposition/f\u00f6rskott (kr)",
+      "description": "Belopp som debiteras vid bokning; 0 = ingen deposition"
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"

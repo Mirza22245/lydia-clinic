@@ -1,7 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { fetchAvailabilityData, isSlotFree, parseResourceIds } from '../../shared/availability.ts';
 
 // Skapar en offentlig bokning utan inloggning. Validerar behandling, kontrollerar
-// krockar, hittar/skapar kund via e-post och skapar en pending-bokning.
+// alla schemakonflikter (behandlare, rum, resurser, buffertider, framförhållning),
+// hittar/skapar kund via e-post och skapar en pending-bokning.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -44,24 +46,31 @@ export default async function(req) {
       }
     }
 
-    // Krockkontroll för vald behandlare samma dag
-    const dayStart = new Date(start); dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(start); dayEnd.setHours(23, 59, 59, 999);
-    const existing = await svc.entities.Booking.filter(
-      {
-        clinic_id, staff_name,
-        start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
-        status: { $nin: ['cancelled', 'no_show'] },
-      },
-      { limit: 200 }
-    );
-    const conflict = (existing.items || []).some((b) => {
-      const bs = new Date(b.start_time);
-      const be = b.end_time ? new Date(b.end_time) : new Date(bs.getTime() + (b.duration || 30) * 60000);
-      return start < be && end > bs;
-    });
-    if (conflict) {
-      return Response.json({ error: 'Tiden är tyvärr redan bokad. Välj en annan tid.' }, { status: 409 });
+    // Full schemavalidering: behandlarens schema, frånvaro, buffertider,
+    // minsta/max framförhållning, rum och resurser. Motorn garanterar att ingen
+    // tid kan bokas om någon dimension är upptagen (race-skydd innan create).
+    const dateStr = start.toISOString().slice(0, 10);
+    const requireRoomId = treatment.room_id || undefined;
+    const requireResourceIds = parseResourceIds(treatment.required_resource_ids);
+    const availData = await fetchAvailabilityData(svc, { clinic_id, staff_name, date: dateStr, requireRoomId, requireResourceIds });
+    const free = isSlotFree({
+      date: dateStr,
+      durationMin: duration,
+      bufferBeforeMin: treatment.buffer_before || 0,
+      bufferAfterMin: treatment.buffer_after || 0,
+      minLeadHours: treatment.min_lead_hours || 0,
+      maxLeadDays: treatment.max_lead_days || 0,
+      schedule: availData.schedule,
+      timeOff: availData.timeOff,
+      staffBookings: availData.staffBookings,
+      roomBookings: availData.roomBookings,
+      resourceBookings: availData.resourceBookings,
+      resourceQuantities: availData.resourceQuantities,
+      requireRoomId,
+      requireResourceIds,
+    }, start.getTime());
+    if (!free) {
+      return Response.json({ error: 'Tiden är tyvärr inte tillgänglig. Välj en annan tid.' }, { status: 409 });
     }
 
     // Hitta eller skapa kund inom kliniken
@@ -96,6 +105,9 @@ export default async function(req) {
       end_time: end.toISOString(),
       status: 'pending',
       price: treatment.price,
+      room_id: treatment.room_id || '',
+      resource_ids: treatment.required_resource_ids || '[]',
+      deposit_amount: treatment.deposit_amount || 0,
     });
 
     // Kravlista som kunden måste komplettera i kundportalen innan behandling.

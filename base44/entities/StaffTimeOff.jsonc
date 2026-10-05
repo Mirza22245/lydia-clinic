@@ -1,0 +1,114 @@
+{
+  "name": "StaffTimeOff",
+  "type": "object",
+  "properties": {
+    "staff_name": {
+      "type": "string",
+      "title": "Behandlare"
+    },
+    "start": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Fr\u00e5n"
+    },
+    "end": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Till"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "semester",
+        "sjuk",
+        "blocked",
+        "rast",
+        "annat"
+      ],
+      "default": "blocked",
+      "title": "Typ"
+    },
+    "note": {
+      "type": "string",
+      "title": "Anteckning"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "staff_name",
+    "start",
+    "end",
+    "type"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

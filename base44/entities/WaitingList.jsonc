@@ -1,5 +1,5 @@
 {
-  "name": "Booking",
+  "name": "WaitingList",
   "type": "object",
   "properties": {
     "customer_id": {
@@ -9,6 +9,15 @@
     "customer_name": {
       "type": "string",
       "title": "Kund"
+    },
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "title": "E-post"
+    },
+    "customer_phone": {
+      "type": "string",
+      "title": "Telefon"
     },
     "treatment_id": {
       "type": "string",
@@ -20,59 +29,39 @@
     },
     "staff_name": {
       "type": "string",
-      "title": "Behandlare"
+      "title": "\u00d6nskad behandlare",
+      "description": "Valfritt; tomt = ingen preferens"
     },
-    "start_time": {
+    "desired_from": {
       "type": "string",
-      "format": "date-time",
-      "title": "Start"
+      "format": "date",
+      "title": "\u00d6nskad fr\u00e5n datum"
     },
-    "end_time": {
+    "desired_until": {
       "type": "string",
-      "format": "date-time",
-      "title": "Slut"
+      "format": "date",
+      "title": "\u00d6nskad till datum"
     },
     "status": {
       "type": "string",
       "enum": [
-        "draft",
-        "pending",
-        "confirmed",
-        "checked_in",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "no_show"
+        "active",
+        "offered",
+        "booked",
+        "expired",
+        "cancelled"
       ],
-      "default": "pending",
+      "default": "active",
       "title": "Status"
     },
-    "price": {
-      "type": "number",
-      "title": "Pris (kr)"
-    },
-    "notes": {
+    "notified_at": {
       "type": "string",
-      "title": "Anteckningar"
+      "format": "date-time",
+      "title": "Erbjuden datum"
     },
-    "room_id": {
+    "note": {
       "type": "string",
-      "title": "Rum"
-    },
-    "resource_ids": {
-      "type": "string",
-      "title": "Resurser (JSON)",
-      "description": "JSON-array med Resource-ID:n som bokats f\u00f6r denna behandling"
-    },
-    "deposit_amount": {
-      "type": "number",
-      "default": 0,
-      "title": "Deposition (kr)"
-    },
-    "deposit_paid": {
-      "type": "boolean",
-      "default": false,
-      "title": "Deposition betald"
+      "title": "Anteckning"
     },
     "clinic_id": {
       "type": "string",
@@ -81,8 +70,7 @@
   },
   "required": [
     "customer_name",
-    "treatment_name",
-    "start_time"
+    "treatment_name"
   ],
   "rls": {
     "read": {
