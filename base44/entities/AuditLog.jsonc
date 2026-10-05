@@ -19,7 +19,7 @@
     "description": {
       "type": "string",
       "title": "Beskrivning",
-      "description": "L\u00e4slig sammanfattning av h\u00e4ndelsen"
+      "description": "L\u00e4sbar sammanfattning av h\u00e4ndelsen"
     },
     "user_id": {
       "type": "string",
@@ -45,7 +45,25 @@
   ],
   "rls": {
     "read": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
     },
     "create": {
       "data.clinic_id": "{{user.data.clinic_id}}"
