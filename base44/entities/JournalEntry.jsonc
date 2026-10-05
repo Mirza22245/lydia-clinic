@@ -94,10 +94,56 @@
   ],
   "rls": {
     "read": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
     },
     "create": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
     },
     "update": {
       "$and": [
@@ -108,6 +154,25 @@
           "data.is_signed": {
             "$ne": true
           }
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
         }
       ]
     },
@@ -120,6 +185,25 @@
           "data.is_signed": {
             "$ne": true
           }
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
         }
       ]
     }
