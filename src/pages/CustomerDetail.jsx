@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText, Lock, PenLine, Sparkles } from "lucide-react";
 import ConsentsPanel from "@/components/ConsentsPanel";
+import FormSubmissionsPanel from "@/components/FormSubmissionsPanel";
 import { cn } from "@/lib/utils";
 
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
@@ -113,6 +114,9 @@ export default function CustomerDetail() {
 
       {/* Samtycken */}
       <ConsentsPanel customerId={id} customerName={customer.name} />
+
+      {/* Formulär */}
+      <FormSubmissionsPanel customerId={id} />
 
       {/* Tidslinje */}
       <div>

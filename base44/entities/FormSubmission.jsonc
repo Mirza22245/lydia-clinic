@@ -1,0 +1,70 @@
+{
+  "name": "FormSubmission",
+  "type": "object",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "title": "Mall-ID"
+    },
+    "template_name": {
+      "type": "string",
+      "title": "Formul\u00e4r"
+    },
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "answers": {
+      "type": "string",
+      "title": "Svar (JSON)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "submitted"
+      ],
+      "default": "submitted",
+      "title": "Status"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Inl\u00e4mnat"
+    },
+    "submitted_by": {
+      "type": "string",
+      "title": "Inl\u00e4mnat av"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "template_name",
+    "customer_name"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}

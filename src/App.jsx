@@ -17,6 +17,7 @@ import Customers from '@/pages/Customers';
 import Treatments from '@/pages/Treatments';
 import Bookings from '@/pages/Bookings';
 import Journals from '@/pages/Journals';
+import Forms from '@/pages/Forms';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
 import AppShell from '@/components/AppShell';
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/bookings" element={<Bookings />} />
           <Route path="/app/bookings/:id" element={<BookingDetail />} />
           <Route path="/app/journal" element={<Journals />} />
+          <Route path="/app/forms" element={<Forms />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

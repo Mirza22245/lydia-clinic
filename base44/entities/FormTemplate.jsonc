@@ -1,0 +1,49 @@
+{
+  "name": "FormTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "health_declaration",
+        "consent",
+        "custom"
+      ],
+      "default": "health_declaration",
+      "title": "Typ"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "questions": {
+      "type": "string",
+      "title": "Fr\u00e5gor (JSON)"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}
