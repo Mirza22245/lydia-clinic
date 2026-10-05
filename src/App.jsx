@@ -21,6 +21,7 @@ import Journals from '@/pages/Journals';
 import Forms from '@/pages/Forms';
 import HealthDeclarations from '@/pages/HealthDeclarations';
 import POS from '@/pages/POS';
+import ZReport from '@/pages/ZReport';
 import Staff from '@/pages/Staff';
 import AuditLog from '@/pages/AuditLog';
 import Settings from '@/pages/Settings';
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/forms" element={<Forms />} />
           <Route path="/app/health" element={<HealthDeclarations />} />
           <Route path="/app/pos" element={<POS />} />
+          <Route path="/app/z-report" element={<ZReport />} />
           <Route path="/app/staff" element={<Staff />} />
           <Route path="/app/audit" element={<AuditLog />} />
           <Route path="/app/settings" element={<Settings />} />

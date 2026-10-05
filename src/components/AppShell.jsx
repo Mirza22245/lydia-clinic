@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ const nav = [
   { to: "/app/forms", label: "Formulär", icon: ClipboardList, perm: "forms" },
   { to: "/app/health", label: "Hälsodeklarationer", icon: HeartPulse, perm: "health" },
   { to: "/app/pos", label: "Kassa", icon: Receipt, perm: "payments" },
+  { to: "/app/z-report", label: "Z-rapport", icon: Calculator, perm: "payments" },
   { to: "/app/staff", label: "Personal", icon: UserCog, perm: "staff" },
   { to: "/app/audit", label: "Audit-logg", icon: ShieldCheck, perm: "audit" },
   { to: "/app/settings", label: "Inställningar", icon: Settings, perm: "settings" },
