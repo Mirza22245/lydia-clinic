@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import { getPatientPortalData } from "@/functions/getPatientPortalData";
 import { signPatientConsent } from "@/functions/signPatientConsent";
 import { cancelPatientBooking } from "@/functions/cancelPatientBooking";
+import { getBookingRequirements } from "@/functions/getBookingRequirements";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Loader2, CalendarDays, FileText, HeartPulse, ClipboardList, LogOut,
-  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake, Receipt, Plus, XCircle,
+  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake, Receipt, Plus, XCircle, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,7 @@ export default function Portal() {
   const [signError, setSignError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
+  const [reqsByBooking, setReqsByBooking] = useState({});
 
   useEffect(() => {
     (async () => {
@@ -113,6 +115,25 @@ export default function Portal() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!data || !data.bookings) return;
+    const upcoming = data.bookings.filter((b) => new Date(b.start_time) >= new Date() && !["cancelled", "no_show"].includes(b.status) && b.treatment_id);
+    let active = true;
+    (async () => {
+      const entries = await Promise.all(upcoming.map(async (b) => {
+        try {
+          const res = await getBookingRequirements({ booking_id: b.id });
+          return [b.id, res.data];
+        } catch { return null; }
+      }));
+      if (!active) return;
+      const map = {};
+      for (const e of entries) if (e) map[e[0]] = e[1];
+      setReqsByBooking(map);
+    })();
+    return () => { active = false; };
+  }, [data]);
 
   const handleLogout = () => base44.auth.logout("/login");
 
@@ -230,6 +251,23 @@ export default function Portal() {
                         </div>
                         <p className="text-sm text-muted-foreground">{fmtDateTime(b.start_time)}{b.staff_name ? ` · ${b.staff_name}` : ""}</p>
                         {b.notes && <p className="mt-1 text-sm text-muted-foreground">{b.notes}</p>}
+                        {reqsByBooking[b.id] && reqsByBooking[b.id].enforceableCount > 0 && (
+                          <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-3">
+                            {reqsByBooking[b.id].allCompleted ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"><Check className="w-3.5 h-3.5" />Alla krav inför besöket är uppfyllda</span>
+                            ) : (
+                              <div>
+                                <p className="text-xs font-medium text-amber-700">Saknas inför besöket:</p>
+                                <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                                  {reqsByBooking[b.id].missing.map((m) => (
+                                    <li key={m} className="flex items-center gap-1"><XCircle className="w-3 h-3 text-amber-600" />{m}</li>
+                                  ))}
+                                </ul>
+                                <p className="mt-1.5 text-xs text-muted-foreground">Slutför under flikarna Hälsodeklarationer, Formulär och Samtycken.</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className="mt-3 flex items-center gap-3">
                           <Button size="sm" variant="outline" disabled={cancellingId === b.id} onClick={() => handleCancelBooking(b.id)}>
                             {cancellingId === b.id ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Avbokar...</> : <><XCircle className="w-3.5 h-3.5 mr-1" />Avboka</>}
