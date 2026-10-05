@@ -22,6 +22,7 @@ import Forms from '@/pages/Forms';
 import HealthDeclarations from '@/pages/HealthDeclarations';
 import POS from '@/pages/POS';
 import ZReport from '@/pages/ZReport';
+import Reports from '@/pages/Reports';
 import Staff from '@/pages/Staff';
 import AuditLog from '@/pages/AuditLog';
 import Settings from '@/pages/Settings';
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/health" element={<HealthDeclarations />} />
           <Route path="/app/pos" element={<POS />} />
           <Route path="/app/z-report" element={<ZReport />} />
+          <Route path="/app/reports" element={<Reports />} />
           <Route path="/app/staff" element={<Staff />} />
           <Route path="/app/audit" element={<AuditLog />} />
           <Route path="/app/settings" element={<Settings />} />
