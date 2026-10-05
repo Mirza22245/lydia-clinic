@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail, Eye } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
+import { Link } from "react-router-dom";
 
 const empty = { name: "", email: "", phone: "", address: "", birth_date: "", status: "active", tags: "", notes: "" };
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
@@ -103,6 +104,7 @@ export default function Customers() {
                   <p className="text-xs text-muted-foreground">{statusLabels[c.status] || c.status}</p>
                 </div>
                 <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Öppna kund"><Link to={`/app/customers/${c.id}`}><Eye className="w-4 h-4" /></Link></Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => remove(c)}><Trash2 className="w-4 h-4" /></Button>
                 </div>
