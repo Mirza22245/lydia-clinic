@@ -7,6 +7,7 @@ import BookingsCalendar from "@/components/BookingsCalendar";
 import TodayBookings from "@/components/dashboard/TodayBookings";
 import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings";
 import TodoSummary from "@/components/dashboard/TodoSummary";
+import UnsignedJournals from "@/components/dashboard/UnsignedJournals";
 import { cn } from "@/lib/utils";
 
 const statusLabels = {
@@ -83,8 +84,11 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <TodayBookings className="lg:col-span-1" />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TodayBookings />
+        <UnsignedJournals />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
         <UpcomingMeetings />
         <TodoSummary />
       </div>
