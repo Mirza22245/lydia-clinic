@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail, Eye } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail, Eye, BadgeCheck } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { Link } from "react-router-dom";
 import { logAudit } from "@/lib/audit";
 
-const empty = { name: "", email: "", phone: "", address: "", birth_date: "", status: "active", tags: "", notes: "" };
+const empty = { name: "", email: "", phone: "", address: "", birth_date: "", personnummer: "", status: "active", tags: "", notes: "" };
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
 
 export default function Customers() {
@@ -117,8 +117,9 @@ export default function Customers() {
                 </div>
               </div>
               <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-                {c.phone && <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{c.phone}</p>}
-                {c.email && <p className="flex items-center gap-2 truncate"><Mail className="w-3.5 h-3.5" />{c.email}</p>}
+                {c.personnummer && <p className="flex items-center gap-2"><BadgeCheck className="w-3.5 h-3.5" />{c.personnummer}</p>}
+                {c.phone && <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" />{c.phone}{c.phone_verified && <span className="text-emerald-600">✓</span>}</p>}
+                {c.email && <p className="flex items-center gap-2 truncate"><Mail className="w-3.5 h-3.5" />{c.email}{c.email_verified && <span className="text-emerald-600">✓</span>}</p>}
                 {c.tags && <p className="mt-2"><span className="rounded bg-secondary px-2 py-0.5 text-xs">{c.tags}</span></p>}
               </div>
             </div>
@@ -140,6 +141,7 @@ export default function Customers() {
             </div>
             <div className="space-y-2"><Label htmlFor="address">Adress</Label><Input id="address" value={form.address} onChange={set("address")} /></div>
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="personnummer">Personnummer</Label><Input id="personnummer" value={form.personnummer} onChange={set("personnummer")} placeholder="ÅÅMMDD-XXXX" /></div>
               <div className="space-y-2"><Label htmlFor="birth_date">Födelsedatum</Label><Input id="birth_date" type="date" value={form.birth_date} onChange={set("birth_date")} /></div>
               <div className="space-y-2"><Label htmlFor="status">Status</Label>
                 <select id="status" value={form.status} onChange={set("status")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">

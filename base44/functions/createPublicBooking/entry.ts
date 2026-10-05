@@ -74,13 +74,14 @@ export default async function(req) {
     let cust = (custPage.items || [])[0];
     if (!cust) {
       cust = await svc.entities.Customer.create({
-        clinic_id, name: customer.name, email: customer.email, phone: customer.phone, birth_date: customer.birth_date, status: 'lead',
+        clinic_id, name: customer.name, email: customer.email, phone: customer.phone, birth_date: customer.birth_date, personnummer: customer.personnummer, status: 'lead',
       });
     } else {
       const patch = {};
       if (!cust.phone && customer.phone) patch.phone = customer.phone;
       if (!cust.name && customer.name) patch.name = customer.name;
       if (!cust.birth_date && customer.birth_date) patch.birth_date = customer.birth_date;
+      if (!cust.personnummer && customer.personnummer) patch.personnummer = customer.personnummer;
       if (Object.keys(patch).length) cust = await svc.entities.Customer.update(cust.id, patch);
     }
 

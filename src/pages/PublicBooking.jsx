@@ -50,7 +50,7 @@ export default function PublicBooking() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState(null);
 
-  const [customer, setCustomer] = useState({ name: "", email: "", phone: "", birth_date: "" });
+  const [customer, setCustomer] = useState({ name: "", email: "", phone: "", birth_date: "", personnummer: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
@@ -307,6 +307,10 @@ export default function PublicBooking() {
                   <Input id="birth_date" type="date" value={customer.birth_date} onChange={(e) => setCustomer({ ...customer, birth_date: e.target.value })} max={new Date().toISOString().slice(0, 10)} />
                 </div>
               )}
+              <div>
+                <Label htmlFor="personnummer" className="mb-1.5 block">Personnummer <span className="text-xs text-muted-foreground">(frivilligt)</span></Label>
+                <Input id="personnummer" value={customer.personnummer} onChange={(e) => setCustomer({ ...customer, personnummer: e.target.value })} placeholder="ÅÅMMDD-XXXX" />
+              </div>
             </div>
             {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
             <Button className="mt-4 w-full" disabled={submitting} onClick={submit}>

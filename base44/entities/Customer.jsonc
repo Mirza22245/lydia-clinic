@@ -24,6 +24,21 @@
       "format": "date",
       "title": "F\u00f6delsedatum"
     },
+    "personnummer": {
+      "type": "string",
+      "title": "Personnummer",
+      "description": "Svenskt personnummer (10 eller 12 siffror). Frivilligt \u2014 anv\u00e4nds endast om kliniken kr\u00e4ver det."
+    },
+    "email_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "E-post verifierad"
+    },
+    "phone_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "Telefon verifierad"
+    },
     "tags": {
       "type": "string",
       "title": "Taggar"

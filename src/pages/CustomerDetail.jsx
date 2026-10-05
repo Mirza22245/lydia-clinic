@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText, BadgeCheck, ShieldCheck } from "lucide-react";
 import ConsentsPanel from "@/components/ConsentsPanel";
 import FormSubmissionsPanel from "@/components/FormSubmissionsPanel";
 import HealthDeclarationsPanel from "@/components/HealthDeclarationsPanel";
@@ -72,8 +72,9 @@ export default function CustomerDetail() {
               {customer.tags && <span className="rounded bg-secondary px-2 py-0.5 text-xs">{customer.tags}</span>}
             </div>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-              {customer.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{customer.phone}</span>}
-              {customer.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{customer.email}</span>}
+              {customer.personnummer && <span className="flex items-center gap-1.5"><BadgeCheck className="w-3.5 h-3.5" />{customer.personnummer}</span>}
+              {customer.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{customer.phone}{customer.phone_verified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}</span>}
+              {customer.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{customer.email}{customer.email_verified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />}</span>}
               {customer.address && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{customer.address}</span>}
               {customer.birth_date && <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" />{fmtDate(customer.birth_date)}</span>}
             </div>
