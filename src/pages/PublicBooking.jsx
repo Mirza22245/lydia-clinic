@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getPublicBookingData } from "@/functions/getPublicBookingData";
 import { getAvailableSlots } from "@/functions/getAvailableSlots";
 import { createPublicBooking } from "@/functions/createPublicBooking";
+import StripePaymentStep from "@/components/stripe/StripePaymentStep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,8 @@ export default function PublicBooking() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
+  const [pendingBooking, setPendingBooking] = useState(null);
+  const [payError, setPayError] = useState(null);
   const [pendingReqs, setPendingReqs] = useState([]);
 
   useEffect(() => {
@@ -103,9 +106,16 @@ export default function PublicBooking() {
         start_time: slot,
         customer,
       });
-      setConfirmation(res.data.booking);
+      const booking = res.data.booking;
       setPendingReqs(res.data.requirements || []);
-      setStep(5);
+      if (treatment.requires_payment && treatment.price > 0) {
+        setPendingBooking(booking);
+        setPayError(null);
+        setStep(5);
+      } else {
+        setConfirmation(booking);
+        setStep(5);
+      }
     } catch (e) {
       const msg = e?.response?.data?.error || e.message || "Kunde inte boka";
       setSubmitError(msg);
@@ -303,6 +313,28 @@ export default function PublicBooking() {
               {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Bekräftar...</> : "Bekräfta bokning"}
             </Button>
             <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStep(3)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
+          </div>
+        )}
+
+        {step === 5 && pendingBooking && (
+          <div className="max-w-md">
+            <h2 className="mb-1 text-lg font-semibold">Betalning</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Slutför bokningen genom att betala nu.</p>
+            <div className="mb-4 rounded-xl border border-border bg-card p-4 text-sm">
+              <p className="font-medium">{treatment.name}</p>
+              <p className="text-muted-foreground">{fmtFull(pendingBooking.start_time)}</p>
+              <p className="text-muted-foreground">Behandlare: {pendingBooking.staff_name}</p>
+              <p className="mt-1">Att betala: {treatment.price.toLocaleString("sv-SE")} kr</p>
+            </div>
+            {payError && <p className="mb-3 text-sm text-rose-600">{payError}</p>}
+            <StripePaymentStep
+              booking={pendingBooking}
+              amountLabel={`${treatment.price.toLocaleString("sv-SE")} kr`}
+              onPaid={() => { setConfirmation(pendingBooking); setStep(5); }}
+              onError={(m) => setPayError(m)}
+              onSkip={() => { setConfirmation(pendingBooking); setStep(5); }}
+            />
+            <Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setStep(4)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
           </div>
         )}
       </main>
