@@ -45,6 +45,30 @@
       "type": "string",
       "title": "L\u00e4mnat av"
     },
+    "signed_text": {
+      "type": "string",
+      "title": "Signerad text (of\u00f6r\u00e4nderlig kopia)",
+      "description": "Of\u00e4r\u00e4nderlig kopia av samtyckestexten exakt som den s\u00e5g ut vid signeringstillf\u00e4llet"
+    },
+    "document_version": {
+      "type": "number",
+      "title": "Signerad dokumentversion",
+      "description": "Vilken version av dokumentet/villkoren som godk\u00e4ndes"
+    },
+    "ip_address": {
+      "type": "string",
+      "title": "IP-adress vid signering"
+    },
+    "device_info": {
+      "type": "string",
+      "title": "Enhet vid signering",
+      "description": "User-agent / enhetsinformation vid signeringstillf\u00e4llet"
+    },
+    "signature_hash": {
+      "type": "string",
+      "title": "Signaturhash",
+      "description": "SHA-256-hash av signerat inneh\u00e5ll f\u00f6r integritetsverifiering"
+    },
     "revoked_at": {
       "type": "string",
       "format": "date-time",
@@ -67,10 +91,28 @@
       "data.clinic_id": "{{user.data.clinic_id}}"
     },
     "update": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.granted": {
+            "$ne": true
+          }
+        }
+      ]
     },
     "delete": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.granted": {
+            "$ne": true
+          }
+        }
+      ]
     }
   }
 }
