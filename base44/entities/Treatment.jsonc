@@ -27,6 +27,63 @@
       "title": "Moms (%)",
       "default": 25
     },
+    "requires_health_declaration": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4ver h\u00e4lsodeklaration"
+    },
+    "requires_consent": {
+      "type": "boolean",
+      "default": true,
+      "title": "Kr\u00e4ver samtycke"
+    },
+    "requires_treatment_info": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4ver behandlingsinformation/risker"
+    },
+    "requires_aftercare": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4ver efterv\u00e5rdsinformation"
+    },
+    "requires_payment": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4ver betalning vid bokning"
+    },
+    "guest_booking_allowed": {
+      "type": "boolean",
+      "default": true,
+      "title": "Till\u00e5t g\u00e4stbokning (utan konto)"
+    },
+    "min_age": {
+      "type": "number",
+      "default": 0,
+      "title": "L\u00e4gsta \u00e5lder",
+      "description": "0 = ingen \u00e5ldersgr\u00e4ns"
+    },
+    "waiting_period_days": {
+      "type": "number",
+      "default": 0,
+      "title": "V\u00e4ntetid (dagar)",
+      "description": "Antal dagar mellan bokning och tidigaste behandlingstillf\u00e4lle"
+    },
+    "cancellation_hours": {
+      "type": "number",
+      "default": 24,
+      "title": "Avgiftsfri avbokning (timmar innan)"
+    },
+    "no_show_fee": {
+      "type": "number",
+      "default": 0,
+      "title": "No-show-avgift (kr)"
+    },
+    "required_form_ids": {
+      "type": "string",
+      "title": "Obligatoriska formul\u00e4r (JSON)",
+      "description": "JSON-array med FormTemplate-ID:n som kr\u00e4vs f\u00f6r denna behandling"
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"

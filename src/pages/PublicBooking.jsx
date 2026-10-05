@@ -20,6 +20,22 @@ const steps = [
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 const fmtFull = (iso) => new Date(iso).toLocaleString("sv-SE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 
+const treatmentRequirements = (t) => {
+  if (!t) return [];
+  const r = [];
+  if (t.requires_health_declaration) r.push("Hälsodeklaration");
+  if (t.requires_consent) r.push("Samtycke");
+  if (t.requires_treatment_info) r.push("Behandlingsinformation & risker");
+  if (t.requires_aftercare) r.push("Eftervårdsinformation");
+  if (t.requires_payment) r.push("Betalning");
+  if (t.min_age > 0) r.push(`Ålderskontroll (minst ${t.min_age} år)`);
+  if (t.waiting_period_days > 0) r.push(`Väntetid ${t.waiting_period_days} dagar`);
+  let formCount = 0;
+  try { formCount = JSON.parse(t.required_form_ids || "[]").length; } catch { /* ignore */ }
+  if (formCount > 0) r.push(`${formCount} formulär`);
+  return r;
+};
+
 export default function PublicBooking() {
   const [init, setInit] = useState(null);
   const [loadingInit, setLoadingInit] = useState(true);
@@ -33,10 +49,11 @@ export default function PublicBooking() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState(null);
 
-  const [customer, setCustomer] = useState({ name: "", email: "", phone: "" });
+  const [customer, setCustomer] = useState({ name: "", email: "", phone: "", birth_date: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
+  const [pendingReqs, setPendingReqs] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -87,6 +104,7 @@ export default function PublicBooking() {
         customer,
       });
       setConfirmation(res.data.booking);
+      setPendingReqs(res.data.requirements || []);
       setStep(5);
     } catch (e) {
       const msg = e?.response?.data?.error || e.message || "Kunde inte boka";
@@ -122,6 +140,15 @@ export default function PublicBooking() {
             <p className="text-sm text-muted-foreground">Behandlare: {confirmation.staff_name}</p>
             {confirmation.price != null && <p className="mt-2 text-sm">Pris: {confirmation.price.toLocaleString("sv-SE")} kr</p>}
           </div>
+          {pendingReqs.length > 0 && (
+            <div className="mx-auto mt-4 max-w-sm rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-sm">
+              <p className="font-medium text-amber-900">Att göra före besöket</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-amber-800">
+                {pendingReqs.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+              <p className="mt-2 text-amber-700">Logga in i kundportalen för att komplettera.</p>
+            </div>
+          )}
           <p className="mt-6 text-xs text-muted-foreground">
             Vid frågor, kontakta kliniken{init.clinic.phone ? ` på ${init.clinic.phone}` : ""}.
           </p>
@@ -242,6 +269,15 @@ export default function PublicBooking() {
               <p className="text-muted-foreground">Behandlare: {staff.name}</p>
               {treatment.price != null && <p className="mt-1">Pris: {treatment.price.toLocaleString("sv-SE")} kr</p>}
             </div>
+            {treatmentRequirements(treatment).length > 0 && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+                <p className="font-medium text-amber-900">Krav före behandling</p>
+                <p className="text-amber-700">Följande måste kompletteras i kundportalen innan besöket:</p>
+                <ul className="mt-2 list-disc space-y-0.5 pl-5 text-amber-800">
+                  {treatmentRequirements(treatment).map((r) => <li key={r}>{r}</li>)}
+                </ul>
+              </div>
+            )}
             <div className="space-y-3">
               <div>
                 <Label htmlFor="name" className="mb-1.5 block">Namn *</Label>
@@ -255,6 +291,12 @@ export default function PublicBooking() {
                 <Label htmlFor="phone" className="mb-1.5 block">Telefon</Label>
                 <Input id="phone" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
               </div>
+              {treatment?.min_age > 0 && (
+                <div>
+                  <Label htmlFor="birth_date" className="mb-1.5 block">Födelsedatum *<span className="ml-1 text-xs text-muted-foreground">(ålderskontroll, minst {treatment.min_age} år)</span></Label>
+                  <Input id="birth_date" type="date" value={customer.birth_date} onChange={(e) => setCustomer({ ...customer, birth_date: e.target.value })} max={new Date().toISOString().slice(0, 10)} />
+                </div>
+              )}
             </div>
             {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
             <Button className="mt-4 w-full" disabled={submitting} onClick={submit}>

@@ -29,6 +29,17 @@ export default async function(req) {
       },
       treatments: (treatments.items || []).map((t) => ({
         id: t.id, name: t.name, duration: t.duration, price: t.price, category: t.category, description: t.description,
+        requires_health_declaration: !!t.requires_health_declaration,
+        requires_consent: t.requires_consent !== false,
+        requires_treatment_info: !!t.requires_treatment_info,
+        requires_aftercare: !!t.requires_aftercare,
+        requires_payment: !!t.requires_payment,
+        guest_booking_allowed: t.guest_booking_allowed !== false,
+        min_age: t.min_age || 0,
+        waiting_period_days: t.waiting_period_days || 0,
+        cancellation_hours: t.cancellation_hours ?? 24,
+        no_show_fee: t.no_show_fee || 0,
+        required_form_ids: t.required_form_ids || "",
       })),
       staff: (staff.items || []).map((s) => ({ id: s.id, name: s.name, title: s.title })),
     });

@@ -21,6 +21,29 @@ export default async function(req) {
     const start = new Date(start_time);
     const end = new Date(start.getTime() + duration * 60000);
 
+    // --- Behandlingsspecifika arbetsflödesregler (FAS 6/10) ---
+    // Väntetid: tidigaste tillåtna behandling är nu + waiting_period_days.
+    if ((treatment.waiting_period_days || 0) > 0) {
+      const earliest = new Date(Date.now() + treatment.waiting_period_days * 86400000);
+      if (start < earliest) {
+        return Response.json({
+          error: `Denna behandling har en väntetid på ${treatment.waiting_period_days} dagar. Tidigaste möjliga datum är ${earliest.toLocaleDateString('sv-SE')}.`,
+          code: 'waiting_period',
+          earliest: earliest.toISOString(),
+        }, { status: 400 });
+      }
+    }
+    // Ålderskontroll baserat på kundens födelsedatum.
+    if ((treatment.min_age || 0) > 0) {
+      if (!customer.birth_date) {
+        return Response.json({ error: `Denna behandling kräver att du är minst ${treatment.min_age} år. Ange ditt födelsedatum.`, code: 'age_required' }, { status: 400 });
+      }
+      const ageAtStart = Math.floor((start.getTime() - new Date(customer.birth_date).getTime()) / (365.25 * 86400000));
+      if (ageAtStart < treatment.min_age) {
+        return Response.json({ error: `Denna behandling kräver att du är minst ${treatment.min_age} år gammal.`, code: 'under_age' }, { status: 400 });
+      }
+    }
+
     // Krockkontroll för vald behandlare samma dag
     const dayStart = new Date(start); dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(start); dayEnd.setHours(23, 59, 59, 999);
@@ -51,12 +74,13 @@ export default async function(req) {
     let cust = (custPage.items || [])[0];
     if (!cust) {
       cust = await svc.entities.Customer.create({
-        clinic_id, name: customer.name, email: customer.email, phone: customer.phone, status: 'lead',
+        clinic_id, name: customer.name, email: customer.email, phone: customer.phone, birth_date: customer.birth_date, status: 'lead',
       });
     } else {
       const patch = {};
       if (!cust.phone && customer.phone) patch.phone = customer.phone;
       if (!cust.name && customer.name) patch.name = customer.name;
+      if (!cust.birth_date && customer.birth_date) patch.birth_date = customer.birth_date;
       if (Object.keys(patch).length) cust = await svc.entities.Customer.update(cust.id, patch);
     }
 
@@ -72,6 +96,18 @@ export default async function(req) {
       status: 'pending',
       price: treatment.price,
     });
+
+    // Kravlista som kunden måste komplettera i kundportalen innan behandling.
+    const requirements = [];
+    if (treatment.requires_health_declaration) requirements.push('Hälsodeklaration');
+    if (treatment.requires_consent) requirements.push('Samtycke');
+    if (treatment.requires_treatment_info) requirements.push('Behandlingsinformation & risker');
+    if (treatment.requires_aftercare) requirements.push('Eftervårdsinformation');
+    if (treatment.requires_payment) requirements.push('Betalning');
+    try {
+      const formIds = JSON.parse(treatment.required_form_ids || '[]');
+      if (Array.isArray(formIds) && formIds.length > 0) requirements.push(`${formIds.length} formulär`);
+    } catch { /* ignore */ }
 
     // Bekräftelse via e-post — får inte blockera bokningen om det misslyckas.
     try {
@@ -108,6 +144,7 @@ export default async function(req) {
         end_time: booking.end_time,
         price: treatment.price,
       },
+      requirements,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
