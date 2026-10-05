@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getPatientPortalData } from "@/functions/getPatientPortalData";
 import { signPatientConsent } from "@/functions/signPatientConsent";
+import { cancelPatientBooking } from "@/functions/cancelPatientBooking";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Loader2, CalendarDays, FileText, HeartPulse, ClipboardList, LogOut,
-  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake,
+  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake, Receipt, Plus, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +98,8 @@ export default function Portal() {
   const [error, setError] = useState(null);
   const [signingId, setSigningId] = useState(null);
   const [signError, setSignError] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [cancelError, setCancelError] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -134,7 +138,21 @@ export default function Portal() {
     );
   }
 
-  const { customer, bookings, journals, healthDeclarations, formSubmissions, consents } = data;
+  const { customer, bookings, journals, healthDeclarations, formSubmissions, consents, payments } = data;
+
+  const handleCancelBooking = async (bookingId) => {
+    setCancelError(null);
+    setCancellingId(bookingId);
+    try {
+      const res = await cancelPatientBooking({ booking_id: bookingId });
+      const updated = res.data.booking;
+      setData((prev) => (prev ? { ...prev, bookings: prev.bookings.map((b) => (b.id === updated.id ? updated : b)) } : prev));
+    } catch (e) {
+      setCancelError(e?.response?.data?.error || e.message || "Kunde inte avboka");
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const handleSignConsent = async (consentId) => {
     setSignError(null);
@@ -167,7 +185,10 @@ export default function Portal() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Patientportal</p>
             <h1 className="text-xl font-semibold font-heading">{customer.name}</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4 mr-1" />Logga ut</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild><Link to="/book"><Plus className="w-4 h-4 mr-1" />Boka ny tid</Link></Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}><LogOut className="w-4 h-4 mr-1" />Logga ut</Button>
+          </div>
         </div>
       </header>
 
@@ -188,6 +209,7 @@ export default function Portal() {
             <TabsTrigger value="health">Hälsodeklarationer</TabsTrigger>
             <TabsTrigger value="forms">Formulär</TabsTrigger>
             <TabsTrigger value="consents">Samtycken</TabsTrigger>
+            <TabsTrigger value="archive">Arkiv & kvitton</TabsTrigger>
           </TabsList>
 
           {/* Bokningar */}
@@ -208,11 +230,18 @@ export default function Portal() {
                         </div>
                         <p className="text-sm text-muted-foreground">{fmtDateTime(b.start_time)}{b.staff_name ? ` · ${b.staff_name}` : ""}</p>
                         {b.notes && <p className="mt-1 text-sm text-muted-foreground">{b.notes}</p>}
+                        <div className="mt-3 flex items-center gap-3">
+                          <Button size="sm" variant="outline" disabled={cancellingId === b.id} onClick={() => handleCancelBooking(b.id)}>
+                            {cancellingId === b.id ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Avbokar...</> : <><XCircle className="w-3.5 h-3.5 mr-1" />Avboka</>}
+                          </Button>
+                          <Button size="sm" variant="ghost" asChild><Link to="/book">Boka om</Link></Button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+              {cancelError && <p className="mt-3 text-sm text-rose-600">{cancelError}</p>}
             </div>
             <div>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Tidigare bokningar</h2>
@@ -308,6 +337,35 @@ export default function Portal() {
                   </div>
                 );
               })
+            )}
+          </TabsContent>
+
+          {/* Arkiv & kvitton */}
+          <TabsContent value="archive" className="space-y-3">
+            <p className="text-sm text-muted-foreground">Här hittar du dina tidigare kvitton och betalningar.</p>
+            {(!payments || payments.length === 0) ? (
+              <EmptyState icon={Receipt} text="Inga kvitton eller betalningar än." />
+            ) : (
+              <div className="space-y-3">
+                {payments.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="w-4 h-4 text-muted-foreground" />
+                        <p className="font-medium">{p.treatment_name || "Betalning"}</p>
+                      </div>
+                      <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", p.status === "refunded" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700")}>
+                        {p.status === "refunded" ? "Återbetalad" : "Betald"}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                      <span>{fmtDateTime(p.paid_at)}</span>
+                      <span className="font-medium text-foreground">{p.amount.toLocaleString("sv-SE")} kr{p.method ? ` · ${p.method}` : ""}</span>
+                    </div>
+                    {p.receipt_number && <p className="mt-1 text-xs text-muted-foreground">Kvittonummer: {p.receipt_number}</p>}
+                  </div>
+                ))}
+              </div>
             )}
           </TabsContent>
 

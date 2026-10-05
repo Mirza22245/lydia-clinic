@@ -22,12 +22,13 @@ export default async function(req) {
     if (!customer) return Response.json({ customer: null });
 
     const cid = customer.id;
-    const [bookings, journals, health, forms, consents] = await Promise.all([
+    const [bookings, journals, health, forms, consents, payments] = await Promise.all([
       svc.entities.Booking.filter({ customer_id: cid }, { sort: '-start_time', limit: 200 }),
       svc.entities.JournalEntry.filter({ customer_id: cid }, { sort: '-entry_date', limit: 200 }),
       svc.entities.HealthDeclaration.filter({ customer_id: cid }, { sort: '-submitted_at', limit: 50 }),
       svc.entities.FormSubmission.filter({ customer_id: cid }, { sort: '-submitted_at', limit: 50 }),
       svc.entities.Consent.filter({ customer_id: cid }, { sort: '-granted_at', limit: 100 }),
+      svc.entities.Payment.filter({ customer_id: cid }, { sort: '-paid_at', limit: 200 }),
     ]);
 
     return Response.json({
@@ -43,6 +44,7 @@ export default async function(req) {
       healthDeclarations: health.items || [],
       formSubmissions: forms.items || [],
       consents: consents.items || [],
+      payments: payments.items || [],
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
