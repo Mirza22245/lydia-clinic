@@ -1,0 +1,123 @@
+{
+  "name": "HealthDeclaration",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Inl\u00e4mnad"
+    },
+    "submitted_by": {
+      "type": "string",
+      "title": "Inl\u00e4mnad av"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted"
+      ],
+      "default": "submitted",
+      "title": "Status"
+    },
+    "allergies": {
+      "type": "string",
+      "title": "Allergier",
+      "description": "K\u00e4nda allergier (mot t.ex. latex, lokalebbed\u00f6vning, antibiotika)"
+    },
+    "medications": {
+      "type": "string",
+      "title": "Nuvarande mediciner"
+    },
+    "conditions": {
+      "type": "string",
+      "title": "Kroniska sjukdomar"
+    },
+    "surgeries": {
+      "type": "string",
+      "title": "Tidigare operationer"
+    },
+    "family_history": {
+      "type": "string",
+      "title": "Familjehistorik"
+    },
+    "pregnant": {
+      "type": "boolean",
+      "default": false,
+      "title": "Gravid"
+    },
+    "breastfeeding": {
+      "type": "boolean",
+      "default": false,
+      "title": "Ammar"
+    },
+    "heart_condition": {
+      "type": "boolean",
+      "default": false,
+      "title": "Hj\u00e4rtbesv\u00e4r"
+    },
+    "high_blood_pressure": {
+      "type": "boolean",
+      "default": false,
+      "title": "H\u00f6g blodtryck"
+    },
+    "diabetes": {
+      "type": "boolean",
+      "default": false,
+      "title": "Diabetes"
+    },
+    "asthma": {
+      "type": "boolean",
+      "default": false,
+      "title": "Astmabesv\u00e4r"
+    },
+    "skin_condition": {
+      "type": "boolean",
+      "default": false,
+      "title": "Hudbesv\u00e4r"
+    },
+    "smoking": {
+      "type": "boolean",
+      "default": false,
+      "title": "R\u00f6kning"
+    },
+    "other": {
+      "type": "string",
+      "title": "\u00d6vrigt"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_name",
+    "submitted_at"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}
