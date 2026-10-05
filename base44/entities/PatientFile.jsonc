@@ -1,0 +1,76 @@
+{
+  "name": "PatientFile",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "file_name": {
+      "type": "string",
+      "title": "Filnamn"
+    },
+    "file_uri": {
+      "type": "string",
+      "title": "Fil-URI",
+      "description": "Privat lagrings-URI fr\u00e5n UploadPrivateFile \u2014 ej publikt \u00e5tkomlig"
+    },
+    "file_type": {
+      "type": "string",
+      "enum": [
+        "image",
+        "document"
+      ],
+      "default": "document",
+      "title": "Typ"
+    },
+    "mime_type": {
+      "type": "string",
+      "title": "MIME-typ"
+    },
+    "size_bytes": {
+      "type": "number",
+      "title": "Storlek (bytes)"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "uploaded_by": {
+      "type": "string",
+      "title": "Uppladdad av"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Uppladdad"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "file_name",
+    "file_uri"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}

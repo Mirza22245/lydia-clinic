@@ -8,6 +8,7 @@ import FormSubmissionsPanel from "@/components/FormSubmissionsPanel";
 import HealthDeclarationsPanel from "@/components/HealthDeclarationsPanel";
 import CareHistoryTimeline from "@/components/CareHistoryTimeline";
 import ReceiptsPanel from "@/components/ReceiptsPanel";
+import PatientFilesPanel from "@/components/PatientFilesPanel";
 
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
 
@@ -109,6 +110,9 @@ export default function CustomerDetail() {
 
       {/* Formulär */}
       <FormSubmissionsPanel customerId={id} />
+
+      {/* Filer & bilder — krypterat material */}
+      <PatientFilesPanel customerId={id} customerName={customer.name} />
 
       {/* Kvitton & betalningar */}
       <ReceiptsPanel customerId={id} clinicName="Lydia Demo Klinik" />
