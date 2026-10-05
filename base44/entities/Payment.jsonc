@@ -1,0 +1,88 @@
+{
+  "name": "Payment",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "amount": {
+      "type": "number",
+      "title": "Belopp (kr)"
+    },
+    "vat": {
+      "type": "number",
+      "title": "Moms (kr)",
+      "default": 0
+    },
+    "vat_rate": {
+      "type": "number",
+      "title": "Momssats (%)",
+      "default": 25
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "card",
+        "swish",
+        "cash",
+        "invoice"
+      ],
+      "default": "card",
+      "title": "Betalningsmetod"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "paid",
+        "refunded"
+      ],
+      "default": "paid",
+      "title": "Status"
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Betaldatum"
+    },
+    "receipt_number": {
+      "type": "string",
+      "title": "Kvittonummer"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_name",
+    "amount",
+    "paid_at"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}
