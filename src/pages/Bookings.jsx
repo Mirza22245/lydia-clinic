@@ -10,6 +10,7 @@ import { getClinicId } from "@/lib/currentUser";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
+import BookingsCalendar from "@/components/BookingsCalendar";
 import { logAudit } from "@/lib/audit";
 import { sendBookingConfirmation } from "@/functions/sendBookingConfirmation";
 
@@ -51,6 +52,7 @@ export default function Bookings() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [checkout, setCheckout] = useState(null);
+  const [viewMode, setViewMode] = useState("list");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,10 +187,18 @@ export default function Bookings() {
           <h1 className="text-2xl font-semibold tracking-tight font-heading">Bokningar</h1>
           <p className="text-sm text-muted-foreground">Se och hantera klinikens bokningar.</p>
         </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setViewMode("list")} className={cn("rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors", viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}>Lista</button>
+          <button onClick={() => setViewMode("calendar")} className={cn("rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors", viewMode === "calendar" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-accent")}>Kalender</button>
+        </div>
         <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Ny bokning</Button>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      {viewMode === "calendar" ? (
+        <BookingsCalendar />
+      ) : (
+        <>
+        <div className="flex flex-wrap gap-1.5">
         {filters.map((f) => (
           <button
             key={f.key}
@@ -229,6 +239,8 @@ export default function Bookings() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
 
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>

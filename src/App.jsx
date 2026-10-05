@@ -24,6 +24,7 @@ import POS from '@/pages/POS';
 import ZReport from '@/pages/ZReport';
 import Reports from '@/pages/Reports';
 import Staff from '@/pages/Staff';
+import Schedule from '@/pages/Schedule';
 import AuditLog from '@/pages/AuditLog';
 import Settings from '@/pages/Settings';
 import CustomerDetail from '@/pages/CustomerDetail';
@@ -75,6 +76,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/z-report" element={<ZReport />} />
           <Route path="/app/reports" element={<Reports />} />
           <Route path="/app/staff" element={<Staff />} />
+          <Route path="/app/schedule" element={<Schedule />} />
           <Route path="/app/audit" element={<AuditLog />} />
           <Route path="/app/settings" element={<Settings />} />
         </Route>
