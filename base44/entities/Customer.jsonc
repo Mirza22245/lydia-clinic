@@ -1,0 +1,49 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "E-post"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon"
+    },
+    "address": {
+      "type": "string",
+      "title": "Adress"
+    },
+    "birth_date": {
+      "type": "string",
+      "format": "date",
+      "title": "F\u00f6delsedatum"
+    },
+    "tags": {
+      "type": "string",
+      "title": "Taggar"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "lead"
+      ],
+      "default": "active",
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

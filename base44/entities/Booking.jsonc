@@ -1,0 +1,64 @@
+{
+  "name": "Booking",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "Behandlare"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Start"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Slut"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending",
+        "confirmed",
+        "checked_in",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_show"
+      ],
+      "default": "pending",
+      "title": "Status"
+    },
+    "price": {
+      "type": "number",
+      "title": "Pris (kr)"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    }
+  },
+  "required": [
+    "customer_name",
+    "treatment_name",
+    "start_time"
+  ]
+}

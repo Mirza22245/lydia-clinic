@@ -1,0 +1,34 @@
+{
+  "name": "Treatment",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "duration": {
+      "type": "number",
+      "title": "L\u00e4ngd (min)"
+    },
+    "price": {
+      "type": "number",
+      "title": "Pris (kr)"
+    },
+    "category": {
+      "type": "string",
+      "title": "Kategori"
+    },
+    "vat": {
+      "type": "number",
+      "title": "Moms (%)",
+      "default": 25
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
