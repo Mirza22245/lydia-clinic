@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText, Lock, PenLine, Sparkles } from "lucide-react";
+import ConsentsPanel from "@/components/ConsentsPanel";
 import { cn } from "@/lib/utils";
 
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
@@ -109,6 +110,9 @@ export default function CustomerDetail() {
           <p className="mt-1 text-2xl font-semibold font-heading">{totalSpent.toLocaleString("sv-SE")} kr</p>
         </div>
       </div>
+
+      {/* Samtycken */}
+      <ConsentsPanel customerId={id} customerName={customer.name} />
 
       {/* Tidslinje */}
       <div>

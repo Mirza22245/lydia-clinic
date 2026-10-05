@@ -1,0 +1,76 @@
+{
+  "name": "Consent",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "treatment",
+        "journal",
+        "photography",
+        "image_use",
+        "communication",
+        "marketing"
+      ],
+      "title": "Samtyckestyp"
+    },
+    "version": {
+      "type": "number",
+      "title": "Version",
+      "default": 1
+    },
+    "text": {
+      "type": "string",
+      "title": "Samtyckestext"
+    },
+    "granted": {
+      "type": "boolean",
+      "default": false,
+      "title": "L\u00e4mnat"
+    },
+    "granted_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "L\u00e4mnat datum"
+    },
+    "granted_by": {
+      "type": "string",
+      "title": "L\u00e4mnat av"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "\u00c5terkallat datum"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "type"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}
