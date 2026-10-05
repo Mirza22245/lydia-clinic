@@ -1,0 +1,44 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Titel",
+      "description": "Vad som ska g\u00f6ras"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning",
+      "description": "Valfria detaljer"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "todo",
+        "in_progress",
+        "done"
+      ],
+      "default": "todo",
+      "title": "Status"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium",
+      "title": "Prioritet"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "title": "F\u00f6rfallodatum"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
