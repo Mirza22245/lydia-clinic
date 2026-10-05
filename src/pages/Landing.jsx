@@ -47,8 +47,8 @@ export default function Landing() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center px-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">L</div>
-            <span className="font-semibold tracking-tight font-heading text-lg">Lydia</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-heading text-lg">L</div>
+            <span className="font-semibold tracking-tight font-heading text-lg">Lydia <span className="text-muted-foreground font-body text-sm">Estetisk Klinik</span></span>
           </div>
           <nav className="ml-10 hidden gap-6 text-sm text-muted-foreground md:flex">
             <a href="#funktioner" className="hover:text-foreground">Funktioner</a>
@@ -142,10 +142,10 @@ export default function Landing() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-sm text-muted-foreground md:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-semibold">L</div>
-            <span className="font-medium text-foreground">Lydia</span>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-heading">L</div>
+            <span className="font-medium text-foreground">Lydia Estetisk Klinik</span>
           </div>
-          <p>© 2026 Lydia. Kliniksystem för moderna kliniker.</p>
+          <p>© 2026 Lydia Estetisk Klinik · Göteborg</p>
         </div>
       </footer>
     </div>
