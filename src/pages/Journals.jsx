@@ -9,6 +9,7 @@ import { Plus, Loader2, Pencil, Trash2, Lock, PenLine, ScrollText } from "lucide
 import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
 import { logAudit } from "@/lib/audit";
+import { signJournalEntry } from "@/functions/signJournalEntry";
 
 const emptyForm = {
   booking_id: "", customer_id: "", customer_name: "", treatment_id: "", treatment_name: "",
@@ -175,14 +176,12 @@ export default function Journals() {
   };
 
   const sign = async (j) => {
-    const name = await currentUserName();
-    await base44.entities.JournalEntry.update(j.id, {
-      is_signed: true,
-      signed_at: new Date().toISOString(),
-      signed_by: name || "Okänd",
-    });
-    await logAudit("journal_sign", "JournalEntry", j.id, `Journal för ${j.customer_name} signerad av ${name || "Okänd"}`, { customer_id: j.customer_id, version: j.version });
-    await load();
+    try {
+      await signJournalEntry({ journal_id: j.id });
+      await load();
+    } catch {
+      // Swallow: fel vid signering visas inte för användaren här.
+    }
   };
 
   const remove = async (j) => {

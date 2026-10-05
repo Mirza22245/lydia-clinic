@@ -69,6 +69,11 @@
       "type": "string",
       "title": "Signerad av"
     },
+    "signature_hash": {
+      "type": "string",
+      "title": "Signaturhash",
+      "description": "SHA-256-hash av signerat inneh\u00e5ll f\u00f6r integritetsverifiering"
+    },
     "version": {
       "type": "number",
       "title": "Version",
