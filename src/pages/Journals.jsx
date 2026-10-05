@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
 
 const emptyForm = {
-  customer_id: "", customer_name: "", treatment_id: "", treatment_name: "",
+  booking_id: "", customer_id: "", customer_name: "", treatment_id: "", treatment_name: "",
   provider: "", entry_date: "", notes: "", observations: "", assessment: "",
   treatment_performed: "", aftercare: "", recommendations: "",
 };
@@ -55,6 +55,30 @@ export default function Journals() {
   }, [filter]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get("booking_id");
+    const customerId = params.get("customer_id");
+    const treatmentId = params.get("treatment_id");
+    if (bookingId || customerId) {
+      (async () => {
+        const name = await currentUserName();
+        await fetchOptions();
+        setForm({
+          ...emptyForm,
+          booking_id: bookingId || "",
+          customer_id: customerId || "",
+          treatment_id: treatmentId || "",
+          provider: name,
+          entry_date: toLocalInput(new Date().toISOString()),
+        });
+        setMode("create");
+        setEditing(null);
+        setOpen(true);
+      })();
+    }
+  }, []);
 
   const fetchOptions = async () => {
     const [c, t] = await Promise.all([
@@ -114,6 +138,7 @@ export default function Journals() {
       const treat = treatments.find((x) => x.id === form.treatment_id);
       const data = {
         clinic_id,
+        booking_id: form.booking_id || undefined,
         customer_id: form.customer_id,
         customer_name: cust?.name || form.customer_name || "",
         treatment_id: form.treatment_id || undefined,

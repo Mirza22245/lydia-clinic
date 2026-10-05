@@ -18,6 +18,10 @@
       "type": "string",
       "title": "Behandling"
     },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
     "provider": {
       "type": "string",
       "title": "Behandlare"

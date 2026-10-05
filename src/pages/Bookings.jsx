@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, Eye } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const statusLabels = {
@@ -115,8 +116,29 @@ export default function Bookings() {
         price: treat?.price ?? 0,
         notes: form.notes || undefined,
       };
-      if (editing) await base44.entities.Booking.update(editing.id, data);
-      else await base44.entities.Booking.create(data);
+      if (editing) {
+        await base44.entities.Booking.update(editing.id, data);
+        if (form.status === "completed" && editing.status !== "completed") {
+          const existing = await base44.entities.JournalEntry.filter({ booking_id: editing.id }, { limit: 1 });
+          if (!existing.items || existing.items.length === 0) {
+            await base44.entities.JournalEntry.create({
+              clinic_id,
+              booking_id: editing.id,
+              customer_id: data.customer_id,
+              customer_name: data.customer_name,
+              treatment_id: data.treatment_id,
+              treatment_name: data.treatment_name,
+              provider: data.staff_name || undefined,
+              entry_date: new Date().toISOString(),
+              notes: "",
+              version: 1,
+              is_signed: false,
+            });
+          }
+        }
+      } else {
+        await base44.entities.Booking.create(data);
+      }
       setOpen(false);
       setEditing(null);
       await load();
@@ -176,6 +198,7 @@ export default function Bookings() {
                 {statusLabels[b.status] || b.status}
               </span>
               <div className="flex gap-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Öppna bokning"><Link to={`/app/bookings/${b.id}`}><Eye className="w-4 h-4" /></Link></Button>
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(b)}><Pencil className="w-4 h-4" /></Button>
                 <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
               </div>
