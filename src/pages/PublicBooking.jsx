@@ -1,0 +1,269 @@
+import React, { useEffect, useState } from "react";
+import { getPublicBookingData } from "@/functions/getPublicBookingData";
+import { getAvailableSlots } from "@/functions/getAvailableSlots";
+import { createPublicBooking } from "@/functions/createPublicBooking";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Sparkles, CalendarDays, User, Check, ArrowLeft, Loader2, CheckCircle2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const steps = [
+  { n: 1, label: "Behandling", icon: Sparkles },
+  { n: 2, label: "Behandlare", icon: User },
+  { n: 3, label: "Tid", icon: CalendarDays },
+  { n: 4, label: "Uppgifter", icon: Check },
+];
+
+const fmtTime = (iso) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+const fmtFull = (iso) => new Date(iso).toLocaleString("sv-SE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+
+export default function PublicBooking() {
+  const [init, setInit] = useState(null);
+  const [loadingInit, setLoadingInit] = useState(true);
+  const [initError, setInitError] = useState(null);
+
+  const [step, setStep] = useState(1);
+  const [treatment, setTreatment] = useState(null);
+  const [staff, setStaff] = useState(null);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slot, setSlot] = useState(null);
+
+  const [customer, setCustomer] = useState({ name: "", email: "", phone: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getPublicBookingData({});
+        setInit(res.data);
+      } catch (e) {
+        setInitError(e.message || "Kunde inte ladda");
+      } finally {
+        setLoadingInit(false);
+      }
+    })();
+  }, []);
+
+  const loadSlots = async (staffName, dateStr, t) => {
+    if (!staffName || !dateStr || !t) { setSlots([]); return; }
+    setLoadingSlots(true);
+    setSlot(null);
+    try {
+      const res = await getAvailableSlots({ clinic_id: init.clinic.id, staff_name: staffName, date: dateStr, duration: t.duration || 30 });
+      setSlots(res.data.slots || []);
+    } catch {
+      setSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const pickTreatment = (t) => { setTreatment(t); setStaff(null); setSlot(null); setStep(2); };
+  const pickStaff = (s) => { setStaff(s); setSlot(null); setStep(3); loadSlots(s.name, date, treatment); };
+  const onDateChange = (e) => {
+    const d = e.target.value;
+    setDate(d);
+    setSlot(null);
+    if (staff) loadSlots(staff.name, d, treatment);
+  };
+
+  const submit = async () => {
+    setSubmitError(null);
+    if (!customer.name || !customer.email) { setSubmitError("Namn och e-post krävs"); return; }
+    setSubmitting(true);
+    try {
+      const res = await createPublicBooking({
+        clinic_id: init.clinic.id,
+        treatment_id: treatment.id,
+        staff_name: staff.name,
+        start_time: slot,
+        customer,
+      });
+      setConfirmation(res.data.booking);
+      setStep(5);
+    } catch (e) {
+      const msg = e?.response?.data?.error || e.message || "Kunde inte boka";
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loadingInit) {
+    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (initError) {
+    return <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center"><p className="text-sm text-muted-foreground">{initError}</p></div>;
+  }
+  if (!init) return null;
+
+  if (confirmation) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card">
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.name}</p>
+          </div>
+        </header>
+        <main className="mx-auto max-w-2xl px-4 py-12 text-center">
+          <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
+          <h1 className="text-2xl font-semibold font-heading">Bokning bekräftad!</h1>
+          <p className="mt-2 text-muted-foreground">Vi ser fram emot att se dig.</p>
+          <div className="mx-auto mt-6 max-w-sm rounded-xl border border-border bg-card p-5 text-left">
+            <p className="font-medium">{confirmation.treatment_name}</p>
+            <p className="text-sm text-muted-foreground">{fmtFull(confirmation.start_time)}</p>
+            <p className="text-sm text-muted-foreground">Behandlare: {confirmation.staff_name}</p>
+            {confirmation.price != null && <p className="mt-2 text-sm">Pris: {confirmation.price.toLocaleString("sv-SE")} kr</p>}
+          </div>
+          <p className="mt-6 text-xs text-muted-foreground">
+            Vid frågor, kontakta kliniken{init.clinic.phone ? ` på ${init.clinic.phone}` : ""}.
+          </p>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto max-w-2xl px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.name}</p>
+          <h1 className="text-xl font-semibold font-heading">Boka tid</h1>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-2xl px-4 pt-6">
+        <div className="flex items-center gap-2">
+          {steps.map((s, i) => {
+            const Icon = s.icon;
+            const active = step === s.n;
+            const done = step > s.n;
+            return (
+              <React.Fragment key={s.n}>
+                <button
+                  type="button"
+                  disabled={s.n >= step}
+                  onClick={() => s.n < step && setStep(s.n)}
+                  className={cn("flex items-center gap-2", s.n < step ? "cursor-pointer" : "cursor-default")}
+                >
+                  <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium", active ? "border-primary bg-primary text-primary-foreground" : done ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-muted-foreground")}>
+                    {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  </span>
+                  <span className={cn("hidden text-sm sm:block", active ? "font-medium" : "text-muted-foreground")}>{s.label}</span>
+                </button>
+                {i < steps.length - 1 && <div className={cn("h-px flex-1", step > s.n ? "bg-emerald-500" : "bg-border")} />}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      <main className="mx-auto max-w-2xl px-4 py-6">
+        {step === 1 && (
+          <div>
+            <h2 className="mb-1 text-lg font-semibold">Välj behandling</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Välj den behandling du vill boka.</p>
+            {init.treatments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Inga behandlingar tillgängliga just nu.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {init.treatments.map((t) => (
+                  <button key={t.id} type="button" onClick={() => pickTreatment(t)} className={cn("rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary", treatment?.id === t.id && "border-primary ring-1 ring-primary")}>
+                    <p className="font-medium">{t.name}</p>
+                    {t.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{t.description}</p>}
+                    <p className="mt-2 text-sm text-muted-foreground">{t.duration || 30} min{t.price != null ? ` · ${t.price.toLocaleString("sv-SE")} kr` : ""}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <h2 className="mb-1 text-lg font-semibold">Välj behandlare</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Vem vill du bli behandlad av?</p>
+            {init.staff.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Inga behandlare tillgängliga.</p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {init.staff.map((s) => (
+                  <button key={s.id} type="button" onClick={() => pickStaff(s)} className={cn("flex items-center gap-3 rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary", staff?.id === s.id && "border-primary ring-1 ring-primary")}>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"><User className="w-5 h-5" /></span>
+                    <div>
+                      <p className="font-medium">{s.name}</p>
+                      {s.title && <p className="text-sm text-muted-foreground">{s.title}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <Button variant="ghost" size="sm" className="mt-4" onClick={() => setStep(1)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <h2 className="mb-1 text-lg font-semibold">Välj dag och tid</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Öppet 09:00–17:00.</p>
+            <div className="mb-4">
+              <Label htmlFor="date" className="mb-1.5 block">Datum</Label>
+              <Input id="date" type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={onDateChange} className="max-w-[200px]" />
+            </div>
+            {loadingSlots ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Hämtar tillgängliga tider...</div>
+            ) : slots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Inga lediga tider denna dag. Prova ett annat datum.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {slots.map((s) => (
+                  <button key={s} type="button" onClick={() => { setSlot(s); setStep(4); }} className="rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:border-primary hover:bg-accent">{fmtTime(s)}</button>
+                ))}
+              </div>
+            )}
+            <Button variant="ghost" size="sm" className="mt-4" onClick={() => setStep(2)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="max-w-md">
+            <h2 className="mb-1 text-lg font-semibold">Dina uppgifter</h2>
+            <p className="mb-4 text-sm text-muted-foreground">Bekräfta din bokning.</p>
+            <div className="mb-4 rounded-xl border border-border bg-card p-4 text-sm">
+              <p className="font-medium">{treatment.name}</p>
+              <p className="text-muted-foreground">{fmtFull(slot)}</p>
+              <p className="text-muted-foreground">Behandlare: {staff.name}</p>
+              {treatment.price != null && <p className="mt-1">Pris: {treatment.price.toLocaleString("sv-SE")} kr</p>}
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="name" className="mb-1.5 block">Namn *</Label>
+                <Input id="name" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="email" className="mb-1.5 block">E-post *</Label>
+                <Input id="email" type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="phone" className="mb-1.5 block">Telefon</Label>
+                <Input id="phone" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
+              </div>
+            </div>
+            {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
+            <Button className="mt-4 w-full" disabled={submitting} onClick={submit}>
+              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Bekräftar...</> : "Bekräfta bokning"}
+            </Button>
+            <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStep(3)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

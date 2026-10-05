@@ -12,6 +12,7 @@ import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import Landing from '@/pages/Landing';
+import PublicBooking from '@/pages/PublicBooking';
 import Dashboard from '@/pages/Dashboard';
 import Customers from '@/pages/Customers';
 import Treatments from '@/pages/Treatments';
@@ -48,6 +49,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/book" element={<PublicBooking />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

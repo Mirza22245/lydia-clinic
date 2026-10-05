@@ -56,6 +56,7 @@ export default function Landing() {
             <a href="#faq" className="hover:text-foreground">FAQ</a>
           </nav>
           <div className="ml-auto flex gap-2">
+            <Button variant="ghost" size="sm" asChild><Link to="/book">Boka tid</Link></Button>
             <Button variant="ghost" size="sm" asChild><Link to="/login">Logga in</Link></Button>
             <Button size="sm" asChild><Link to="/register">Starta gratis</Link></Button>
           </div>
@@ -74,8 +75,8 @@ export default function Landing() {
             Bokning, journal, kundkort, kassa, betalning, lager och rapporter – byggt för estetiska och hudkliniker.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button size="lg" asChild><Link to="/register">Starta gratis</Link></Button>
-            <Button size="lg" variant="outline" asChild><Link to="/login">Boka demo</Link></Button>
+            <Button size="lg" asChild><Link to="/book">Boka tid nu</Link></Button>
+            <Button size="lg" variant="outline" asChild><Link to="/register">Starta gratis</Link></Button>
           </div>
         </div>
       </section>
