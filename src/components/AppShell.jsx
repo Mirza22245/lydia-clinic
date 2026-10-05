@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare } from "lucide-react";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,11 @@ const nav = [
   { to: "/app/staff", label: "Personal", icon: UserCog, perm: "staff" },
   { to: "/app/schedule", label: "Schema & Resurser", icon: CalendarClock, perm: "schedule" },
   { to: "/app/management", label: "Ledningssystem", icon: ClipboardCheck, perm: "management" },
+  { to: "/app/products", label: "Produkter & Lager", icon: Package, perm: "products", feature: "inventory" },
+  { to: "/app/gift-cards", label: "Presentkort", icon: Gift, perm: "gift_cards", feature: "gift_cards" },
+  { to: "/app/marketing", label: "Marknadsföring", icon: Megaphone, perm: "marketing", feature: "marketing" },
+  { to: "/app/reviews", label: "Recensioner", icon: Star, perm: "reviews", feature: "reviews" },
+  { to: "/app/messages", label: "Meddelanden", icon: MessageSquare, perm: "messages", feature: "messages" },
   { to: "/app/audit", label: "Audit-logg", icon: ShieldCheck, perm: "audit" },
   { to: "/app/settings", label: "Inställningar", icon: Settings, perm: "settings" },
 ];
@@ -27,12 +33,17 @@ const nav = [
 export default function AppShell() {
   const location = useLocation();
   const { permissions } = useStaffPermissions();
+  const { isDisabled: isFlagDisabled } = useFeatureFlags();
 
   const handleLogout = async () => {
     await base44.auth.logout("/");
   };
 
-  const visibleNav = permissions ? nav.filter((item) => permissions[item.perm] !== false) : nav;
+  const visibleNav = nav.filter((item) => {
+    if (permissions && permissions[item.perm] === false) return false;
+    if (item.feature && isFlagDisabled(item.feature)) return false;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-background">

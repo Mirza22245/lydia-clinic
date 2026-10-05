@@ -1,0 +1,162 @@
+{
+  "name": "GiftCard",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "title": "Kod",
+      "description": "Unik presentkortskod"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "giftcard",
+        "klippkort",
+        "paket",
+        "medlemskap"
+      ],
+      "default": "giftcard",
+      "title": "Typ"
+    },
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "initial_balance": {
+      "type": "number",
+      "default": 0,
+      "title": "Ursprungligt saldo (kr)"
+    },
+    "balance": {
+      "type": "number",
+      "default": 0,
+      "title": "Saldo (kr)"
+    },
+    "initial_clips": {
+      "type": "number",
+      "default": 0,
+      "title": "Ursprungliga klipp",
+      "description": "Antal klipp f\u00f6r klippkort"
+    },
+    "remaining_clips": {
+      "type": "number",
+      "default": 0,
+      "title": "\u00c5terst\u00e5ende klipp"
+    },
+    "treatment_ids": {
+      "type": "string",
+      "title": "Behandlingar (JSON)",
+      "description": "JSON-array med Treatment-ID:n som ing\u00e5r i paket/klippkort"
+    },
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date",
+      "title": "G\u00e4ller fr\u00e5n"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "title": "G\u00e4ller till"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "used",
+        "expired",
+        "cancelled"
+      ],
+      "default": "active",
+      "title": "Status"
+    },
+    "purchased_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "K\u00f6pt"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "code",
+    "type"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

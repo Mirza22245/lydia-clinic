@@ -27,6 +27,11 @@ import Staff from '@/pages/Staff';
 import Schedule from '@/pages/Schedule';
 import AuditLog from '@/pages/AuditLog';
 import ManagementSystem from '@/pages/ManagementSystem';
+import Products from '@/pages/Products';
+import GiftCards from '@/pages/GiftCards';
+import Marketing from '@/pages/Marketing';
+import Reviews from '@/pages/Reviews';
+import Messages from '@/pages/Messages';
 import Settings from '@/pages/Settings';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
@@ -80,6 +85,11 @@ const AuthenticatedApp = () => {
           <Route path="/app/schedule" element={<Schedule />} />
           <Route path="/app/audit" element={<AuditLog />} />
           <Route path="/app/management" element={<ManagementSystem />} />
+          <Route path="/app/products" element={<Products />} />
+          <Route path="/app/gift-cards" element={<GiftCards />} />
+          <Route path="/app/marketing" element={<Marketing />} />
+          <Route path="/app/reviews" element={<Reviews />} />
+          <Route path="/app/messages" element={<Messages />} />
           <Route path="/app/settings" element={<Settings />} />
         </Route>
       </Route>

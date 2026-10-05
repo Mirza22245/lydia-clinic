@@ -1,0 +1,135 @@
+{
+  "name": "InventoryTransaction",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "title": "Produkt-ID"
+    },
+    "product_name": {
+      "type": "string",
+      "title": "Produkt"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "purchase",
+        "consumption",
+        "adjustment",
+        "waste"
+      ],
+      "default": "consumption",
+      "title": "Typ",
+      "description": "purchase = ink\u00f6p, consumption = f\u00f6rbrukning, adjustment = justering, waste = kassation"
+    },
+    "quantity": {
+      "type": "number",
+      "title": "Antal",
+      "description": "Positivt f\u00f6r ink\u00f6p, negativt f\u00f6r f\u00f6rbrukning"
+    },
+    "batch_lot": {
+      "type": "string",
+      "title": "Batch/lot"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Utg\u00e5ngsdatum"
+    },
+    "supplier": {
+      "type": "string",
+      "title": "Leverant\u00f6r"
+    },
+    "related_booking_id": {
+      "type": "string",
+      "title": "Boknings-ID",
+      "description": "Vilken bokning produkten f\u00f6rbrukades vid"
+    },
+    "note": {
+      "type": "string",
+      "title": "Anteckning"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "product_id",
+    "type",
+    "quantity"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "name": "TreatmentPlan",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "recommended_interval_days": {
+      "type": "number",
+      "default": 90,
+      "title": "Rekommenderat intervall (dagar)",
+      "description": "t.ex. 90 f\u00f6r 3 m\u00e5nader, 120 f\u00f6r 4 m\u00e5nader"
+    },
+    "next_recommended_date": {
+      "type": "string",
+      "format": "date",
+      "title": "N\u00e4sta rekommenderade bes\u00f6k"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active",
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "created_by": {
+      "type": "string",
+      "title": "Skapad av"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "treatment_name"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "name": "Review",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "rating": {
+      "type": "number",
+      "default": 5,
+      "title": "Betyg",
+      "description": "1-5"
+    },
+    "text": {
+      "type": "string",
+      "title": "Recensionstext"
+    },
+    "would_recommend": {
+      "type": "boolean",
+      "default": true,
+      "title": "Skulle rekommendera"
+    },
+    "published": {
+      "type": "boolean",
+      "default": false,
+      "title": "Publicerad",
+      "description": "Endast publicerade recensioner visas publikt"
+    },
+    "staff_response": {
+      "type": "string",
+      "title": "Personalens svar"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "rating"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

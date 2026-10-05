@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, Building2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getClinicId } from "@/lib/currentUser";
+import FeatureFlagsPanel from "@/components/FeatureFlagsPanel";
 
 const empty = { name: "", org_number: "", email: "", phone: "", address: "", industry: "" };
 
@@ -121,6 +122,10 @@ export default function Settings() {
           </Button>
         </div>
       </form>
+
+      <div className="max-w-2xl">
+        <FeatureFlagsPanel />
+      </div>
     </div>
   );
 }

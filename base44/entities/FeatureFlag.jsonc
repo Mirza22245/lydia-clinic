@@ -1,0 +1,138 @@
+{
+  "name": "FeatureFlag",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "title": "Nyckel",
+      "description": "Unik modulnyckel, t.ex. 'sms', 'bankid', 'gift_cards'"
+    },
+    "label": {
+      "type": "string",
+      "title": "Etikett"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "core",
+        "clinical",
+        "communication",
+        "commerce",
+        "marketing",
+        "integration",
+        "saas"
+      ],
+      "default": "core",
+      "title": "Modulgrupp"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "test",
+        "enabled"
+      ],
+      "default": "disabled",
+      "title": "Status",
+      "description": "disabled = avst\u00e4ngd, test = testl\u00e4ge, enabled = aktiv"
+    },
+    "requires_external": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4ver extern integration",
+      "description": "True om modulen kr\u00e4ver en extern tj\u00e4nst (BankID, SMS, Fortnox osv.)"
+    },
+    "required_secrets": {
+      "type": "string",
+      "title": "Kr\u00e4vda secrets (JSON)",
+      "description": "JSON-array med namn p\u00e5 secrets som kr\u00e4vs f\u00f6r att aktivera"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "activation_instructions": {
+      "type": "string",
+      "title": "Aktiveringsinstruktioner",
+      "description": "Hur man aktiverar modulen senare"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "key",
+    "label",
+    "module",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

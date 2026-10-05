@@ -1,0 +1,125 @@
+{
+  "name": "DiscountCode",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "title": "Kod",
+      "description": "Rabattkod som kunden anger vid bokning"
+    },
+    "campaign_id": {
+      "type": "string",
+      "title": "Kampanj-ID"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "percent",
+        "amount"
+      ],
+      "default": "percent",
+      "title": "Rabattyp"
+    },
+    "discount_value": {
+      "type": "number",
+      "default": 0,
+      "title": "Rabattv\u00e4rde"
+    },
+    "max_uses": {
+      "type": "number",
+      "default": 0,
+      "title": "Max anv\u00e4ndningar",
+      "description": "0 = obegr\u00e4nsat"
+    },
+    "used_count": {
+      "type": "number",
+      "default": 0,
+      "title": "Anv\u00e4nda"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "title": "G\u00e4ller till"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "title": "Aktiv"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "code"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

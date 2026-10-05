@@ -1,0 +1,140 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "sku": {
+      "type": "string",
+      "title": "SKU/Artikelnr"
+    },
+    "category": {
+      "type": "string",
+      "title": "Kategori",
+      "description": "t.ex. Toxin, Filler, Consumable"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "st",
+        "ml",
+        "mg",
+        "ie",
+        "pack"
+      ],
+      "default": "st",
+      "title": "Enhet"
+    },
+    "stock_quantity": {
+      "type": "number",
+      "default": 0,
+      "title": "Lagersaldo"
+    },
+    "min_stock": {
+      "type": "number",
+      "default": 0,
+      "title": "Minsta lager",
+      "description": "Lagervarning n\u00e4r saldot g\u00e5r under detta"
+    },
+    "supplier": {
+      "type": "string",
+      "title": "Leverant\u00f6r"
+    },
+    "cost_price": {
+      "type": "number",
+      "default": 0,
+      "title": "Ink\u00f6pspris (kr)"
+    },
+    "sell_price": {
+      "type": "number",
+      "default": 0,
+      "title": "F\u00f6rs\u00e4ljningspris (kr)"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "title": "Aktiv"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

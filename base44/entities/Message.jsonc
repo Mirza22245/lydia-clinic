@@ -1,0 +1,95 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "default": "inbound",
+      "title": "Riktning",
+      "description": "inbound = fr\u00e5n kund, outbound = fr\u00e5n personal"
+    },
+    "subject": {
+      "type": "string",
+      "title": "\u00c4mne"
+    },
+    "body": {
+      "type": "string",
+      "title": "Meddelande"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "title": "L\u00e4st"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Skickat"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "L\u00e4st datum"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "Personal"
+    },
+    "related_booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "body",
+    "direction"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
