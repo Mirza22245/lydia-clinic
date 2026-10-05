@@ -4,6 +4,9 @@ import { base44 } from "@/api/base44Client";
 import { Users, CalendarDays, CheckCircle2, TrendingUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookingsCalendar from "@/components/BookingsCalendar";
+import TodayBookings from "@/components/dashboard/TodayBookings";
+import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings";
+import TodoSummary from "@/components/dashboard/TodoSummary";
 import { cn } from "@/lib/utils";
 
 const statusLabels = {
@@ -17,22 +20,19 @@ const statusColors = {
   checked_in: "bg-cyan-100 text-cyan-700", draft: "bg-slate-100 text-slate-600",
 };
 const fmtSEK = (n) => new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n || 0);
-const fmtDate = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ customers: 0, bookings: 0, completed: 0, revenue: 0 });
-  const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [custCount, bookCount, doneCount, revAgg, recentPage] = await Promise.all([
+        const [custCount, bookCount, doneCount, revAgg] = await Promise.all([
           base44.entities.Customer.count(),
           base44.entities.Booking.count(),
           base44.entities.Booking.count({ status: "completed" }),
           base44.entities.Booking.aggregate({ query: { status: "completed" }, sum: "price" }),
-          base44.entities.Booking.filter({}, { sort: "-start_time", limit: 5 }),
         ]);
         setStats({
           customers: custCount,
@@ -40,7 +40,6 @@ export default function Dashboard() {
           completed: doneCount,
           revenue: revAgg.rows[0]?.sum_price || 0,
         });
-        setRecent(recentPage.items || []);
       } catch {
         // ignore
       } finally {
@@ -84,35 +83,13 @@ export default function Dashboard() {
         })}
       </div>
 
-      <BookingsCalendar />
-
-      <div className="rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="font-medium">Senaste bokningarna</h2>
-          <Link to="/app/bookings" className="text-sm text-muted-foreground hover:text-foreground">Visa alla</Link>
-        </div>
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
-          </div>
-        ) : recent.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-muted-foreground">Inga bokningar än.</div>
-        ) : (
-          <div className="divide-y divide-border">
-            {recent.map((b) => (
-              <div key={b.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{b.customer_name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{b.treatment_name} · {fmtDate(b.start_time)}</p>
-                </div>
-                <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", statusColors[b.status] || "bg-slate-100 text-slate-600")}>
-                  {statusLabels[b.status] || b.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <TodayBookings className="lg:col-span-1" />
+        <UpcomingMeetings />
+        <TodoSummary />
       </div>
+
+      <BookingsCalendar />
     </div>
   );
 }
