@@ -73,6 +73,32 @@ export default async function(req) {
       price: treatment.price,
     });
 
+    // Bekräftelse via e-post — får inte blockera bokningen om det misslyckas.
+    try {
+      const proto = req.headers.get('x-forwarded-proto') || 'https';
+      const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
+      const baseUrl = host ? `${proto}://${host}` : '';
+      const portalUrl = baseUrl ? `${baseUrl}/portal` : '';
+      const clinic = await svc.entities.Clinic.get(clinic_id).catch(() => null);
+      const clinicName = clinic?.name || 'Klinik';
+      const fmtTime = (d) => new Date(d).toLocaleString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      await svc.integrations.Core.SendEmail({
+        to: customer.email,
+        template_name: 'BookingConfirmation',
+        variables: {
+          customer_name: cust.name,
+          treatment_name: treatment.name,
+          staff_name,
+          start_time: fmtTime(start),
+          price: String(treatment.price || ''),
+          portal_url: portalUrl,
+          clinic_name: clinicName,
+        },
+      });
+    } catch {
+      // Swallow: e-post får inte blockera bokningen.
+    }
+
     return Response.json({
       booking: {
         id: booking.id,
