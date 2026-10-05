@@ -11,6 +11,7 @@ export const PERMISSION_AREAS = [
   { key: "health", label: "Hälsodeklarationer" },
   { key: "staff", label: "Personal" },
   { key: "payments", label: "Kassa" },
+  { key: "audit", label: "Audit-logg" },
   { key: "settings", label: "Inställningar" },
 ];
 
@@ -26,6 +27,7 @@ export const ROLE_PERMISSIONS = {
     health: true,
     staff: true,
     payments: true,
+    audit: true,
     settings: true,
   },
   behandlare: {
@@ -38,6 +40,7 @@ export const ROLE_PERMISSIONS = {
     health: true,
     staff: false,
     payments: false,
+    audit: false,
     settings: false,
   },
 };

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Plus, Loader2, Pencil, Trash2, Lock, PenLine, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
+import { logAudit } from "@/lib/audit";
 
 const emptyForm = {
   booking_id: "", customer_id: "", customer_name: "", treatment_id: "", treatment_name: "",
@@ -154,6 +155,7 @@ export default function Journals() {
       };
       if (mode === "edit" && editing) {
         await base44.entities.JournalEntry.update(editing.id, data);
+        await logAudit("journal_update", "JournalEntry", editing.id, `Journal för ${data.customer_name} uppdaterad`, { customer_id: data.customer_id });
       } else {
         if (mode === "amend") {
           data.parent_id = form.parent_id;
@@ -161,7 +163,8 @@ export default function Journals() {
         } else {
           data.version = 1;
         }
-        await base44.entities.JournalEntry.create(data);
+        const created = await base44.entities.JournalEntry.create(data);
+        await logAudit(mode === "amend" ? "journal_amend" : "journal_create", "JournalEntry", created.id, `${mode === "amend" ? `Ny version (v${data.version}) för` : "Journal skapad för"} ${data.customer_name}`, { customer_id: data.customer_id, parent_id: data.parent_id });
       }
       setOpen(false);
       setEditing(null);
@@ -178,12 +181,14 @@ export default function Journals() {
       signed_at: new Date().toISOString(),
       signed_by: name || "Okänd",
     });
+    await logAudit("journal_sign", "JournalEntry", j.id, `Journal för ${j.customer_name} signerad av ${name || "Okänd"}`, { customer_id: j.customer_id, version: j.version });
     await load();
   };
 
   const remove = async (j) => {
     if (confirm("Ta bort journalanteckningen?")) {
       await base44.entities.JournalEntry.delete(j.id);
+      await logAudit("journal_delete", "JournalEntry", j.id, `Journal för ${j.customer_name} borttagen`, { customer_id: j.customer_id });
       await load();
     }
   };

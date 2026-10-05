@@ -9,6 +9,7 @@ import { Receipt, Loader2, CreditCard, Banknote, Smartphone, FileText } from "lu
 import { cn } from "@/lib/utils";
 import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
 import { useToast } from "@/components/ui/use-toast";
+import { logAudit } from "@/lib/audit";
 
 const methodLabels = { card: "Kort", swish: "Swish", cash: "Kontant", invoice: "Faktura" };
 const methodIcons = { card: CreditCard, swish: Smartphone, cash: Banknote, invoice: FileText };
@@ -80,6 +81,7 @@ export default function POS() {
         receipt_number: `R-${year}-${seq}`,
         clinic_id: active.clinic_id,
       });
+      await logAudit("payment_create", "Payment", created.id, `Betalning ${amt} kr registrerad för ${active.customer_name}`, { booking_id: active.id, method, receipt_number: created.receipt_number });
       try {
         const res = await sendReceiptEmail({ payment_id: created.id });
         if (res?.data?.sent) {

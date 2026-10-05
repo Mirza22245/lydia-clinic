@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { recordAudit } from '../../shared/audit.ts';
 
 // Låter en inloggad patient digitalt signera (bevilja) ett samtycke som kliniken
 // har lagt upp för dem. Accesskontroll: matchar anroparens e-post mot en Customer
@@ -34,6 +35,14 @@ export default async function(req) {
       granted: true,
       granted_at: new Date().toISOString(),
       granted_by: customer.name,
+    });
+
+    await recordAudit(base44, {
+      event_type: 'consent_sign',
+      entity_type: 'Consent',
+      entity_id: consentId,
+      description: `Samtycke (${consent.type || 'okänd'}) signerat av patient ${customer.name}`,
+      metadata: { customer_id: customer.id, consent_type: consent.type },
     });
 
     return Response.json({ consent: updated });

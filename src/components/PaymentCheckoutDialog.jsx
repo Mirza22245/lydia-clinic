@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
 import { useToast } from "@/components/ui/use-toast";
+import { logAudit } from "@/lib/audit";
 
 const methodLabels = { card: "Kort", swish: "Swish", cash: "Kontant", invoice: "Faktura" };
 
@@ -46,6 +47,7 @@ export default function PaymentCheckoutDialog({ booking, open, onClose, onPaid }
         receipt_number: `R-${year}-${seq}`,
         clinic_id: booking.clinic_id,
       });
+      await logAudit("payment_create", "Payment", created.id, `Betalning ${amt} kr registrerad för ${booking.customer_name}`, { booking_id: booking.id, method, receipt_number: created.receipt_number });
       try {
         const res = await sendReceiptEmail({ payment_id: created.id });
         if (res?.data?.sent) {

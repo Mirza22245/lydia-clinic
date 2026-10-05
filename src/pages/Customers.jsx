@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Plus, Search, Loader2, Pencil, Trash2, Phone, Mail, Eye } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { Link } from "react-router-dom";
+import { logAudit } from "@/lib/audit";
 
 const empty = { name: "", email: "", phone: "", address: "", birth_date: "", status: "active", tags: "", notes: "" };
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
@@ -55,8 +56,13 @@ export default function Customers() {
         tags: form.tags || undefined,
         notes: form.notes || undefined,
       };
-      if (editing) await base44.entities.Customer.update(editing.id, data);
-      else await base44.entities.Customer.create(data);
+      if (editing) {
+        await base44.entities.Customer.update(editing.id, data);
+        await logAudit("customer_update", "Customer", editing.id, `Kund "${data.name}" uppdaterad`, {});
+      } else {
+        const created = await base44.entities.Customer.create(data);
+        await logAudit("customer_create", "Customer", created.id, `Kund "${data.name}" skapad`, {});
+      }
       setOpen(false);
       setEditing(null);
       await load();
@@ -68,6 +74,7 @@ export default function Customers() {
   const remove = async (c) => {
     if (confirm(`Ta bort kunden "${c.name}"?`)) {
       await base44.entities.Customer.delete(c.id);
+      await logAudit("customer_delete", "Customer", c.id, `Kund "${c.name}" borttagen`, {});
       await load();
     }
   };

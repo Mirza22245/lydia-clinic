@@ -1,0 +1,54 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "title": "H\u00e4ndelsetyp",
+      "description": "Vad som gjordes, t.ex. journal_sign, journal_create, consent_sign"
+    },
+    "entity_type": {
+      "type": "string",
+      "title": "Entitetstyp",
+      "description": "Vilken entitet h\u00e4ndelsen ber\u00f6r, t.ex. JournalEntry, Consent, Booking"
+    },
+    "entity_id": {
+      "type": "string",
+      "title": "Entitets-ID"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning",
+      "description": "L\u00e4slig sammanfattning av h\u00e4ndelsen"
+    },
+    "user_id": {
+      "type": "string",
+      "title": "Anv\u00e4ndar-ID"
+    },
+    "user_name": {
+      "type": "string",
+      "title": "Anv\u00e4ndare"
+    },
+    "metadata": {
+      "type": "string",
+      "title": "Metadata (JSON)",
+      "description": "Ytterligare kontext som JSON-str\u00e4ng"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "event_type",
+    "entity_type"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}

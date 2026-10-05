@@ -10,6 +10,7 @@ import { getClinicId } from "@/lib/currentUser";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
+import { logAudit } from "@/lib/audit";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -120,6 +121,7 @@ export default function Bookings() {
       };
       if (editing) {
         await base44.entities.Booking.update(editing.id, data);
+        await logAudit("booking_update", "Booking", editing.id, `Bokning för ${data.customer_name} uppdaterad`, { status: data.status });
         if (form.status === "completed" && editing.status !== "completed") {
           const existing = await base44.entities.JournalEntry.filter({ booking_id: editing.id }, { limit: 1 });
           if (!existing.items || existing.items.length === 0) {
@@ -137,6 +139,7 @@ export default function Bookings() {
               is_signed: false,
             });
           }
+          await logAudit("booking_status", "Booking", editing.id, `Bokning för ${data.customer_name} markerad som klar`, { from: editing.status, to: "completed" });
           setCheckout({
             id: editing.id,
             customer_id: data.customer_id,
@@ -147,7 +150,8 @@ export default function Bookings() {
           });
         }
       } else {
-        await base44.entities.Booking.create(data);
+        const created = await base44.entities.Booking.create(data);
+        await logAudit("booking_create", "Booking", created.id, `Bokning skapad för ${data.customer_name}`, { treatment: data.treatment_name });
       }
       setOpen(false);
       setEditing(null);
@@ -160,6 +164,7 @@ export default function Bookings() {
   const remove = async (b) => {
     if (confirm("Ta bort bokningen?")) {
       await base44.entities.Booking.delete(b.id);
+      await logAudit("booking_delete", "Booking", b.id, `Bokning för ${b.customer_name} borttagen`, { treatment: b.treatment_name });
       await load();
     }
   };
