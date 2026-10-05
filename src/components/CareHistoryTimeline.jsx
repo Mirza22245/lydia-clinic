@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { FileText, CalendarDays, Lock, PenLine, Stethoscope, ChevronDown, Activity } from "lucide-react";
+import { FileText, CalendarDays, Lock, PenLine, Stethoscope, ChevronDown, Activity, ShieldCheck } from "lucide-react";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }) : "");
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
@@ -12,10 +12,20 @@ const bookingStatus = {
   no_show: { label: "Utebliven", cls: "bg-rose-100 text-rose-700" },
 };
 
+const CONSENT_LABELS = {
+  treatment: "Behandling",
+  journal: "Journalföring",
+  photography: "Fotografering",
+  image_use: "Användning av bilder",
+  communication: "Kommunikation",
+  marketing: "Marknadsföring",
+};
+
 const FILTERS = [
   { key: "all", label: "Allt" },
   { key: "treatment", label: "Behandlingar" },
   { key: "journal", label: "Journalanteckningar" },
+  { key: "consent", label: "Samtycken" },
 ];
 
 // En enskild journalpost med utfällbara detaljer.
@@ -113,8 +123,32 @@ function TreatmentCard({ b }) {
   );
 }
 
-// Samlad vy över kundens vårdhistorik: journalanteckningar och genomförda behandlingar.
-export default function CareHistoryTimeline({ bookings = [], journals = [] }) {
+// Ett signerat samtycke i tidslinjen.
+function ConsentCard({ c }) {
+  const label = CONSENT_LABELS[c.type] || c.type;
+  return (
+    <div className="flex gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+        <ShieldCheck className="w-4 h-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-medium">Samtycke: {label}</p>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            <Lock className="w-3 h-3" />Signerat
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {fmtDateTime(c.granted_at)}{c.granted_by ? ` · ${c.granted_by}` : ""}
+        </p>
+        {c.text && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{c.text}</p>}
+      </div>
+    </div>
+  );
+}
+
+// Samlad vy över kundens vårdhistorik: journalanteckningar, genomförda behandlingar och signerade samtyckesformulär.
+export default function CareHistoryTimeline({ bookings = [], journals = [], consents = [] }) {
   const [filter, setFilter] = useState("all");
 
   // Genomförda och pågående behandlingar räknas som vårdhistorik.
@@ -123,16 +157,25 @@ export default function CareHistoryTimeline({ bookings = [], journals = [] }) {
     [bookings]
   );
 
+  // Endast signerade (lämnade) samtyckesformulär visas i tidslinjen.
+  const signedConsents = useMemo(
+    () => consents.filter((c) => c.granted && c.granted_at),
+    [consents]
+  );
+
   const events = useMemo(() => {
     const items = [];
-    if (filter !== "journal") {
+    if (filter === "all" || filter === "treatment") {
       treatments.forEach((b) => items.push({ kind: "treatment", date: b.start_time, item: b }));
     }
-    if (filter !== "treatment") {
+    if (filter === "all" || filter === "journal") {
       journals.forEach((j) => items.push({ kind: "journal", date: j.entry_date, item: j }));
     }
+    if (filter === "all" || filter === "consent") {
+      signedConsents.forEach((c) => items.push({ kind: "consent", date: c.granted_at, item: c }));
+    }
     return items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  }, [filter, treatments, journals]);
+  }, [filter, treatments, journals, signedConsents]);
 
   // Gruppera per månad för överblick.
   const grouped = useMemo(() => {
@@ -147,9 +190,10 @@ export default function CareHistoryTimeline({ bookings = [], journals = [] }) {
   }, [events]);
 
   const counts = {
-    all: treatments.length + journals.length,
+    all: treatments.length + journals.length + signedConsents.length,
     treatment: treatments.length,
     journal: journals.length,
+    consent: signedConsents.length,
   };
 
   return (
@@ -188,6 +232,8 @@ export default function CareHistoryTimeline({ bookings = [], journals = [] }) {
                 {group.items.map((e) =>
                   e.kind === "journal" ? (
                     <JournalCard key={`j-${e.item.id}`} j={e.item} />
+                  ) : e.kind === "consent" ? (
+                    <ConsentCard key={`c-${e.item.id}`} c={e.item} />
                   ) : (
                     <TreatmentCard key={`t-${e.item.id}`} b={e.item} />
                   )

@@ -18,6 +18,7 @@ export default function CustomerDetail() {
   const [customer, setCustomer] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [journals, setJournals] = useState([]);
+  const [consents, setConsents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -25,15 +26,17 @@ export default function CustomerDetail() {
     (async () => {
       setLoading(true);
       try {
-        const [c, b, j] = await Promise.all([
+        const [c, b, j, s] = await Promise.all([
           base44.entities.Customer.get(id).catch(() => null),
           base44.entities.Booking.filter({ customer_id: id }, { sort: "-start_time", limit: 100 }),
           base44.entities.JournalEntry.filter({ customer_id: id }, { sort: "-entry_date", limit: 100 }),
+          base44.entities.Consent.filter({ customer_id: id }, { sort: "-granted_at", limit: 200 }),
         ]);
         if (!c) { setNotFound(true); return; }
         setCustomer(c);
         setBookings(b.items || []);
         setJournals(j.items || []);
+        setConsents(s.items || []);
       } finally {
         setLoading(false);
       }
@@ -111,7 +114,7 @@ export default function CustomerDetail() {
       <ReceiptsPanel customerId={id} clinicName="Lydia Demo Klinik" />
 
       {/* Samlad vårdhistorik */}
-      <CareHistoryTimeline bookings={bookings} journals={journals} />
+      <CareHistoryTimeline bookings={bookings} journals={journals} consents={consents} />
     </div>
   );
 }
