@@ -9,6 +9,10 @@ import HealthDeclarationsPanel from "@/components/HealthDeclarationsPanel";
 import CareHistoryTimeline from "@/components/CareHistoryTimeline";
 import ReceiptsPanel from "@/components/ReceiptsPanel";
 import PatientFilesPanel from "@/components/PatientFilesPanel";
+import ComplicationPanel from "@/components/ComplicationPanel";
+import BeforeAfterPanel from "@/components/BeforeAfterPanel";
+import ClinicalRecordPanel from "@/components/ClinicalRecordPanel";
+import { logPatientAccess } from "@/functions/logPatientAccess";
 
 const statusLabels = { active: "Aktiv", inactive: "Inaktiv", lead: "Lead" };
 
@@ -38,6 +42,8 @@ export default function CustomerDetail() {
         setBookings(b.items || []);
         setJournals(j.items || []);
         setConsents(s.items || []);
+        // Logga patientåtkomst (P0 #7) — fire-and-forget, får inte blockera
+        logPatientAccess({ customer_id: id, customer_name: c.name, access_type: "read", entity_type: "Customer", description: `Personal öppnade kundprofil för ${c.name}` }).catch(() => {});
       } finally {
         setLoading(false);
       }
@@ -114,6 +120,21 @@ export default function CustomerDetail() {
 
       {/* Filer & bilder — krypterat material */}
       <PatientFilesPanel customerId={id} customerName={customer.name} />
+
+      {/* Strukturerad behandlingsjournal */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <ClinicalRecordPanel customerId={id} customerName={customer.name} />
+      </div>
+
+      {/* Före/efter-bilder */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <BeforeAfterPanel customerId={id} customerName={customer.name} />
+      </div>
+
+      {/* Komplikationer & avvikelser */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <ComplicationPanel customerId={id} customerName={customer.name} />
+      </div>
 
       {/* Kvitton & betalningar */}
       <ReceiptsPanel customerId={id} clinicName="Lydia Demo Klinik" />

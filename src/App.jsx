@@ -26,6 +26,7 @@ import Reports from '@/pages/Reports';
 import Staff from '@/pages/Staff';
 import Schedule from '@/pages/Schedule';
 import AuditLog from '@/pages/AuditLog';
+import ManagementSystem from '@/pages/ManagementSystem';
 import Settings from '@/pages/Settings';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
@@ -78,6 +79,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/staff" element={<Staff />} />
           <Route path="/app/schedule" element={<Schedule />} />
           <Route path="/app/audit" element={<AuditLog />} />
+          <Route path="/app/management" element={<ManagementSystem />} />
           <Route path="/app/settings" element={<Settings />} />
         </Route>
       </Route>

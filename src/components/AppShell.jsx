@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator, BarChart3, CalendarClock } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const nav = [
   { to: "/app/reports", label: "Rapporter", icon: BarChart3, perm: "reports" },
   { to: "/app/staff", label: "Personal", icon: UserCog, perm: "staff" },
   { to: "/app/schedule", label: "Schema & Resurser", icon: CalendarClock, perm: "schedule" },
+  { to: "/app/management", label: "Ledningssystem", icon: ClipboardCheck, perm: "management" },
   { to: "/app/audit", label: "Audit-logg", icon: ShieldCheck, perm: "audit" },
   { to: "/app/settings", label: "Inställningar", icon: Settings, perm: "settings" },
 ];

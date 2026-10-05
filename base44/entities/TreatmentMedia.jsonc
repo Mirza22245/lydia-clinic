@@ -1,0 +1,185 @@
+{
+  "name": "TreatmentMedia",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "clinical_record_id": {
+      "type": "string",
+      "title": "Behandlingsjournal-ID"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": [
+        "before",
+        "after",
+        "during",
+        "other"
+      ],
+      "default": "before",
+      "title": "Typ"
+    },
+    "file_uri": {
+      "type": "string",
+      "title": "Fil-URI",
+      "description": "Privat lagrings-URI fr\u00e5n UploadPrivateFile"
+    },
+    "file_name": {
+      "type": "string",
+      "title": "Filnamn"
+    },
+    "treatment_area": {
+      "type": "string",
+      "title": "Behandlingsomr\u00e5de"
+    },
+    "taken_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Fotodatum"
+    },
+    "taken_by": {
+      "type": "string",
+      "title": "Fotograf/behandlare"
+    },
+    "consent_given": {
+      "type": "boolean",
+      "default": false,
+      "title": "Fotograferingssamtycke",
+      "description": "Samtycke f\u00f6r fotografering finns"
+    },
+    "internal_only": {
+      "type": "boolean",
+      "default": true,
+      "title": "Endast intern",
+      "description": "true = f\u00e5r ej publiceras externt"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "file_uri",
+    "file_name"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

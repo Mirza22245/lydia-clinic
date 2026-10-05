@@ -1,0 +1,154 @@
+{
+  "name": "ManagementDocument",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Titel"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "rutin",
+        "sop",
+        "policy",
+        "styrdokument",
+        "riskanalys",
+        "egenkontroll",
+        "avvikelse",
+        "incident",
+        "klagomal",
+        "forbattringsatalgard"
+      ],
+      "default": "rutin",
+      "title": "Typ"
+    },
+    "category": {
+      "type": "string",
+      "title": "Kategori"
+    },
+    "content": {
+      "type": "string",
+      "title": "Inneh\u00e5ll"
+    },
+    "responsible_person": {
+      "type": "string",
+      "title": "Ansvarig"
+    },
+    "version": {
+      "type": "number",
+      "title": "Version",
+      "default": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "archived"
+      ],
+      "default": "draft",
+      "title": "Status"
+    },
+    "approved_by": {
+      "type": "string",
+      "title": "Godk\u00e4nd av"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Godk\u00e4nd datum"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date",
+      "title": "G\u00e4ller fr\u00e5n"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "title": "G\u00e4ller till"
+    },
+    "annual_review_date": {
+      "type": "string",
+      "format": "date",
+      "title": "\u00c5rlig \u00f6versyn"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "title",
+    "type"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

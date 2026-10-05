@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { getBookingRequirements } from "@/functions/getBookingRequirements";
 import { updateBookingStatus } from "@/functions/updateBookingStatus";
 import TreatmentCompliancePanel from "@/components/TreatmentCompliancePanel";
+import ClinicalRecordPanel from "@/components/ClinicalRecordPanel";
+import BeforeAfterPanel from "@/components/BeforeAfterPanel";
+import RescheduleDialog from "@/components/RescheduleDialog";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -137,7 +140,10 @@ export default function BookingDetail() {
             </div>
             {booking.notes && <p className="mt-4 rounded-lg bg-secondary/60 p-3 text-sm">{booking.notes}</p>}
           </div>
-          <Button size="sm" asChild><Link to={newJournalUrl}><Plus className="w-4 h-4 mr-1" />Ny journal för bokning</Link></Button>
+          <div className="flex gap-2">
+            <RescheduleDialog bookingId={booking.id} />
+            <Button size="sm" asChild><Link to={newJournalUrl}><Plus className="w-4 h-4 mr-1" />Ny journal</Link></Button>
+          </div>
         </div>
 
         {/* Statusåtgärder */}
@@ -235,6 +241,20 @@ export default function BookingDetail() {
           </div>
         )}
       </div>
+
+      {/* Strukturerad behandlingsjournal */}
+      {booking.customer_id && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <ClinicalRecordPanel customerId={booking.customer_id} customerName={booking.customer_name} bookingId={booking.id} treatmentId={booking.treatment_id} treatmentName={booking.treatment_name} />
+        </div>
+      )}
+
+      {/* Före/efter-bilder */}
+      {booking.customer_id && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <BeforeAfterPanel customerId={booking.customer_id} customerName={booking.customer_name} bookingId={booking.id} treatmentId={booking.treatment_id} treatmentName={booking.treatment_name} />
+        </div>
+      )}
     </div>
   );
 }

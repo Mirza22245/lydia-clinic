@@ -1,0 +1,182 @@
+{
+  "name": "CommunicationLog",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "email"
+      ],
+      "title": "Kanal"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "booking_confirmation",
+        "reminder_72h",
+        "reminder_24h",
+        "reminder_2h",
+        "cancellation",
+        "reschedule",
+        "form_reminder",
+        "consent_reminder",
+        "follow_up",
+        "payment_reminder",
+        "recall",
+        "other"
+      ],
+      "title": "Meddelandetyp"
+    },
+    "recipient": {
+      "type": "string",
+      "title": "Mottagare",
+      "description": "Telefonnummer eller e-postadress"
+    },
+    "content": {
+      "type": "string",
+      "title": "Inneh\u00e5ll"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "sent",
+        "failed",
+        "delivered"
+      ],
+      "default": "pending",
+      "title": "Status"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Skickat"
+    },
+    "provider": {
+      "type": "string",
+      "title": "Leverant\u00f6r"
+    },
+    "provider_message_id": {
+      "type": "string",
+      "title": "Leverant\u00f6rs-ID"
+    },
+    "related_booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "channel",
+    "message_type",
+    "recipient"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "reception"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "reception"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

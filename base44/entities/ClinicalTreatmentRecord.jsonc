@@ -1,0 +1,258 @@
+{
+  "name": "ClinicalTreatmentRecord",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "provider": {
+      "type": "string",
+      "title": "Behandlare"
+    },
+    "record_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Datum"
+    },
+    "treatment_area": {
+      "type": "string",
+      "title": "Behandlingsomr\u00e5de",
+      "description": "Anatomiskt omr\u00e5de som behandlats"
+    },
+    "product": {
+      "type": "string",
+      "title": "Produkt",
+      "description": "t.ex. Botox, Restylane, Juvederm"
+    },
+    "substance": {
+      "type": "string",
+      "title": "Substans",
+      "description": "Aktiv substans, t.ex. botulinumtoxin, hyaluronsyra"
+    },
+    "manufacturer": {
+      "type": "string",
+      "title": "Tillverkare"
+    },
+    "batch_lot": {
+      "type": "string",
+      "title": "Batch/lotnummer"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Utg\u00e5ngsdatum"
+    },
+    "dose": {
+      "type": "string",
+      "title": "Dos"
+    },
+    "units": {
+      "type": "string",
+      "title": "Enheter",
+      "description": "t.ex. IE, ml, enheter"
+    },
+    "injection_sites": {
+      "type": "string",
+      "title": "Injektionsst\u00e4llen",
+      "description": "Beskrivning av injektionspunkter"
+    },
+    "technique": {
+      "type": "string",
+      "title": "Teknik"
+    },
+    "needle_cannula": {
+      "type": "string",
+      "title": "N\u00e5l/Kanyl",
+      "description": "t.ex. 30G 1/2, 27G cannula"
+    },
+    "ordination_prescriber": {
+      "type": "string",
+      "title": "Ordinerande l\u00e4kare"
+    },
+    "ordination_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Ordinationsdatum"
+    },
+    "ordination_reference": {
+      "type": "string",
+      "title": "Ordinationsreferens"
+    },
+    "aftercare_instructions": {
+      "type": "string",
+      "title": "Efterv\u00e5rdsinstruktioner"
+    },
+    "next_recommended_visit": {
+      "type": "string",
+      "format": "date",
+      "title": "Rekommenderad \u00e5terbes\u00f6k"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "is_signed": {
+      "type": "boolean",
+      "default": false,
+      "title": "Signerad"
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Signerad datum"
+    },
+    "signed_by": {
+      "type": "string",
+      "title": "Signerad av"
+    },
+    "signature_hash": {
+      "type": "string",
+      "title": "Signaturhash"
+    },
+    "version": {
+      "type": "number",
+      "title": "Version",
+      "default": 1
+    },
+    "parent_id": {
+      "type": "string",
+      "title": "Original-ID"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_name",
+    "record_date"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.is_signed": {
+            "$ne": true
+          }
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.is_signed": {
+            "$ne": true
+          }
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -38,7 +38,48 @@ export default async function(req) {
       return Response.json({ error: 'Bokningen har redan passerat' }, { status: 409 });
     }
 
+    // --- Avbokningsregler: cancellation_hours och no_show_fee ---
+    const treatment = booking.treatment_id ? await svc.entities.Treatment.get(booking.treatment_id).catch(() => null) : null;
+    const hoursUntilStart = (start.getTime() - Date.now()) / 3600000;
+    const cancellationHours = treatment?.cancellation_hours ?? 24;
+    const noShowFee = treatment?.no_show_fee ?? 0;
+    const withinCancellationWindow = hoursUntilStart < cancellationHours;
+
+    // Om avbokning sker för sent och en no-show/avbokningsavgift finns, notera detta
+    let feeInfo = null;
+    if (withinCancellationWindow && noShowFee > 0) {
+      feeInfo = {
+        applies: true,
+        amount: noShowFee,
+        reason: `Avbokning inom ${cancellationHours}h — avgift om ${noShowFee} kr kan debiteras`,
+      };
+    }
+
+    // Deposition: markera som ej återbetalbar om avbokning sker för sent
+    let depositInfo = null;
+    if (booking.deposit_amount > 0 && booking.deposit_paid) {
+      if (withinCancellationWindow) {
+        depositInfo = { refunded: false, amount: booking.deposit_amount, reason: 'Deposition behålls — avbokning inom avbokningsfönstret' };
+      } else {
+        depositInfo = { refunded: true, amount: booking.deposit_amount, reason: 'Deposition återbetalas — avbokning i tid' };
+      }
+    }
+
     const updated = await svc.entities.Booking.update(booking_id, { status: 'cancelled' });
+
+    // Audit-logg för avbokning med avgiftsinformation
+    try {
+      await svc.entities.AuditLog.create({
+        clinic_id: booking.clinic_id,
+        event_type: 'booking_cancellation',
+        entity_type: 'Booking',
+        entity_id: booking_id,
+        description: `Avbokning för ${booking.customer_name || ''}${feeInfo ? ` — avgift: ${feeInfo.amount} kr` : ''}`,
+        user_id: user.id,
+        user_name: user.full_name || user.email || '',
+        metadata: JSON.stringify({ feeInfo, depositInfo, hoursUntilStart }),
+      });
+    } catch { /* swallow */ }
 
     // Frigjord tid → erbjud automatiskt plats till matchande väntelistekunder.
     // Får inte blockera avbokningen om det misslyckas.
@@ -46,7 +87,7 @@ export default async function(req) {
       await notifyWaitingListOnCancellation(svc, updated);
     } catch { /* swallow */ }
 
-    return Response.json({ booking: updated });
+    return Response.json({ booking: updated, feeInfo, depositInfo });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -1,0 +1,202 @@
+{
+  "name": "Complication",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "clinical_record_id": {
+      "type": "string",
+      "title": "Behandlingsjournal-ID"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "complication_type": {
+      "type": "string",
+      "enum": [
+        "biverkning",
+        "komplikation",
+        "avvikelse",
+        "infektion",
+        "asymmetri",
+        "allergisk_reaktion",
+        "vascular_komplikation",
+        "annan"
+      ],
+      "default": "komplikation",
+      "title": "Typ"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Datum"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "lindrig",
+        "m\u00e5ttlig",
+        "allvarlig"
+      ],
+      "default": "lindrig",
+      "title": "Sv\u00e5righetsgrad"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "action_taken": {
+      "type": "string",
+      "title": "\u00c5tg\u00e4rd"
+    },
+    "responsible_person": {
+      "type": "string",
+      "title": "Ansvarig"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Uppf\u00f6ljningsdatum"
+    },
+    "outcome": {
+      "type": "string",
+      "title": "Resultat"
+    },
+    "reporting_status": {
+      "type": "string",
+      "enum": [
+        "ej_rapporterad",
+        "rapporterad_intern",
+        "rapporterad_ivo",
+        "rapporterad_socialstyrelsen",
+        "stangd"
+      ],
+      "default": "ej_rapporterad",
+      "title": "Rapporteringsstatus"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_name",
+    "date"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
