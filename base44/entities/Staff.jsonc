@@ -1,0 +1,63 @@
+{
+  "name": "Staff",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "E-post"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon"
+    },
+    "title": {
+      "type": "string",
+      "title": "Befattning"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "administrat\u00f6r",
+        "behandlare"
+      ],
+      "default": "behandlare",
+      "title": "Roll"
+    },
+    "permissions": {
+      "type": "string",
+      "title": "Beh\u00f6righeter (JSON)",
+      "description": "JSON-str\u00e4ng med explicita beh\u00f6righeter per omr\u00e5de"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "title": "Aktiv"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
+}

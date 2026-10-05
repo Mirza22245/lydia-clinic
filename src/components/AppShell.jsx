@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, LogOut } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList, HeartPulse, UserCog, LogOut } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const nav = [
   { to: "/app/journal", label: "Journal", icon: FileText },
   { to: "/app/forms", label: "Formulär", icon: ClipboardList },
   { to: "/app/health", label: "Hälsodeklarationer", icon: HeartPulse },
+  { to: "/app/staff", label: "Personal", icon: UserCog },
 ];
 
 export default function AppShell() {

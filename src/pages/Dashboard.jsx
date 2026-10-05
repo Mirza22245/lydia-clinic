@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Users, CalendarDays, CheckCircle2, TrendingUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import BookingsCalendar from "@/components/BookingsCalendar";
 import { cn } from "@/lib/utils";
 
 const statusLabels = {
@@ -82,6 +83,8 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      <BookingsCalendar />
 
       <div className="rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">

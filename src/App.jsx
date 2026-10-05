@@ -19,6 +19,7 @@ import Bookings from '@/pages/Bookings';
 import Journals from '@/pages/Journals';
 import Forms from '@/pages/Forms';
 import HealthDeclarations from '@/pages/HealthDeclarations';
+import Staff from '@/pages/Staff';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
 import AppShell from '@/components/AppShell';
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/journal" element={<Journals />} />
           <Route path="/app/forms" element={<Forms />} />
           <Route path="/app/health" element={<HealthDeclarations />} />
+          <Route path="/app/staff" element={<Staff />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
