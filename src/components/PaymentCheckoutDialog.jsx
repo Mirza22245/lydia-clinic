@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
+import { useToast } from "@/components/ui/use-toast";
 
 const methodLabels = { card: "Kort", swish: "Swish", cash: "Kontant", invoice: "Faktura" };
 
@@ -13,6 +15,7 @@ export default function PaymentCheckoutDialog({ booking, open, onClose, onPaid }
   const [method, setMethod] = useState("card");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (booking) {
@@ -29,7 +32,7 @@ export default function PaymentCheckoutDialog({ booking, open, onClose, onPaid }
       const seq = (countRes + 1).toString().padStart(4, "0");
       const amt = Number(amount) || 0;
       const vatRate = 25;
-      await base44.entities.Payment.create({
+      const created = await base44.entities.Payment.create({
         customer_id: booking.customer_id || "",
         customer_name: booking.customer_name,
         booking_id: booking.id,
@@ -43,6 +46,16 @@ export default function PaymentCheckoutDialog({ booking, open, onClose, onPaid }
         receipt_number: `R-${year}-${seq}`,
         clinic_id: booking.clinic_id,
       });
+      try {
+        const res = await sendReceiptEmail({ payment_id: created.id });
+        if (res?.data?.sent) {
+          toast({ title: "Kvitto skickat", description: `E-post skickat till ${res.data.to}` });
+        } else {
+          toast({ variant: "destructive", title: "Kvitto skapat", description: res?.data?.error || "Kunde inte skicka e-post." });
+        }
+      } catch {
+        toast({ variant: "destructive", title: "Kvitto skapat", description: "Kunde inte skicka e-post." });
+      }
       onPaid?.();
       onClose();
     } finally {

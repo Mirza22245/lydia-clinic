@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Receipt, Loader2, CreditCard, Banknote, Smartphone, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
+import { useToast } from "@/components/ui/use-toast";
 
 const methodLabels = { card: "Kort", swish: "Swish", cash: "Kontant", invoice: "Faktura" };
 const methodIcons = { card: CreditCard, swish: Smartphone, cash: Banknote, invoice: FileText };
@@ -20,6 +22,7 @@ export default function POS() {
   const [method, setMethod] = useState("card");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const load = async () => {
     setLoading(true);
@@ -63,7 +66,7 @@ export default function POS() {
       const seq = (payments.length + 1).toString().padStart(4, "0");
       const amt = Number(amount) || 0;
       const vatRate = 25;
-      await base44.entities.Payment.create({
+      const created = await base44.entities.Payment.create({
         customer_id: active.customer_id || "",
         customer_name: active.customer_name,
         booking_id: active.id,
@@ -77,6 +80,16 @@ export default function POS() {
         receipt_number: `R-${year}-${seq}`,
         clinic_id: active.clinic_id,
       });
+      try {
+        const res = await sendReceiptEmail({ payment_id: created.id });
+        if (res?.data?.sent) {
+          toast({ title: "Kvitto skickat", description: `E-post skickat till ${res.data.to}` });
+        } else {
+          toast({ variant: "destructive", title: "Betalning registrerad", description: res?.data?.error || "Kunde inte skicka e-post." });
+        }
+      } catch {
+        toast({ variant: "destructive", title: "Betalning registrerad", description: "Kunde inte skicka e-post." });
+      }
       setActive(null);
       load();
     } finally {

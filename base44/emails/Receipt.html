@@ -1,0 +1,55 @@
+<mjml>
+  <mj-head>
+    <mj-title>Kvitto {{receipt_number}}</mj-title>
+    <mj-preview>Ditt kvitto från {{clinic_name}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-section background-color="#ffffff" padding="0 36px" />
+      <mj-text color="#000000" font-size="15px" line-height="1.6" padding="0" />
+      <mj-button background-color="#000000" color="#ffffff" border-radius="4px" font-weight="700" inner-padding="14px 28px" align="left" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f6f7f9">
+    <mj-section background-color="#111111" padding="20px 36px">
+      <mj-column>
+        <mj-image src="https://media.base44.com/images/public/6ac3fdb641cde950308a8b95/1e2bb8532_logo.png" width="120px" align="left" padding="0" />
+        <mj-text color="#ffffff" font-size="18px" font-weight="700" padding="8px 0 0">QuickBuild Pro</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="36px 36px 12px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700">Ditt kvitto</mj-text>
+        <mj-text color="#6b7280">Tack för ditt besök hos {{clinic_name}}, {{customer_name}}. Här är ditt kvitto för dagens behandling.</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 36px 28px">
+      <mj-column background-color="#ffffff" border-radius="4px" border="1px solid #e5e7eb" padding="0">
+        <mj-text padding="20px 24px 8px">
+          <strong>Kvittonummer:</strong> {{receipt_number}}<br/>
+          <strong>Datum:</strong> {{paid_at}}<br/>
+          <strong>Behandling:</strong> {{treatment_name}}<br/>
+          <strong>Betalningsmetod:</strong> {{method}}
+        </mj-text>
+        <mj-divider border-color="#e5e7eb" padding="8px 24px" />
+        <mj-text padding="8px 24px 20px">
+          <strong>Belopp att betala: {{amount}} kr</strong><br/>
+          Varav moms: {{vat}} kr
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 36px 28px">
+      <mj-column>
+        <mj-button href="https://benign-quick-build-flow.base44.app/portal">Visa dina bokningar</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 36px 36px">
+      <mj-column>
+        <mj-text color="#6b7280" font-size="13px">Detta är ett automatiskt kvitto från {{clinic_name}}. Spara detta kvitto för din bokföring.</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
