@@ -29,9 +29,19 @@ export default async function(req) {
     if (!email) return Response.json({ error: 'Customer has no email' }, { status: 400 });
 
     let clinicName = 'Klinik';
+    let clinicAddress = '';
+    let clinicOrgNumber = '';
+    let clinicPhone = '';
+    let clinicEmail = '';
     if (payment.clinic_id) {
       const clinic = await svc.entities.Clinic.get(payment.clinic_id).catch(() => null);
-      if (clinic) clinicName = clinic.name || clinicName;
+      if (clinic) {
+        clinicName = clinic.name || clinicName;
+        clinicAddress = clinic.address || '';
+        clinicOrgNumber = clinic.org_number || '';
+        clinicPhone = clinic.phone || '';
+        clinicEmail = clinic.email || '';
+      }
     }
 
     const methodLabels = { card: 'Kort', swish: 'Swish', cash: 'Kontant', invoice: 'Faktura' };
@@ -52,6 +62,10 @@ export default async function(req) {
         method: methodLabels[payment.method] || payment.method || '',
         paid_at: fmtDateTime(payment.paid_at),
         clinic_name: clinicName,
+        clinic_address: clinicAddress,
+        clinic_org_number: clinicOrgNumber,
+        clinic_phone: clinicPhone,
+        clinic_email: clinicEmail,
       },
     });
 

@@ -13,7 +13,7 @@
     <mj-section background-color="#111111" padding="20px 36px">
       <mj-column>
         <mj-image src="https://media.base44.com/images/public/6ac3fdb641cde950308a8b95/1e2bb8532_logo.png" width="120px" align="left" padding="0" />
-        <mj-text color="#ffffff" font-size="18px" font-weight="700" padding="8px 0 0">QuickBuild Pro</mj-text>
+        <mj-text color="#ffffff" font-size="18px" font-weight="700" padding="8px 0 0">{{clinic_name}}</mj-text>
       </mj-column>
     </mj-section>
 
@@ -43,6 +43,18 @@
     <mj-section padding="0 36px 28px">
       <mj-column>
         <mj-button href="https://benign-quick-build-flow.base44.app/portal">Visa dina bokningar</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 36px 20px">
+      <mj-column background-color="#ffffff" border-radius="4px" border="1px solid #e5e7eb" padding="16px 24px">
+        <mj-text font-weight="700" padding="0">{{clinic_name}}</mj-text>
+        <mj-text color="#6b7280" font-size="13px" padding="4px 0 0">
+          {{clinic_address}}<br/>
+          {{clinic_org_number}}<br/>
+          {{clinic_phone}}<br/>
+          {{clinic_email}}
+        </mj-text>
       </mj-column>
     </mj-section>
 
