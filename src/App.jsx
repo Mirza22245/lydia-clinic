@@ -22,6 +22,7 @@ import HealthDeclarations from '@/pages/HealthDeclarations';
 import Staff from '@/pages/Staff';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
+import Portal from '@/pages/Portal';
 import AppShell from '@/components/AppShell';
 
 const AuthenticatedApp = () => {
@@ -52,6 +53,7 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/portal" element={<Portal />} />
         <Route element={<AppShell />}>
           <Route path="/app" element={<Dashboard />} />
           <Route path="/app/customers" element={<Customers />} />
