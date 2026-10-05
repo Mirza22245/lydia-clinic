@@ -1,6 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +16,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { Plus, ListTodo, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Plus, ListTodo, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TaskForm from "@/components/tasks/TaskForm";
 import TaskItem from "@/components/tasks/TaskItem";
@@ -21,31 +38,66 @@ const filters = [
   { key: "done", label: "Klart" },
 ];
 
+const sortOptions = [
+  { key: "-created_date", label: "Nyaste" },
+  { key: "created_date", label: "Äldst" },
+  { key: "due_date", label: "Förfallodatum" },
+];
+
 export default function Home() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("-created_date");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [stats, setStats] = useState({ all: 0, todo: 0, in_progress: 0, done: 0 });
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const query = activeFilter === "all" ? {} : { status: activeFilter };
+      const query = {};
+      if (activeFilter !== "all") query.status = activeFilter;
+      if (search.trim()) {
+        query.title = { $regex: search.trim(), $options: "i" };
+      }
       const page = await base44.entities.Task.filter(query, {
-        sort: "-created_date",
+        sort: sortBy,
         limit: 50,
       });
       setTasks(page.items || []);
     } finally {
       setLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, search, sortBy]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await base44.entities.Task.aggregate({ groupBy: "status" });
+      const next = { all: 0, todo: 0, in_progress: 0, done: 0 };
+      for (const row of res.rows || []) {
+        next[row.status] = row.count || 0;
+        next.all += row.count || 0;
+      }
+      setStats(next);
+    } catch {
+      setStats({ all: 0, todo: 0, in_progress: 0, done: 0 });
+    }
+  }, []);
 
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const refresh = async () => {
+    await Promise.all([loadTasks(), loadStats()]);
+  };
 
   const handleCreate = () => {
     setEditing(null);
@@ -65,30 +117,26 @@ export default function Home() {
     }
     setFormOpen(false);
     setEditing(null);
-    await loadTasks();
+    await refresh();
   };
 
   const handleToggle = async (task) => {
     const next = task.status === "done" ? "todo" : "done";
     await base44.entities.Task.update(task.id, { status: next });
-    await loadTasks();
+    await refresh();
   };
 
   const handleDelete = async () => {
     if (!deleting) return;
     await base44.entities.Task.delete(deleting.id);
     setDeleting(null);
-    await loadTasks();
+    await refresh();
   };
 
-  const counts = tasks.reduce(
-    (acc, t) => {
-      acc.all += 1;
-      acc[t.status] = (acc[t.status] || 0) + 1;
-      return acc;
-    },
-    { all: 0, todo: 0, in_progress: 0, done: 0 }
-  );
+  const progress = useMemo(() => {
+    if (stats.all === 0) return 0;
+    return Math.round((stats.done / stats.all) * 100);
+  }, [stats]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,7 +151,40 @@ export default function Home() {
           <p className="text-sm text-muted-foreground">Håll koll på vad som ska göras.</p>
         </header>
 
-        <div className="flex items-center justify-between gap-3 mb-5">
+        {stats.all > 0 && (
+          <div className="mb-6 rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Förlopp</span>
+              <span className="text-sm text-muted-foreground">
+                {stats.done} av {stats.all} klara · {progress}%
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Sök uppgifter…"
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={handleCreate} size="sm" className="shrink-0">
+            <Plus className="w-4 h-4 mr-1" />
+            Ny
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex flex-wrap gap-1.5">
             {filters.map((f) => (
               <button
@@ -117,14 +198,22 @@ export default function Home() {
                 )}
               >
                 {f.label}
-                <span className="ml-1.5 text-xs opacity-70">{counts[f.key] || 0}</span>
+                <span className="ml-1.5 text-xs opacity-70">{stats[f.key] || 0}</span>
               </button>
             ))}
           </div>
-          <Button onClick={handleCreate} size="sm" className="shrink-0">
-            <Plus className="w-4 h-4 mr-1" />
-            Ny
-          </Button>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[150px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {sortOptions.map((o) => (
+                <SelectItem key={o.key} value={o.key}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -136,9 +225,13 @@ export default function Home() {
             <div className="rounded-full bg-secondary p-4 mb-4">
               <ListTodo className="w-7 h-7 text-muted-foreground" />
             </div>
-            <p className="font-medium">Inga uppgifter</p>
+            <p className="font-medium">
+              {search.trim() ? "Inga träffar" : "Inga uppgifter"}
+            </p>
             <p className="text-sm text-muted-foreground mt-1">
-              {activeFilter === "all"
+              {search.trim()
+                ? "Prova ett annat sökord."
+                : activeFilter === "all"
                 ? "Lägg till din första uppgift för att komma igång."
                 : "Inget i den här vyn."}
             </p>
@@ -184,7 +277,10 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Ta bort
             </AlertDialogAction>
           </AlertDialogFooter>
