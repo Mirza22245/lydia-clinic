@@ -1,8 +1,10 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
+import { sendReceiptForPayment } from "../../shared/receipt.ts";
 
 // Tar emot Stripe-webhooks. Validerar signaturen med STRIPE_WEBHOOK_SECRET
 // (Web Crypto, asynkron) och uppdaterar bokning + betalning vid lyckad betalning.
+// Skapar automatiskt ett kvitto och skickar det via e-post efter godkänd betalning.
 async function verifySignature(rawBody, sigHeader, secret) {
   const parts = (sigHeader || "").split(",").map((s) => s.trim());
   const tPart = parts.find((p) => p.startsWith("t="));
@@ -70,7 +72,7 @@ export default async function(req) {
           const countRes = await svc.entities.Payment.count({ clinic_id: clinicId });
           const seq = (countRes + 1).toString().padStart(4, "0");
           const vatRate = 25;
-          await svc.entities.Payment.create({
+          const created = await svc.entities.Payment.create({
             customer_id: customerId,
             customer_name: customerName,
             booking_id: bookingId,
@@ -84,7 +86,15 @@ export default async function(req) {
             receipt_number: `R-${year}-${seq}`,
             clinic_id: clinicId,
           });
-          await svc.entities.Booking.update(bookingId, { status: "confirmed" });
+          await svc.entities.Booking.update(bookingId, {
+            status: "confirmed",
+            deposit_paid: (booking?.deposit_amount || 0) > 0,
+          });
+          // Skicka kvitto automatiskt — fel fångas tyst så att webhook:en
+          // aldrig misslyckas på grund av e-postproblem.
+          await sendReceiptForPayment(svc, created.id).catch((e) => {
+            console.error("Receipt email failed:", e.message);
+          });
         }
       }
     }
