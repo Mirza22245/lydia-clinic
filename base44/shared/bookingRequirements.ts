@@ -84,6 +84,54 @@ export async function computeBookingRequirements(svc, booking, treatment) {
     requirements.push({ key: 'payment', label: 'Betalning', required: true, completed });
   }
 
+  // 5. IVO-compliance för injektionsbehandlingar
+  if (treatment.treatment_type === 'injektion' && cid) {
+    // Ålderskontroll — IVO kräver 18+ för injektionsbehandlingar
+    const minAge = Math.max(18, treatment.min_age || 0);
+    if (minAge > 0) {
+      const customer = await svc.entities.Customer.get(cid).catch(() => null);
+      let ageOk = false;
+      if (customer?.birth_date) {
+        const age = Math.floor((Date.now() - new Date(customer.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        ageOk = age >= minAge;
+      }
+      requirements.push({ key: 'compliance_age', label: `Ålderskontroll (${minAge}+ år)`, required: true, completed: ageOk });
+    }
+
+    // Compliance-post (information, betänketid, samtycke)
+    const cpQuery = bid ? { customer_id: cid, treatment_id: treatment.id, booking_id: bid } : { customer_id: cid, treatment_id: treatment.id };
+    const cp = await svc.entities.TreatmentCompliance.filter(cpQuery, { sort: '-created_date', limit: 1 });
+    const compliance = cp.items?.[0];
+
+    requirements.push({
+      key: 'compliance_info',
+      label: 'Behandlingsinformation lämnad',
+      required: true,
+      completed: !!compliance?.information_given_at,
+    });
+
+    if (treatment.betanketid_hours > 0) {
+      const betanketidPassed = !!(compliance?.betanketid_ends_at && new Date() >= new Date(compliance.betanketid_ends_at));
+      requirements.push({
+        key: 'compliance_betanketid',
+        label: `Betänketid (${treatment.betanketid_hours}h)`,
+        required: true,
+        completed: betanketidPassed,
+      });
+    }
+
+    if (treatment.requires_consent && compliance) {
+      const consentOk = !!(compliance.consent_signed_at && compliance.consent_eligible_at &&
+        new Date(compliance.consent_signed_at) >= new Date(compliance.consent_eligible_at));
+      requirements.push({
+        key: 'compliance_consent',
+        label: 'Samtycke efter betänketid',
+        required: true,
+        completed: consentOk,
+      });
+    }
+  }
+
   // Informella (visas men blockerar inte)
   if (treatment.requires_treatment_info) {
     requirements.push({ key: 'treatment_info', label: 'Behandlingsinformation & risker', required: false, completed: true });

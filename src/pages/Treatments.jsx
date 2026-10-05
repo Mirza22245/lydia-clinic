@@ -12,11 +12,13 @@ import { getClinicId } from "@/lib/currentUser";
 
 const empty = {
   name: "", description: "", duration: 30, price: 0, category: "", vat: 25,
+  treatment_type: "annan", betanketid_hours: 0, information_version: "", repeat_treatment_months: 0,
+  requires_identity_verification: false, requires_ordination: false,
   requires_health_declaration: false, requires_consent: true, requires_treatment_info: false,
   requires_aftercare: false, requires_payment: false, guest_booking_allowed: true,
   min_age: 0, waiting_period_days: 0, cancellation_hours: 24, no_show_fee: 0, required_form_ids: "",
 };
-const numFields = new Set(["duration", "price", "vat", "min_age", "waiting_period_days", "cancellation_hours", "no_show_fee"]);
+const numFields = new Set(["duration", "price", "vat", "min_age", "waiting_period_days", "cancellation_hours", "no_show_fee", "betanketid_hours", "repeat_treatment_months"]);
 const fmtSEK = (n) => new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n || 0);
 
 const ruleBadges = (t) => {
@@ -29,6 +31,8 @@ const ruleBadges = (t) => {
   if (t.min_age > 0) out.push(`≥${t.min_age} år`);
   if (t.waiting_period_days > 0) out.push(`Vänt ${t.waiting_period_days}d`);
   if (!t.guest_booking_allowed) out.push("Ej gäst");
+  if (t.treatment_type === "injektion") out.push("Injektion");
+  if (t.betanketid_hours > 0) out.push(`Betänketid ${t.betanketid_hours}h`);
   return out;
 };
 
@@ -107,12 +111,16 @@ export default function Treatments() {
     { key: "requires_aftercare", label: "Eftervårdsinformation" },
     { key: "requires_payment", label: "Betalning vid bokning" },
     { key: "guest_booking_allowed", label: "Tillåt gästbokning" },
+    { key: "requires_identity_verification", label: "Kräv identitetsverifiering" },
+    { key: "requires_ordination", label: "Kräv läkarordination" },
   ];
   const nums = [
     { key: "min_age", label: "Lägsta ålder (år)", step: 1 },
     { key: "waiting_period_days", label: "Väntetid (dagar)", step: 1 },
     { key: "cancellation_hours", label: "Avgiftsfri avbokning (timmar)", step: 1 },
     { key: "no_show_fee", label: "No-show-avgift (kr)", step: 50 },
+    { key: "betanketid_hours", label: "Betänketid (timmar)", step: 1 },
+    { key: "repeat_treatment_months", label: "Upprepningskontroll (månader)", step: 1 },
   ];
 
   return (
@@ -182,6 +190,26 @@ export default function Treatments() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label htmlFor="category">Kategori</Label><Input id="category" value={form.category} onChange={set("category")} placeholder="t.ex. Injektion" /></div>
               <div className="space-y-2"><Label htmlFor="vat">Moms (%)</Label><Input id="vat" type="number" min="0" max="100" value={form.vat} onChange={set("vat")} /></div>
+            </div>
+
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <p className="text-sm font-medium">Behandlingstyp & IVO-compliance</p>
+              <p className="text-xs text-muted-foreground">För injektionsbehandlingar kräver IVO åldersgräns 18+, betänketid och samtycke efter betänketid.</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="treatment_type" className="text-xs">Behandlingstyp</Label>
+                <select id="treatment_type" value={form.treatment_type} onChange={set("treatment_type")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                  <option value="annan">Annan</option>
+                  <option value="injektion">Injektion</option>
+                  <option value="kirurgi">Kirurgi</option>
+                  <option value="laser">Laser</option>
+                  <option value="hud">Hud</option>
+                  <option value="massage">Massage</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="information_version" className="text-xs">Informationsversion</Label>
+                <Input id="information_version" value={form.information_version} onChange={set("information_version")} placeholder="t.ex. v1.0 — vilken info patienten fick" />
+              </div>
             </div>
 
             <div className="rounded-lg border border-border p-3 space-y-3">

@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, CalendarDays, FileText, Lock, PenLine, User, Plus, 
 import { cn } from "@/lib/utils";
 import { getBookingRequirements } from "@/functions/getBookingRequirements";
 import { updateBookingStatus } from "@/functions/updateBookingStatus";
+import TreatmentCompliancePanel from "@/components/TreatmentCompliancePanel";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -193,6 +194,11 @@ export default function BookingDetail() {
             ))}
           </ul>
         </div>
+      )}
+
+      {/* IVO Compliance */}
+      {booking.treatment_id && booking.customer_id && (
+        <TreatmentCompliancePanel bookingId={booking.id} customerId={booking.customer_id} treatmentId={booking.treatment_id} />
       )}
 
       {/* Kundens journalhistorik */}

@@ -27,6 +27,49 @@
       "title": "Moms (%)",
       "default": 25
     },
+    "treatment_type": {
+      "type": "string",
+      "enum": [
+        "injektion",
+        "kirurgi",
+        "laser",
+        "hud",
+        "massage",
+        "annan"
+      ],
+      "default": "annan",
+      "title": "Behandlingstyp",
+      "description": "Styra vilka IVO-regler som g\u00e4ller (injektion = 18+, bet\u00e4nketid, samtycke efter bet\u00e4nketid)"
+    },
+    "betanketid_hours": {
+      "type": "number",
+      "default": 0,
+      "title": "Bet\u00e4nketid (timmar)",
+      "description": "Laglig bet\u00e4nketid fr\u00e5n att patientinformationen l\u00e4mnas tills samtycke f\u00e5r signeras. 0 = ingen bet\u00e4nketid."
+    },
+    "information_version": {
+      "type": "string",
+      "title": "Informationsversion",
+      "description": "Version av patientinformationen som l\u00e4mnas (t.ex. v1.0). Dokumenteras i compliance-posten."
+    },
+    "repeat_treatment_months": {
+      "type": "number",
+      "default": 0,
+      "title": "Upprepningskontroll (m\u00e5nader)",
+      "description": "F\u00f6r injektioner: kontrollera om samma behandling utf\u00f6rts inom detta antal m\u00e5nader (IVO: 6 m\u00e5n). 0 = ingen kontroll."
+    },
+    "requires_identity_verification": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4v identitetsverifiering",
+      "description": "Kr\u00e4v verifierad identitet (t.ex. BankID) innan bokning/behandling"
+    },
+    "requires_ordination": {
+      "type": "boolean",
+      "default": false,
+      "title": "Kr\u00e4v l\u00e4karordination",
+      "description": "Kr\u00e4v individuell skriftlig l\u00e4karordination inf\u00f6r behandlingen (t.ex. botulinumtoxin)"
+    },
     "requires_health_declaration": {
       "type": "boolean",
       "default": false,
@@ -61,7 +104,7 @@
       "type": "number",
       "default": 0,
       "title": "L\u00e4gsta \u00e5lder",
-      "description": "0 = ingen \u00e5ldersgr\u00e4ns"
+      "description": "0 = ingen \u00e5ldersgr\u00e4ns. F\u00f6r injektioner ignoreras detta och 18 anv\u00e4nds som minimum enligt IVO."
     },
     "waiting_period_days": {
       "type": "number",

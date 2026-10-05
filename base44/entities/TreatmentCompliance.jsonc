@@ -1,0 +1,223 @@
+{
+  "name": "TreatmentCompliance",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "treatment_type": {
+      "type": "string",
+      "title": "Behandlingstyp"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "information_given_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Information l\u00e4mnad",
+      "description": "N\u00e4r patientinformationen l\u00e4mnades \u2014 startar bet\u00e4nketiden"
+    },
+    "information_version": {
+      "type": "string",
+      "title": "Informationsversion",
+      "description": "Vilken version av patientinformationen som l\u00e4mnades"
+    },
+    "information_given_by": {
+      "type": "string",
+      "title": "Information l\u00e4mnad av"
+    },
+    "betanketid_hours": {
+      "type": "number",
+      "title": "Bet\u00e4nketid (timmar)",
+      "description": "Snapshot fr\u00e5n behandlingen vid tidpunkten f\u00f6r registrering"
+    },
+    "betanketid_ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Bet\u00e4nketid slutar",
+      "description": "information_given_at + betanketid_hours \u2014 fr\u00e5n denna tidpunkt f\u00e5r samtycke l\u00e4mnas"
+    },
+    "consent_eligible_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Samtycke kan l\u00e4mnas fr\u00e5n"
+    },
+    "consent_signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Samtycke signerat"
+    },
+    "age_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "\u00c5lder verifierad"
+    },
+    "age_verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "\u00c5lder verifierad datum"
+    },
+    "previous_treatment_checked": {
+      "type": "boolean",
+      "default": false,
+      "title": "Tidigare behandling kontrollerad"
+    },
+    "previous_treatment_checked_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kontroll datum"
+    },
+    "previous_treatment_found": {
+      "type": "boolean",
+      "default": false,
+      "title": "Tidigare behandling hittad"
+    },
+    "previous_treatment_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Tidigare behandlingsdatum"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "info_given",
+        "betanketid_active",
+        "consent_eligible",
+        "consented",
+        "blocked",
+        "completed"
+      ],
+      "default": "pending",
+      "title": "Status"
+    },
+    "block_reason": {
+      "type": "string",
+      "title": "Blockeringsorsak"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "treatment_id"
+  ],
+  "rls": {
+    "read": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
