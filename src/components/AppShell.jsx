@@ -4,24 +4,28 @@ import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ClipboardList
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 
 const nav = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/app/bookings", label: "Bokningar", icon: CalendarDays },
-  { to: "/app/customers", label: "Kunder", icon: Users },
-  { to: "/app/treatments", label: "Behandlingar", icon: Sparkles },
-  { to: "/app/journal", label: "Journal", icon: FileText },
-  { to: "/app/forms", label: "Formulär", icon: ClipboardList },
-  { to: "/app/health", label: "Hälsodeklarationer", icon: HeartPulse },
-  { to: "/app/staff", label: "Personal", icon: UserCog },
+  { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true, perm: "dashboard" },
+  { to: "/app/bookings", label: "Bokningar", icon: CalendarDays, perm: "bookings" },
+  { to: "/app/customers", label: "Kunder", icon: Users, perm: "customers" },
+  { to: "/app/treatments", label: "Behandlingar", icon: Sparkles, perm: "treatments" },
+  { to: "/app/journal", label: "Journal", icon: FileText, perm: "journal" },
+  { to: "/app/forms", label: "Formulär", icon: ClipboardList, perm: "forms" },
+  { to: "/app/health", label: "Hälsodeklarationer", icon: HeartPulse, perm: "health" },
+  { to: "/app/staff", label: "Personal", icon: UserCog, perm: "staff" },
 ];
 
 export default function AppShell() {
   const location = useLocation();
+  const { permissions } = useStaffPermissions();
 
   const handleLogout = async () => {
     await base44.auth.logout("/");
   };
+
+  const visibleNav = permissions ? nav.filter((item) => permissions[item.perm] !== false) : nav;
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,7 +35,7 @@ export default function AppShell() {
           <span className="font-semibold tracking-tight font-heading">Lydia</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
             return (
@@ -60,7 +64,7 @@ export default function AppShell() {
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">L</div>
         <span className="font-semibold font-heading">Lydia</span>
         <div className="ml-auto flex gap-1">
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
             return (
