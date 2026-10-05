@@ -1,0 +1,48 @@
+<mjml>
+  <mj-head>
+    <mj-title>Bokningsbekräftelse - {{clinic_name}}</mj-title>
+    <mj-preview>Din bokning är registrerad</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-section background-color="#ffffff" padding="0 36px" />
+      <mj-text color="#000000" font-size="15px" line-height="1.6" padding="0" />
+      <mj-button background-color="#000000" border-radius="4px" color="#ffffff" font-weight="700" inner-padding="14px 28px" align="left" />
+      <mj-divider border-color="#e5e7eb" padding="0" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f6f7f9">
+    <mj-section padding="24px 36px" background-color="#111111">
+      <mj-column>
+        <mj-text color="#ffffff" font-size="18px" font-weight="700">{{clinic_name}}</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="40px 36px 12px">
+      <mj-column>
+        <mj-text font-size="28px" font-weight="700" line-height="1.1">Bokning bekräftad</mj-text>
+        <mj-text color="#6b7280" padding-top="8px">Hej {{customer_name}}, din bokning är nu registrerad.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="12px 36px">
+      <mj-column>
+        <mj-text font-weight="700">Detaljer</mj-text>
+        <mj-text>
+          Behandling: {{treatment_name}}<br />
+          Behandlare: {{staff_name}}<br />
+          Tid: {{start_time}}<br />
+          Pris: {{price}} kr
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="24px 36px">
+      <mj-column>
+        <mj-button href="{{portal_url}}">Gå till kundportalen</mj-button>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="24px 36px 40px">
+      <mj-column>
+        <mj-divider />
+        <mj-text color="#6b7280" font-size="12px">Vid frågor eller om du behöver boka om, kontakta kliniken eller gå till kundportalen.</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

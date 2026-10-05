@@ -1,0 +1,54 @@
+<mjml>
+  <mj-head>
+    <mj-title>Samtycke signerat - {{clinic_name}}</mj-title>
+    <mj-preview>Ditt samtycke har signerats digitalt</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-section background-color="#ffffff" padding="0 36px" />
+      <mj-text color="#000000" font-size="15px" line-height="1.6" padding="0" />
+      <mj-button background-color="#000000" border-radius="4px" color="#ffffff" font-weight="700" inner-padding="14px 28px" align="left" />
+      <mj-divider border-color="#e5e7eb" padding="0" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f6f7f9">
+    <mj-section padding="24px 36px" background-color="#111111">
+      <mj-column>
+        <mj-text color="#ffffff" font-size="18px" font-weight="700">{{clinic_name}}</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="40px 36px 12px">
+      <mj-column>
+        <mj-text font-size="28px" font-weight="700" line-height="1.1">Samtycke signerat</mj-text>
+        <mj-text color="#6b7280" padding-top="8px">Hej {{customer_name}}, ditt samtycke har signerats digitalt och sparats i en oföränderlig version.</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="12px 36px">
+      <mj-column>
+        <mj-text font-weight="700">Sammanfattning</mj-text>
+        <mj-text>
+          Typ: {{consent_type}}<br />
+          Version: {{document_version}}<br />
+          Signerat: {{granted_at}}<br />
+          IP-adress: {{ip_address}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="12px 36px">
+      <mj-column>
+        <mj-text font-weight="700">Godkända villkor</mj-text>
+        <mj-text color="#374151">{{signed_text}}</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="24px 36px">
+      <mj-column>
+        <mj-button href="{{portal_url}}">Gå till kundportalen</mj-button>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="24px 36px 40px">
+      <mj-column>
+        <mj-divider />
+        <mj-text color="#6b7280" font-size="12px">Detta samtycke är sparat i en oföränderlig version och kan inte ändras i efterhand. Behöver du hjälp? Kontakta kliniken.</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
