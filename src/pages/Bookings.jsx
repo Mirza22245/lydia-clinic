@@ -9,6 +9,7 @@ import { Plus, Loader2, Pencil, Trash2, Eye } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -47,6 +48,7 @@ export default function Bookings() {
   const [treatments, setTreatments] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [checkout, setCheckout] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -135,6 +137,14 @@ export default function Bookings() {
               is_signed: false,
             });
           }
+          setCheckout({
+            id: editing.id,
+            customer_id: data.customer_id,
+            customer_name: data.customer_name,
+            treatment_name: data.treatment_name,
+            price: data.price,
+            clinic_id,
+          });
         }
       } else {
         await base44.entities.Booking.create(data);
@@ -252,6 +262,13 @@ export default function Bookings() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <PaymentCheckoutDialog
+        booking={checkout}
+        open={!!checkout}
+        onClose={() => setCheckout(null)}
+        onPaid={() => load()}
+      />
     </div>
   );
 }
