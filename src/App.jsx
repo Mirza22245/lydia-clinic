@@ -16,6 +16,7 @@ import Dashboard from '@/pages/Dashboard';
 import Customers from '@/pages/Customers';
 import Treatments from '@/pages/Treatments';
 import Bookings from '@/pages/Bookings';
+import Journals from '@/pages/Journals';
 import AppShell from '@/components/AppShell';
 
 const AuthenticatedApp = () => {
@@ -51,6 +52,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/customers" element={<Customers />} />
           <Route path="/app/treatments" element={<Treatments />} />
           <Route path="/app/bookings" element={<Bookings />} />
+          <Route path="/app/journal" element={<Journals />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

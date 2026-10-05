@@ -1,0 +1,118 @@
+{
+  "name": "JournalEntry",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "Kund"
+    },
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandlings-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "provider": {
+      "type": "string",
+      "title": "Behandlare"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Datum"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "observations": {
+      "type": "string",
+      "title": "Observationer"
+    },
+    "assessment": {
+      "type": "string",
+      "title": "Bed\u00f6mning"
+    },
+    "treatment_performed": {
+      "type": "string",
+      "title": "Utf\u00f6rd behandling"
+    },
+    "aftercare": {
+      "type": "string",
+      "title": "Efterv\u00e5rd"
+    },
+    "recommendations": {
+      "type": "string",
+      "title": "Rekommendationer"
+    },
+    "is_signed": {
+      "type": "boolean",
+      "default": false,
+      "title": "Signerad"
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Signerad datum"
+    },
+    "signed_by": {
+      "type": "string",
+      "title": "Signerad av"
+    },
+    "version": {
+      "type": "number",
+      "title": "Version",
+      "default": 1
+    },
+    "parent_id": {
+      "type": "string",
+      "title": "Original-ID"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_name",
+    "entry_date"
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.is_signed": {
+            "$ne": true
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "data.is_signed": {
+            "$ne": true
+          }
+        }
+      ]
+    }
+  }
+}
