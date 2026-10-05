@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Loader2, Pencil, Trash2, ShieldCheck, User, Check } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, ShieldCheck, User, Check, Headset } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { syncStaffRole } from "@/functions/syncStaffRole";
 import {
   PERMISSION_AREAS, ROLE_PERMISSIONS, ROLE_LABELS, ROLE_DESCRIPTIONS,
   getPermissions,
@@ -15,11 +17,19 @@ import {
 const roleBadge = {
   administratör: "bg-primary/10 text-primary",
   behandlare: "bg-secondary text-secondary-foreground",
+  reception: "bg-amber-100 text-amber-700",
+};
+
+const roleIcon = {
+  administratör: ShieldCheck,
+  behandlare: User,
+  reception: Headset,
 };
 
 const emptyForm = { name: "", email: "", phone: "", title: "", role: "behandlare", active: true, permissions: {} };
 
 export default function Staff() {
+  const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -90,6 +100,14 @@ export default function Staff() {
       } else {
         await base44.entities.Staff.create(data);
       }
+      // Synka rollen till användarens profil så RLS styrs på datanivå.
+      if (form.email) {
+        try {
+          await syncStaffRole({ email: form.email, staff_role: form.active ? form.role : "" });
+        } catch (e) {
+          toast({ title: "Rollsynk misslyckades", description: "Användarens data-åtkomst uppdaterades inte.", variant: "destructive" });
+        }
+      }
       setOpen(false);
       setEditing(null);
       await load();
@@ -147,8 +165,8 @@ export default function Staff() {
             const granted = PERMISSION_AREAS.filter((a) => perms[a.key]).length;
             return (
               <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-                <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", s.role === "administratör" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground")}>
-                  {s.role === "administratör" ? <ShieldCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", roleBadge[s.role] || "bg-secondary")}>
+                  {(() => { const Icon = roleIcon[s.role] || User; return <Icon className="w-4 h-4" />; })()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -201,7 +219,7 @@ export default function Staff() {
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      {r === "administratör" ? <ShieldCheck className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-muted-foreground" />}
+                      {(() => { const Icon = roleIcon[r] || User; return <Icon className={cn("w-4 h-4", r === "administratör" ? "text-primary" : "text-muted-foreground")} />; })()}
                       <span className="font-medium">{ROLE_LABELS[r]}</span>
                       {form.role === r && <Check className="ml-auto w-4 h-4 text-primary" />}
                     </div>

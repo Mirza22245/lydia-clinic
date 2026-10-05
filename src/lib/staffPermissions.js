@@ -46,16 +46,32 @@ export const ROLE_PERMISSIONS = {
     audit: false,
     settings: false,
   },
+  reception: {
+    dashboard: true,
+    customers: true,
+    bookings: true,
+    treatments: true,
+    forms: true,
+    journal: false,
+    health: false,
+    staff: false,
+    payments: false,
+    reports: false,
+    audit: false,
+    settings: false,
+  },
 };
 
 export const ROLE_LABELS = {
   administratör: "Administratör",
   behandlare: "Behandlare",
+  reception: "Reception",
 };
 
 export const ROLE_DESCRIPTIONS = {
   administratör: "Full åtkomst till hela systemet inklusive personal, kassa och inställningar.",
   behandlare: "Hanterar kunder, bokningar, journal och formulär. Ingen åtkomst till personal, kassa eller inställningar.",
+  reception: "Hanterar bokningar, kunder och intake-formulär. Ingen åtkomst till journal, hälsodata, kassa eller inställningar.",
 };
 
 // Returnera behörigheter för en personalpost: explicita om sparade, annars rollens standard.

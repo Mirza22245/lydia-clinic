@@ -12,6 +12,16 @@
       "type": "string",
       "title": "Klinik-ID",
       "description": "Den klinik anv\u00e4ndaren tillh\u00f6r"
+    },
+    "staff_role": {
+      "type": "string",
+      "title": "Personalroll",
+      "enum": [
+        "administrat\u00f6r",
+        "behandlare",
+        "reception"
+      ],
+      "description": "Klinisk roll som styr RLS-\u00e5tkomst till k\u00e4nslig journal- och h\u00e4lsodata. S\u00e4tts via syncStaffRole n\u00e4r en personalpost sparas."
     }
   },
   "required": [
