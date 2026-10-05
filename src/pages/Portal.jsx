@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { getPatientPortalData } from "@/functions/getPatientPortalData";
+import { signPatientConsent } from "@/functions/signPatientConsent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -21,6 +22,15 @@ const bookingStatus = {
   cancelled: { label: "Inställd", cls: "bg-rose-100 text-rose-700" },
   no_show: { label: "Utebliven", cls: "bg-rose-100 text-rose-700" },
   draft: { label: "Utkast", cls: "bg-secondary text-muted-foreground" },
+};
+
+const consentTypes = {
+  treatment: "Behandlingssamtycke",
+  journal: "Journalsamtycke",
+  photography: "Fotosamtycke",
+  image_use: "Användning av bilder",
+  communication: "Kommunikationssamtycke",
+  marketing: "Marknadsföringssamtycke",
 };
 
 function StatusBadge({ status }) {
@@ -84,6 +94,8 @@ export default function Portal() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [signingId, setSigningId] = useState(null);
+  const [signError, setSignError] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -122,7 +134,21 @@ export default function Portal() {
     );
   }
 
-  const { customer, bookings, journals, healthDeclarations, formSubmissions } = data;
+  const { customer, bookings, journals, healthDeclarations, formSubmissions, consents } = data;
+
+  const handleSignConsent = async (consentId) => {
+    setSignError(null);
+    setSigningId(consentId);
+    try {
+      const res = await signPatientConsent({ consent_id: consentId });
+      const updated = res.data.consent;
+      setData((prev) => (prev ? { ...prev, consents: prev.consents.map((c) => (c.id === updated.id ? updated : c)) } : prev));
+    } catch (e) {
+      setSignError(e.message || "Kunde inte signera samtycket");
+    } finally {
+      setSigningId(null);
+    }
+  };
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.start_time) >= now && !["cancelled", "no_show"].includes(b.status));
   const past = bookings.filter((b) => new Date(b.start_time) < now || ["cancelled", "no_show"].includes(b.status));
@@ -161,6 +187,7 @@ export default function Portal() {
             <TabsTrigger value="journals">Journal</TabsTrigger>
             <TabsTrigger value="health">Hälsodeklarationer</TabsTrigger>
             <TabsTrigger value="forms">Formulär</TabsTrigger>
+            <TabsTrigger value="consents">Samtycken</TabsTrigger>
           </TabsList>
 
           {/* Bokningar */}
@@ -282,6 +309,60 @@ export default function Portal() {
                 );
               })
             )}
+          </TabsContent>
+
+          {/* Samtycken */}
+          <TabsContent value="consents" className="space-y-6">
+            <p className="text-sm text-muted-foreground">Här signerar du dina samtycken digitalt. Signerade samtycken sparas med datum och ditt namn.</p>
+            {signError && <p className="text-sm text-rose-600">{signError}</p>}
+            {(() => {
+              const list = consents || [];
+              const pending = list.filter((c) => !c.granted);
+              const granted = list.filter((c) => c.granted);
+              return (
+                <>
+                  <div>
+                    <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Att signera ({pending.length})</h2>
+                    {pending.length === 0 ? (
+                      <EmptyState icon={FileText} text="Inga samtycken att signera just nu." />
+                    ) : (
+                      <div className="space-y-3">
+                        {pending.map((c) => (
+                          <div key={c.id} className="rounded-xl border border-border bg-card p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium">{consentTypes[c.type] || c.type}</p>
+                              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Ej signerat</span>
+                            </div>
+                            {c.text && <p className="mt-2 max-h-40 overflow-y-auto text-sm whitespace-pre-wrap text-muted-foreground">{c.text}</p>}
+                            <Button size="sm" className="mt-3" disabled={signingId === c.id} onClick={() => handleSignConsent(c.id)}>
+                              {signingId === c.id ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Signerar...</> : <><PenLine className="w-4 h-4 mr-1" />Signera digitalt</>}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Signerade samtycken ({granted.length})</h2>
+                    {granted.length === 0 ? (
+                      <EmptyState icon={Lock} text="Inga signerade samtycken." />
+                    ) : (
+                      <div className="space-y-3">
+                        {granted.map((c) => (
+                          <div key={c.id} className="rounded-xl border border-border bg-card p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium">{consentTypes[c.type] || c.type}</p>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700"><Lock className="w-3 h-3" />Signerat</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{fmtDateTime(c.granted_at)}{c.granted_by ? ` · ${c.granted_by}` : ""}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </main>
