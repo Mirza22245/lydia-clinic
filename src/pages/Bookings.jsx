@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 import { logAudit } from "@/lib/audit";
+import { sendBookingConfirmation } from "@/functions/sendBookingConfirmation";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -152,6 +153,14 @@ export default function Bookings() {
       } else {
         const created = await base44.entities.Booking.create(data);
         await logAudit("booking_create", "Booking", created.id, `Bokning skapad för ${data.customer_name}`, { treatment: data.treatment_name });
+        // Automatisk bokningsbekräftelse till patienten — får inte blockera.
+        if (cust?.email) {
+          try {
+            await sendBookingConfirmation({ booking_id: created.id });
+          } catch {
+            // Swallow: e-post får inte blockera bokningen.
+          }
+        }
       }
       setOpen(false);
       setEditing(null);
