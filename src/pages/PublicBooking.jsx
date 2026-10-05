@@ -16,10 +16,16 @@ const steps = [
   { n: 2, label: "Behandlare", icon: User },
   { n: 3, label: "Tid", icon: CalendarDays },
   { n: 4, label: "Uppgifter", icon: Check },
+  { n: 5, label: "Bekräftelse", icon: CheckCircle2 },
 ];
 
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 const fmtFull = (iso) => new Date(iso).toLocaleString("sv-SE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+
+const slotGroups = (slots) => [
+  { label: "Förmiddag", slots: slots.filter((s) => new Date(s).getHours() < 12) },
+  { label: "Eftermiddag", slots: slots.filter((s) => new Date(s).getHours() >= 12) },
+].filter((g) => g.slots.length > 0);
 
 const treatmentRequirements = (t) => {
   if (!t) return [];
@@ -249,7 +255,16 @@ export default function PublicBooking() {
         {step === 3 && (
           <div>
             <h2 className="mb-1 text-lg font-semibold">Välj dag och tid</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Öppet 09:00–17:00.</p>
+            <p className="mb-4 text-sm text-muted-foreground">Välj en ledig tid för din behandling.</p>
+            <div className="mb-4 rounded-xl border border-border bg-card p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{treatment?.name}</p>
+                  <p className="text-muted-foreground">{staff?.name}</p>
+                </div>
+                {treatment?.price != null && <p className="shrink-0 font-medium">{treatment.price.toLocaleString("sv-SE")} kr</p>}
+              </div>
+            </div>
             <div className="mb-4">
               <Label htmlFor="date" className="mb-1.5 block">Datum</Label>
               <Input id="date" type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={onDateChange} className="max-w-[200px]" />
@@ -259,9 +274,16 @@ export default function PublicBooking() {
             ) : slots.length === 0 ? (
               <p className="text-sm text-muted-foreground">Inga lediga tider denna dag. Prova ett annat datum.</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {slots.map((s) => (
-                  <button key={s} type="button" onClick={() => { setSlot(s); setStep(4); }} className="rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:border-primary hover:bg-accent">{fmtTime(s)}</button>
+              <div className="space-y-4">
+                {slotGroups(slots).map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                      {group.slots.map((s) => (
+                        <button key={s} type="button" onClick={() => { setSlot(s); setStep(4); }} className={cn("rounded-lg border bg-card px-3 py-2 text-sm transition-colors hover:border-primary hover:bg-accent", slot === s && "border-primary bg-primary text-primary-foreground")}>{fmtTime(s)}</button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
