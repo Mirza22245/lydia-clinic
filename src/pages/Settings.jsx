@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getClinicId } from "@/lib/currentUser";
 import FeatureFlagsPanel from "@/components/FeatureFlagsPanel";
 import IntegrationsPanel from "@/components/IntegrationsPanel";
+import PublicSiteCard from "@/components/settings/PublicSiteCard";
 
 const empty = { name: "", org_number: "", email: "", phone: "", address: "", industry: "" };
 
@@ -123,6 +124,8 @@ export default function Settings() {
           </Button>
         </div>
       </form>
+
+      <PublicSiteCard key={clinic.id} clinic={clinic} onSaved={setClinic} />
 
       <div className="max-w-2xl space-y-6">
         <IntegrationsPanel />

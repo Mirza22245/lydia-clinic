@@ -20,6 +20,11 @@ export default async function(req) {
       return Response.json({ error: "Bokning saknas" }, { status: 404 });
     }
 
+    // Inga betalningar för inställda/uteblivna bokningar (funktionen är offentlig; belopp styrs alltid av bokningen).
+    if (['cancelled', 'no_show'].includes(booking.status)) {
+      return Response.json({ error: "Bokningen är inställd" }, { status: 409 });
+    }
+
     const amount = Math.round((booking.price || 0) * 100); // kr -> öre
     if (amount <= 0) {
       return Response.json({ error: "Belopp saknas på bokningen" }, { status: 400 });

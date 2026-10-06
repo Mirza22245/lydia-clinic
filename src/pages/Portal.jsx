@@ -6,6 +6,10 @@ import { signPatientConsent } from "@/functions/signPatientConsent";
 import { cancelPatientBooking } from "@/functions/cancelPatientBooking";
 import { getBookingRequirements } from "@/functions/getBookingRequirements";
 import HealthDeclarationConsentForm from "@/components/portal/HealthDeclarationConsentForm";
+import PhoneVerificationCard from "@/components/portal/PhoneVerificationCard";
+import PortalMessages from "@/components/portal/PortalMessages";
+import TreatmentPlansList from "@/components/portal/TreatmentPlansList";
+import PortalRescheduleDialog from "@/components/portal/PortalRescheduleDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -15,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }) : "");
-const fmtDateTime = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+const fmtDateTime = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" }) : "");
 
 const bookingStatus = {
   pending: { label: "Väntar", cls: "bg-amber-100 text-amber-700" },
@@ -232,6 +236,8 @@ export default function Portal() {
           </div>
         </div>
 
+        {data.features?.sms && <PhoneVerificationCard customer={customer} onVerified={refreshPortalData} />}
+
         <Tabs defaultValue="bookings">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="bookings">Bokningar</TabsTrigger>
@@ -240,6 +246,8 @@ export default function Portal() {
             <TabsTrigger value="forms">Formulär</TabsTrigger>
             <TabsTrigger value="consents">Samtycken</TabsTrigger>
             <TabsTrigger value="archive">Arkiv & kvitton</TabsTrigger>
+            {data.features?.treatment_plans && <TabsTrigger value="plans">Behandlingsplan</TabsTrigger>}
+            {data.features?.messages && <TabsTrigger value="messages">Meddelanden</TabsTrigger>}
           </TabsList>
 
           {/* Bokningar */}
@@ -281,7 +289,7 @@ export default function Portal() {
                           <Button size="sm" variant="outline" disabled={cancellingId === b.id} onClick={() => handleCancelBooking(b.id)}>
                             {cancellingId === b.id ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Avbokar...</> : <><XCircle className="w-3.5 h-3.5 mr-1" />Avboka</>}
                           </Button>
-                          <Button size="sm" variant="ghost" asChild><Link to="/book">Boka om</Link></Button>
+                          <PortalRescheduleDialog booking={b} onDone={refreshPortalData} />
                         </div>
                       </div>
                     </div>
@@ -427,6 +435,13 @@ export default function Portal() {
               </div>
             )}
           </TabsContent>
+
+          {data.features?.treatment_plans && (
+            <TabsContent value="plans"><TreatmentPlansList plans={data.treatmentPlans || []} /></TabsContent>
+          )}
+          {data.features?.messages && (
+            <TabsContent value="messages"><PortalMessages messages={data.messages || []} onSent={refreshPortalData} /></TabsContent>
+          )}
 
           {/* Samtycken */}
           <TabsContent value="consents" className="space-y-6">

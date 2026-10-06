@@ -3,6 +3,7 @@ import { getPublicBookingData } from "@/functions/getPublicBookingData";
 import { getAvailableSlots } from "@/functions/getAvailableSlots";
 import { createPublicBooking } from "@/functions/createPublicBooking";
 import StripePaymentStep from "@/components/stripe/StripePaymentStep";
+import { canPerform } from "@/lib/staffCompetence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,12 +20,16 @@ const steps = [
   { n: 5, label: "Bekräftelse", icon: CheckCircle2 },
 ];
 
-const fmtTime = (iso) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-const fmtFull = (iso) => new Date(iso).toLocaleString("sv-SE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+// All visning sker i klinikens tidszon, oavsett besökarens enhet.
+const TZ = "Europe/Stockholm";
+const fmtTime = (iso) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const hourOf = (iso) => parseInt(new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", hour12: false, timeZone: TZ }), 10);
+const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: TZ });
+const fmtFull = (iso) => new Date(iso).toLocaleString("sv-SE", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: TZ });
 
 const slotGroups = (slots) => [
-  { label: "Förmiddag", slots: slots.filter((s) => new Date(s).getHours() < 12) },
-  { label: "Eftermiddag", slots: slots.filter((s) => new Date(s).getHours() >= 12) },
+  { label: "Förmiddag", slots: slots.filter((s) => hourOf(s) < 12) },
+  { label: "Eftermiddag", slots: slots.filter((s) => hourOf(s) >= 12) },
 ].filter((g) => g.slots.length > 0);
 
 const treatmentRequirements = (t) => {
@@ -51,7 +56,7 @@ export default function PublicBooking() {
   const [step, setStep] = useState(1);
   const [treatment, setTreatment] = useState(null);
   const [staff, setStaff] = useState(null);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayStr());
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slot, setSlot] = useState(null);
@@ -69,6 +74,9 @@ export default function PublicBooking() {
       try {
         const res = await getPublicBookingData({});
         setInit(res.data);
+        const wanted = new URLSearchParams(window.location.search).get("treatment");
+        const pre = res.data.treatments.find((t) => t.id === wanted);
+        if (pre) { setTreatment(pre); setStep(2); }
       } catch (e) {
         setInitError(e.message || "Kunde inte ladda");
       } finally {
@@ -82,7 +90,7 @@ export default function PublicBooking() {
     setLoadingSlots(true);
     setSlot(null);
     try {
-      const res = await getAvailableSlots({ clinic_id: init.clinic.id, staff_name: staffName, date: dateStr, duration: t.duration || 30 });
+      const res = await getAvailableSlots({ clinic_id: init.clinic.id, staff_name: staffName, date: dateStr, duration: t.duration || 30, treatment_id: t.id });
       setSlots(res.data.slots || []);
     } catch {
       setSlots([]);
@@ -130,6 +138,9 @@ export default function PublicBooking() {
     }
   };
 
+  // Endast behandlare som får utföra vald behandling visas (servern nekar dessutom alla andra).
+  const eligibleStaff = (init?.staff || []).filter((s) => canPerform(s, treatment?.id));
+
   if (loadingInit) {
     return <div className="flex min-h-screen items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -143,7 +154,7 @@ export default function PublicBooking() {
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card">
           <div className="mx-auto max-w-2xl px-4 py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.name}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
           </div>
         </header>
         <main className="mx-auto max-w-2xl px-4 py-12 text-center">
@@ -162,7 +173,7 @@ export default function PublicBooking() {
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-amber-800">
                 {pendingReqs.map((r) => <li key={r}>{r}</li>)}
               </ul>
-              <p className="mt-2 text-amber-700">Logga in i kundportalen för att komplettera.</p>
+              <p className="mt-2 text-amber-700">Skapa ett konto med samma e-postadress ({customer.email}) – <a href="/register" className="underline">registrera dig</a> eller <a href="/login" className="underline">logga in</a> – för att komplettera i kundportalen.</p>
             </div>
           )}
           <p className="mt-6 text-xs text-muted-foreground">
@@ -177,7 +188,7 @@ export default function PublicBooking() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-2xl px-4 py-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.name}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
           <h1 className="text-xl font-semibold font-heading">Boka tid</h1>
         </div>
       </header>
@@ -233,11 +244,11 @@ export default function PublicBooking() {
           <div>
             <h2 className="mb-1 text-lg font-semibold">Välj behandlare</h2>
             <p className="mb-4 text-sm text-muted-foreground">Vem vill du bli behandlad av?</p>
-            {init.staff.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Inga behandlare tillgängliga.</p>
+            {eligibleStaff.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Ingen behandlare kan utföra den här behandlingen online just nu. Kontakta kliniken.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {init.staff.map((s) => (
+                {eligibleStaff.map((s) => (
                   <button key={s.id} type="button" onClick={() => pickStaff(s)} className={cn("flex items-center gap-3 rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary", staff?.id === s.id && "border-primary ring-1 ring-primary")}>
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"><User className="w-5 h-5" /></span>
                     <div>
@@ -267,7 +278,7 @@ export default function PublicBooking() {
             </div>
             <div className="mb-4">
               <Label htmlFor="date" className="mb-1.5 block">Datum</Label>
-              <Input id="date" type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={onDateChange} className="max-w-[200px]" />
+              <Input id="date" type="date" value={date} min={todayStr()} onChange={onDateChange} className="max-w-[200px]" />
             </div>
             {loadingSlots ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Hämtar tillgängliga tider...</div>
@@ -326,7 +337,7 @@ export default function PublicBooking() {
               {treatment?.min_age > 0 && (
                 <div>
                   <Label htmlFor="birth_date" className="mb-1.5 block">Födelsedatum *<span className="ml-1 text-xs text-muted-foreground">(ålderskontroll, minst {treatment.min_age} år)</span></Label>
-                  <Input id="birth_date" type="date" value={customer.birth_date} onChange={(e) => setCustomer({ ...customer, birth_date: e.target.value })} max={new Date().toISOString().slice(0, 10)} />
+                  <Input id="birth_date" type="date" value={customer.birth_date} onChange={(e) => setCustomer({ ...customer, birth_date: e.target.value })} max={todayStr()} />
                 </div>
               )}
               <div>

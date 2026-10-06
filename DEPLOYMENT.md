@@ -1,111 +1,114 @@
-# Lydia — Hostinger Deployment Guide
+# Lydia — Driftsättning på Hostinger (utan Base44)
 
-> **Mål:** Deploya Lydia på Hostinger utan Base44. WordPress på lydiaestetisk.se förblir oförändrad.
+> **Status:** Koden bygger (Base44-läge och portabelt läge) och alla 31 backend-funktioner kompilerar för Node.
+> Den portabla servern har **inte** körts mot en riktig PostgreSQL i utvecklingsmiljön — kör röktestet (steg 9) innan något annat.
+> WordPress på lydiaestetisk.se berörs inte av något steg före steg 11.
 
 ## Arkitektur
 
 ```
-lydiaestetisk.se          → WordPress (Hostinger, oförändrad)
-app.lydiaestetisk.se      → Lydia frontend (React, statisk bundle)
-api.lydiaestetisk.se      → Lydia backend (Node/Express)
-                          → PostgreSQL (Hostinger databas)
-                          → S3-fillagring (Hostinger Object Storage)
+lydiaestetisk.se           → WordPress (oförändrad tills steg 11)
+app.lydiaestetisk.se       → host-nginx (TLS) → frontend-container (SPA + /api-proxy) → backend (Node/Express) → PostgreSQL 16
+                              Allt på samma ursprung (/api) — ingen CORS, same-site-cookie.
 ```
 
-## Steg 1 — Förbered Hostinger VPS
+Compose-tjänster: `db` (Postgres), `backend`, `frontend`, samt engångsjobben `migrate` och `create-admin` (profil `tools`).
+Appen kör som databasrollen `lydia_app` (endast DML, ingen BYPASSRLS) så att **FORCE RLS** gäller.
 
-1. Köp VPS-plan (minst 2GB RAM, 20GB SSD)
-2. Installera Docker + Docker Compose:
+## 1. Förbered VPS (min. 2 GB RAM)
+
+```bash
+curl -fsSL https://get.docker.com | sh && sudo systemctl enable docker
+sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+## 2. DNS (endast ny post)
+
+`A  app.lydiaestetisk.se → <VPS-IP>`. Rör inte WordPress-posterna.
+
+## 3. Hämta koden
+
+```bash
+git clone <ditt-github-repo> /opt/lydia && cd /opt/lydia
+```
+
+## 4. Konfigurera hemligheter
+
+```bash
+cp server/.env.example server/.env      # fyll i, se tabellen nedan
+export DB_PASSWORD=<långt-lösenord> LYDIA_APP_PASSWORD=<annat-långt-lösenord>   # eller en .env bredvid docker-compose.yml
+```
+
+| Variabel | Krävs | Anmärkning |
+|---|---|---|
+| `JWT_SECRET`, `FILE_SIGNING_SECRET`, `CRON_SECRET` | ja | `openssl rand -hex 32` var för sig |
+| `APP_BASE_URL` | ja | `https://app.lydiaestetisk.se` (senare `https://lydiaestetisk.se`) |
+| `SMTP_HOST/PORT/USER/PASS/FROM_EMAIL` | ja | Utan SMTP skickas ingen e-post (bokningsbekräftelse, återställning) |
+| `STORAGE_DRIVER` (`LOCAL`/`S3`) + `STORAGE_DIR` eller `S3_*` | ja | Journalbilder och dokument |
+| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | för betalning | Testnycklar tills ni aktiverar |
+| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_API_SECRET`, `SMS_SENDER` | för SMS | Lämna tomt = SMS fungerar ej (svarar "inte konfigurerat") |
+| `BANKID_MODE`, `BANKID_API_URL`, `BANKID_CLIENT_SECRET` | för BankID | Lämna tomt = BankID fungerar ej |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | för Google Calendar | Lämna tomt = ej ansluten |
+| `ENCRYPTION_KEY` | rekommenderas | Krypterar sparade tokens |
+
+## 5. Databas
+
+```bash
+docker compose up -d db
+docker compose --profile tools run --rm migrate
+LYDIA_ADMIN_EMAIL=<din-epost> LYDIA_ADMIN_PASSWORD=<lösenord> docker compose --profile tools run --rm create-admin
+```
+
+## 6. Starta
+
+```bash
+docker compose up -d --build
+```
+
+## 7. TLS + host-nginx
+
+```bash
+sudo cp deploy/nginx/lydia.conf /etc/nginx/conf.d/lydia.conf
+sudo certbot --nginx -d app.lydiaestetisk.se && sudo nginx -t && sudo systemctl reload nginx
+```
+
+## 8. Schemalagda jobb
+
+```bash
+# Påminnelser (24 h / 2 h) var 15:e minut — skickar bara kanaler som är aktiverade
+*/15 * * * * curl -s -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:8080/api/functions/sendDueReminders >/dev/null
+# Backup 03:00 (databas + filer, 14 dagars retention)
+0 3 * * * PG_SUPERUSER_URL=postgresql://lydia:<DB_PASSWORD>@127.0.0.1:5432/lydia /opt/lydia/server/scripts/backup.sh
+```
+Testa återläsning med `server/scripts/restore.sh` på en tom databas **innan** go-live.
+
+## 9. Röktest (ska vara grönt innan data flyttas)
+
+1. `curl https://app.lydiaestetisk.se/api/health` → `{"ok":true}`
+2. Logga in som admin, öppna Inställningar → fyll i öppettider, FAQ, logotyp.
+3. Lägg in personalens arbetsscheman (Schema) — annars finns inga bokningsbara tider.
+4. Boka som gäst, registrera konto med samma e-post, fyll i hälsodeklaration + samtycke, bekräfta som personal.
+5. Betala med Stripe-testkort `4242 4242 4242 4242` → kvitto skapas.
+6. Signera journal; kontrollera Revisionslogg.
+7. Isoleringstest: logga in som kund A och försök läsa kund B:s bokning/journal → ska nekas.
+
+## 10. Flytta data från Base44
+
+1. På Base44-appen: kör funktionen `exportAllData` som app-admin (den exponeras aldrig i den portabla servern). **Ta bort funktionen direkt efter.**
+2. Kör importen med ägar-rollen:
    ```bash
-   curl -fsSL https://get.docker.com | sh
-   sudo systemctl enable docker
+   BASE44_FUNCTIONS_URL=https://<app>.base44.app/functions BASE44_ADMIN_TOKEN=<token> \
+   DATABASE_URL=postgresql://lydia:<DB_PASSWORD>@127.0.0.1:5432/lydia npm --prefix server run import
    ```
-3. Skapa PostgreSQL-databas via Hostinger-panel eller Docker
+3. Jämför antal poster per entitet (importrapporten) mot Base44. Användarkonton migreras **inte** — personal registrerar sig på nytt och kopplas via sin Staff-post; kunder återställer lösenord via "Glömt lösenord".
 
-## Steg 2 — DNS-konfiguration (INTE WordPress!)
+## 11. Stripe och go-live (först efter godkänt röktest)
 
-**Viktigt:** Ändra INTE befintliga DNS-poster för lydiaestetisk.se. Lägg till NYA subdomäner:
+1. Stripe → Webhooks: lägg till `https://app.lydiaestetisk.se/api/functions/stripeWebhook` (events `payment_intent.succeeded`, `charge.refunded`); lägg den nya signeringshemligheten i `STRIPE_WEBHOOK_SECRET`.
+2. Byt till skarpa Stripe-nycklar när ni är redo att ta betalt.
+3. Aktivera moduler **en i taget** under Inställningar → Funktionsflaggor: `sms`, `bankid`, `google_calendar`, `payments` (de är avstängda/testläge och svarar "inte konfigurerat" utan nycklar).
+4. WordPress: ändra endast "Boka tid"-länken till `https://app.lydiaestetisk.se/book` — eller, när ni beslutat flytta hela domänen, använd `deploy/nginx/lydia-disabled.conf.example` som mall.
 
-```
-Typ    Namn                   Värde                     TTL
-A      app.lydiaestetisk.se   [Hostinger VPS IP]        3600
-A      api.lydiaestetisk.se   [Hostinger VPS IP]        3600
-```
+## Rollback
 
-**WordPress-poster (A- och www-poster för lydiaestetisk.se) ska INTE röras.**
-
-## Steg 3 — Deploya backend
-
-```bash
-# På Hostinger VPS:
-git clone https://github.com/ditt-repo/lydia.git
-cd lydia/server
-cp .env.example .env
-# Redigera .env med riktiga värden
-npm install
-npm run migrate  # Kör schema.sql
-npm start
-```
-
-## Steg 4 — Deploya frontend
-
-```bash
-cd lydia
-npm install
-npm run build  # Bygg statisk bundle
-# Servera via nginx:
-# - app.lydiaestetisk.se → /usr/share/lydia/frontend/dist
-# - api.lydiaestetisk.se → proxy till localhost:3001
-```
-
-## Steg 5 — Konfigurera secrets
-
-Sätt i `server/.env`:
-- `DATABASE_URL` — Hostinger PostgreSQL-anslutning
-- `JWT_SECRET` — generera med `openssl rand -hex 32`
-- `STRIPE_SECRET_KEY` — från Stripe-dashboard
-- `STRIPE_WEBHOOK_SECRET` — från Stripe webhook
-- `SMTP_*` — från e-postleverantör (t.ex. Hostinger Mail)
-- `SMS_*` — från SMS-leverantör (när vald)
-- `BANKID_*` — från BankID-leverantör (när avtal sluts)
-- `S3_*` — från Hostinger Object Storage
-
-## Steg 6 — Uppdatera Stripe webhook
-
-I Stripe Dashboard → Webhooks:
-- Ändra URL till: `https://api.lydiaestetisk.se/api/payments/webhook`
-- Behåll samma events: `payment_intent.succeeded`, `charge.refunded`
-
-## Steg 7 — Uppdatera WordPress-länk
-
-I WordPress (lydiaestetisk.se):
-- Ändra "Boka tid"-länk från `https://lydiaestetisk.se/book` till `https://app.lydiaestetisk.se/book`
-- Detta är den ENDA ändringen i WordPress — ingen kod, ingen DNS
-
-## Steg 8 — Verifiera
-
-1. Besök `https://app.lydiaestetisk.se` — Lydia laddar
-2. Besök `https://lydiaestetisk.se` — WordPress oförändrad
-3. Klicka "Boka tid" på WordPress → omdirigeras till Lydia
-4. Testa bokning → betalning → kvitto
-5. Verifiera att journal skapas och signeras
-6. Kontrollera audit-logg
-
-## Migrering av data från Base44
-
-1. Exportera alla entiteter från Base44 som JSON (via Base44 API eller dashboard)
-2. Konvertera till SQL INSERTs (skript finns i `server/src/db/migrate-from-base44.js` — TODO)
-3. Importera till PostgreSQL: `psql -d lydia -f import.sql`
-
-## Backup
-
-```bash
-# Daglig PostgreSQL-backup (cron):
-0 3 * * * pg_dump lydia | gzip > /backups/lydia-$(date +\%Y\%m\%d).sql.gz
-```
-
-## Övervakning
-
-- Health check: `GET https://api.lydiaestetisk.se/health`
-- Logs: `docker-compose logs -f backend`
-- DB health: `pg_isready -U lydia
+WordPress är orörd: ta bort "Boka tid"-länkändringen/nginx-blocket så är läget som före flytten. Databasen kan återställas med `server/scripts/restore.sh`.

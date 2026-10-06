@@ -13,6 +13,9 @@ import PaymentCheckoutDialog from "@/components/PaymentCheckoutDialog";
 import BookingsCalendar from "@/components/BookingsCalendar";
 import { logAudit } from "@/lib/audit";
 import { sendBookingConfirmation } from "@/functions/sendBookingConfirmation";
+import { saveStaffBooking } from "@/functions/saveStaffBooking";
+import { getPublicBookingData } from "@/functions/getPublicBookingData";
+import { canPerform } from "@/lib/staffCompetence";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
@@ -53,6 +56,9 @@ export default function Bookings() {
   const [saving, setSaving] = useState(false);
   const [checkout, setCheckout] = useState(null);
   const [viewMode, setViewMode] = useState("list");
+  const [staffList, setStaffList] = useState([]);
+  const [saveError, setSaveError] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,12 +75,17 @@ export default function Bookings() {
   useEffect(() => { load(); }, [load]);
 
   const fetchOptions = async () => {
-    const [c, t] = await Promise.all([
+    const clinic_id = await getClinicId();
+    // Personallistan hämtas via den publika funktionen (aktiv personal + behörighet) — Staff-posten är läsbar endast för admin.
+    const [c, t, pub] = await Promise.all([
       base44.entities.Customer.filter({}, { limit: 200 }),
       base44.entities.Treatment.filter({}, { limit: 200 }),
+      getPublicBookingData({ clinic_id }),
     ]);
     setCustomers(c.items || []);
     setTreatments(t.items || []);
+    setStaffList(pub.data.staff || []);
+    setSaveError(null);
   };
 
   const openCreate = async () => {
@@ -101,72 +112,68 @@ export default function Bookings() {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!form.customer_id || !form.treatment_id || !form.start_time) return;
+    if (!form.customer_id || !form.treatment_id || !form.start_time || !form.staff_name) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const clinic_id = await getClinicId();
       const cust = customers.find((x) => x.id === form.customer_id);
-      const treat = treatments.find((x) => x.id === form.treatment_id);
-      const start = new Date(form.start_time);
-      const end = new Date(start.getTime() + (treat?.duration || 30) * 60000);
-      const data = {
-        clinic_id,
+      // All validering (behörighet, schema, dubbelbokning, krav) sker server-side i saveStaffBooking.
+      const res = await saveStaffBooking({
+        booking_id: editing?.id,
         customer_id: form.customer_id,
-        customer_name: cust?.name || "",
         treatment_id: form.treatment_id,
-        treatment_name: treat?.name || "",
-        staff_name: form.staff_name || undefined,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
+        staff_name: form.staff_name,
+        start_time: new Date(form.start_time).toISOString(),
         status: form.status,
-        price: treat?.price ?? 0,
-        notes: form.notes || undefined,
-      };
-      if (editing) {
-        await base44.entities.Booking.update(editing.id, data);
-        await logAudit("booking_update", "Booking", editing.id, `Bokning för ${data.customer_name} uppdaterad`, { status: data.status });
-        if (form.status === "completed" && editing.status !== "completed") {
-          const existing = await base44.entities.JournalEntry.filter({ booking_id: editing.id }, { limit: 1 });
-          if (!existing.items || existing.items.length === 0) {
-            await base44.entities.JournalEntry.create({
-              clinic_id,
-              booking_id: editing.id,
-              customer_id: data.customer_id,
-              customer_name: data.customer_name,
-              treatment_id: data.treatment_id,
-              treatment_name: data.treatment_name,
-              provider: data.staff_name || undefined,
-              entry_date: new Date().toISOString(),
-              notes: "",
-              version: 1,
-              is_signed: false,
-            });
-          }
-          await logAudit("booking_status", "Booking", editing.id, `Bokning för ${data.customer_name} markerad som klar`, { from: editing.status, to: "completed" });
-          setCheckout({
-            id: editing.id,
-            customer_id: data.customer_id,
-            customer_name: data.customer_name,
-            treatment_name: data.treatment_name,
-            price: data.price,
+        notes: form.notes || "",
+      });
+      const saved = res.data.booking;
+      const blocked = res.data.status_blocked;
+      if (blocked) {
+        setNotice(`Bokningen sparades som "Väntar". Status "${statusLabels[blocked.status]}" kräver först: ${blocked.missing.join(", ")}.`);
+      } else {
+        setNotice(null);
+      }
+      if (editing && saved.status === "completed" && editing.status !== "completed") {
+        const existing = await base44.entities.JournalEntry.filter({ booking_id: editing.id }, { limit: 1 });
+        if (!existing.items || existing.items.length === 0) {
+          await base44.entities.JournalEntry.create({
             clinic_id,
+            booking_id: editing.id,
+            customer_id: saved.customer_id,
+            customer_name: saved.customer_name,
+            treatment_id: saved.treatment_id,
+            treatment_name: saved.treatment_name,
+            provider: saved.staff_name || undefined,
+            entry_date: new Date().toISOString(),
+            notes: "",
+            version: 1,
+            is_signed: false,
           });
         }
-      } else {
-        const created = await base44.entities.Booking.create(data);
-        await logAudit("booking_create", "Booking", created.id, `Bokning skapad för ${data.customer_name}`, { treatment: data.treatment_name });
-        // Automatisk bokningsbekräftelse till patienten — får inte blockera.
-        if (cust?.email) {
-          try {
-            await sendBookingConfirmation({ booking_id: created.id });
-          } catch {
-            // Swallow: e-post får inte blockera bokningen.
-          }
+        setCheckout({
+          id: editing.id,
+          customer_id: saved.customer_id,
+          customer_name: saved.customer_name,
+          treatment_name: saved.treatment_name,
+          price: saved.price,
+          clinic_id,
+        });
+      }
+      if (!editing && cust?.email) {
+        try {
+          await sendBookingConfirmation({ booking_id: saved.id });
+        } catch {
+          // Swallow: e-post får inte blockera bokningen.
         }
       }
       setOpen(false);
       setEditing(null);
       await load();
+    } catch (err) {
+      const data = err?.response?.data;
+      setSaveError(data?.missing?.length ? `${data.error} Saknas: ${data.missing.join(", ")}` : data?.error || err.message || "Kunde inte spara bokningen");
     } finally {
       setSaving(false);
     }
@@ -193,6 +200,8 @@ export default function Bookings() {
         </div>
         <Button size="sm" onClick={openCreate}><Plus className="w-4 h-4 mr-1" />Ny bokning</Button>
       </div>
+
+      {notice && <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{notice}</p>}
 
       {viewMode === "calendar" ? (
         <BookingsCalendar />
@@ -265,7 +274,15 @@ export default function Bookings() {
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label htmlFor="staff_name">Behandlare</Label><Input id="staff_name" value={form.staff_name} onChange={set("staff_name")} placeholder="Valfritt" /></div>
+              <div className="space-y-2">
+                <Label htmlFor="staff_name">Behandlare</Label>
+                <select id="staff_name" value={form.staff_name} onChange={set("staff_name")} required className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                  <option value="">Välj behandlare…</option>
+                  {staffList
+                    .filter((s) => s.name === form.staff_name || canPerform(s, form.treatment_id))
+                    .map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </select>
+              </div>
               <div className="space-y-2"><Label htmlFor="start_time">Starttid</Label><Input id="start_time" type="datetime-local" value={form.start_time} onChange={set("start_time")} required /></div>
             </div>
             <div className="space-y-2">
@@ -281,9 +298,10 @@ export default function Bookings() {
               </select>
             </div>
             <div className="space-y-2"><Label htmlFor="notes">Anteckningar</Label><Textarea id="notes" value={form.notes} onChange={set("notes")} rows={2} /></div>
+            {saveError && <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-sm text-rose-700">{saveError}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>Avbryt</Button>
-              <Button type="submit" disabled={saving || !form.customer_id || !form.treatment_id || !form.start_time}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{editing ? "Spara" : "Lägg till"}</Button>
+              <Button type="submit" disabled={saving || !form.customer_id || !form.treatment_id || !form.start_time || !form.staff_name}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{editing ? "Spara" : "Lägg till"}</Button>
             </div>
           </form>
         </DialogContent>

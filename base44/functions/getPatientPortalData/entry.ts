@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { findCustomerForUser, normalizeEmail } from '../../shared/portalCustomer.ts';
+import { isFlagActive } from '../../shared/featureFlags.ts';
 
 // Hämtar den inloggade patientens egna data för kundportalen.
 // Accesskontroll sker i koden: patienten matchas mot en Customer-post via e-post,
@@ -17,6 +18,13 @@ export default async function(req) {
     if (!customer) return Response.json({ customer: null });
 
     const cid = customer.id;
+    // Meddelanden, behandlingsplaner och SMS-verifiering exponeras först när modulen aktiverats.
+    const [msgOn, plansOn, smsOn] = await Promise.all([
+      isFlagActive(svc, customer.clinic_id, 'messages'),
+      isFlagActive(svc, customer.clinic_id, 'treatment_plans'),
+      isFlagActive(svc, customer.clinic_id, 'sms'),
+    ]);
+    const none = Promise.resolve({ items: [] });
     const [bookings, journals, health, forms, consents, payments, plans, messages] = await Promise.all([
       svc.entities.Booking.filter({ customer_id: cid }, { sort: '-start_time', limit: 200 }),
       svc.entities.JournalEntry.filter({ customer_id: cid }, { sort: '-entry_date', limit: 200 }),
@@ -24,8 +32,8 @@ export default async function(req) {
       svc.entities.FormSubmission.filter({ customer_id: cid }, { sort: '-submitted_at', limit: 50 }),
       svc.entities.Consent.filter({ customer_id: cid }, { sort: '-granted_at', limit: 100 }),
       svc.entities.Payment.filter({ customer_id: cid }, { sort: '-paid_at', limit: 200 }),
-      svc.entities.TreatmentPlan.filter({ customer_id: cid }, { sort: '-created_date', limit: 50 }),
-      svc.entities.Message.filter({ customer_id: cid }, { sort: '-sent_at', limit: 100 }),
+      plansOn ? svc.entities.TreatmentPlan.filter({ customer_id: cid }, { sort: '-created_date', limit: 50 }) : none,
+      msgOn ? svc.entities.Message.filter({ customer_id: cid }, { sort: '-sent_at', limit: 100 }) : none,
     ]);
 
     return Response.json({
@@ -38,6 +46,7 @@ export default async function(req) {
         email_verified: !!customer.email_verified,
         phone_verified: !!customer.phone_verified,
       },
+      features: { messages: msgOn, treatment_plans: plansOn, sms: smsOn },
       treatmentPlans: (plans.items || []).map((p) => ({
         id: p.id, treatment_name: p.treatment_name, recommended_interval_days: p.recommended_interval_days,
         next_recommended_date: p.next_recommended_date, status: p.status, notes: p.notes,

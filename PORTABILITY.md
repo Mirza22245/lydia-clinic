@@ -1,111 +1,39 @@
-# Lydia — Portabilitets- och migreringsarkitektur
+# Lydia — Portabilitet: status
 
-> **Acceptanskriterium:** *Om Base44-prenumerationen sägs upp ska Lydia fortfarande kunna driftsättas och köras från GitHub + Hostinger.*
->
-> **Status: ARKITEKTUR BYGGD — migrering återstår.** Den portabla backend (`server/`), PostgreSQL-schema, Express-rutter och frontend-abstraktionslager är skapade. Frontend-filer måste byta från `@base44/sdk` till `@/lib/api` (mekaniskt sök/ersätt) och data måste migreras.
+> **Mål:** Om Base44 sägs upp ska Lydia kunna byggas och köras från GitHub + Hostinger.
+> **Status: kod klar, driftsättning ej verifierad.** Se `DEPLOYMENT.md` för stegen.
 
----
+## Vad som ersätter Base44
 
-## 1. Beroendeaudit — Base44-beroende vs portabel ersättning
+| Base44 | Portabel ersättning | Status |
+|---|---|---|
+| `@base44/sdk` i frontend | `src/lib/api.js` (aktiveras med `VITE_USE_BASE44=false`, alias i `vite.config.js`) | Portabelt bygge går igenom; inga Base44-adresser i bundlen |
+| `@base44/vite-plugin` | Utelämnas i portabelt bygge | Klart |
+| Entiteter + RLS (MongoDB) | PostgreSQL, schema genereras från `base44/entities/*.jsonc` (`server/src/db/schema.js`), `FORCE ROW LEVEL SECURITY`, app-roll utan BYPASSRLS | Skrivet, ej körd mot Postgres här |
+| Entity-API | `server/src/entities/*` (klinikfilter, rollområden, skyddade fält) | Skrivet, ej körd här |
+| Auth | `server/src/auth/*` (JWT-cookie, bcrypt, OTP, återställning) | Skrivet, ej körd här |
+| Backend-funktioner (Deno) | Samma källkod, kompileras med esbuild till Node (`server/scripts/build-functions.mjs`) mot SDK-shim | Alla 31 funktioner kompilerar |
+| SendEmail + MJML-mallar | Nodemailer + `mjml` (`server/src/lib/email.js`) | Skrivet; kräver SMTP |
+| Filer | `server/src/lib/storage.js` (LOCAL eller S3, signerade länkar) | Skrivet, ej körd här |
+| Secrets | Miljövariabler (`server/src/runtime/secrets-shim.js`) | Klart |
+| Google Calendar-connector | `server/src/routes/google.js` (egen OAuth) | Kräver Google-nycklar |
+| Datamigrering | `exportAllData` (Base44) + `server/scripts/import-from-base44.mjs` | **Ej körd** |
 
-| # | Beroende | Portabel ersättning | Status |
-|---|----------|---------------------|--------|
-| 1 | `@base44/sdk` (frontend) | `src/lib/api.js` — abstraktionslager som kan prata med Base44 ELLER egen backend | ✅ Byggd — frontend måste byta import (sök/ersätt) |
-| 2 | Base44 MongoDB + entiteter + RLS | PostgreSQL + `server/src/db/schema.sql` (35 tabeller) + Postgres RLS | ✅ Schema byggt — data måste migreras |
-| 3 | Base44 Auth | `server/src/routes/auth.js` (JWT + bcrypt + OTP) | ✅ Byggd |
-| 4 | Base44 Deno-runtime (26 funktioner) | `server/src/routes/*.js` (15 Express-rutter) | ✅ Byggd — speglar alla funktioner |
-| 5 | Base44 SendEmail | `server/src/lib/email.js` (Nodemailer SMTP + MJML-mallar) | ✅ Byggd |
-| 6 | Base44 fillagring | `server/src/lib/storage.js` (S3-kompatibel, presigned URLs) | ✅ Byggd |
-| 7 | Base44 secrets | `server/src/lib/secrets.js` (.env miljövariabler) | ✅ Byggd |
-| 8 | Base44 RLS | PostgreSQL RLS policies + `server/src/auth/middleware.js` RBAC | ✅ Byggd |
-| 9 | `@base44/vite-plugin` | Standard Vite (plugin bort i prod) | ✅ Trivialt |
-| 10 | Stripe via Base44 | `server/src/routes/payments.js` (portabel fetch) | ✅ Byggd |
+## Kvarvarande Base44-koppling i repot (ej i produktion)
 
-### Återstående steg för full oberoende
+- `package.json`: `@base44/sdk`, `@base44/vite-plugin` (används bara i builder-läget).
+- `src/api/base44Client.js`, `src/lib/app-params.js` (ersätts via alias i portabelt bygge).
+- Katalognamnet `base44/` (funktioner, entiteter, mejlmallar, delad logik) och `npm:@base44/sdk`-importer i funktionerna — omskrivs vid bygget till lokal SDK-shim.
+- Engångsfunktionen `exportAllData` på Base44-sidan (tas bort efter export, finns inte i portabelt bygge).
 
-1. **Frontend-migrering:** Sök/ersätt `from "@/api/base44Client"` → `from "@/lib/api"` i 38+ filer
-2. **Byt `base44.entities.X` → `api.entities.X`** och `base44.auth.*` → `api.auth.*`
-3. **Byt `base44.functions.invoke` → `api.functions.invoke`**
-4. **Data-migrering:** Export från Base44 → import till PostgreSQL
-5. **Test:** Kör hela flödet mot egen backend
-6. **Sätt `VITE_USE_BASE44=false`** i frontend-bygget
-
----
-
-## 2. Portabel arkitektur
-
-```
-GitHub (källkod, sanningens källa)
-  ├─ src/                     React-frontend (portabel Vite-build)
-  │  └─ lib/api.js            Abstraktionslager (Base44 ↔ egen backend)
-  ├─ server/                  Portabel Node/Express-backend
-  │  ├─ src/
-  │  │  ├─ index.js           Express-app
-  │  │  ├─ db/
-  │  │  │  ├─ schema.sql      PostgreSQL-schema (35 tabeller)
-  │  │  │  └─ client.js       DB-klient + RLS-helper
-  │  │  ├─ auth/middleware.js JWT + RBAC
-  │  │  ├─ lib/
-  │  │  │  ├─ secrets.js      .env-secrets
-  │  │  │  ├─ email.js        SMTP + MJML-mallar
-  │  │  │  └─ storage.js      S3-fillagring
-  │  │  └─ routes/            15 Express-rutter
-  │  ├─ .env.example          Miljövariabler
-  │  └─ Dockerfile
-  ├─ docker-compose.yml       Full stack (frontend + backend + postgres)
-  └─ DEPLOYMENT.md            Hostinger-deploymentguide
-
-Driftsättning (Hostinger VPS):
-  app.lydiaestetisk.se  → Lydia frontend (statisk bundle)
-  api.lydiaestetisk.se  → Lydia backend (Node/Express)
-  PostgreSQL            → Hostinger DB
-  S3                    → Hostinger Object Storage
-
-WordPress (oförändrad): https://lydiaestetisk.se/
-  └─ "Boka tid"-länk → https://app.lydiaestetisk.se/book
-```
-
----
-
-## 3. Migreringsfaser
-
-### Fas 0 — Förberedelse (KLAR)
-- ✅ Portabel backend skapad (`server/`)
-- ✅ PostgreSQL-schema skapat (35 tabeller)
-- ✅ Frontend-abstraktionslager skapat (`src/lib/api.js`)
-- ✅ Deployment-guide skapad (`DEPLOYMENT.md`)
-
-### Fas 1 — Frontend-migrering (ÅTERSTÅR)
-- Sök/ersätt alla `@base44/sdk`-importer till `@/lib/api`
-- Byt `base44.entities.X` → `api.entities.X`
-- Byt `base44.auth.*` → `api.auth.*`
-- Byt `base44.functions.invoke` → `api.functions.invoke`
-- Sätt `VITE_USE_BASE44=false` i `.env`
-
-### Fas 2 — Data-migrering (ÅTERSTÅR)
-- Exportera alla entiteter från Base44 som JSON
-- Konvertera till SQL INSERTs
-- Importera till PostgreSQL
-- Verifiera dataintegritet
-
-### Fas 3 — Driftsättning (ÅTERSTÅR)
-- Deploya backend på Hostinger
-- Bygg frontend och deploya
-- Konfigurera DNS (nya subdomäner, INTE WordPress)
-- Konfigurera Stripe webhook
-- Verifiera hela flödet
-
----
-
-## 4. Acceptans-status
+## Acceptans
 
 | Kriterium | Status |
-|-----------|--------|
-| Portabel backend byggd | ✅ KLAR |
-| PostgreSQL-schema byggd | ✅ KLAR |
-| Frontend-abstraktion byggd | ✅ KLAR |
-| Deployment-konfigurationer | ✅ KLAR |
-| Frontend-migrerad | ❌ ÅTERSTÅR (mekaniskt sök/ersätt) |
-| Data migrerad | ❌ ÅTERSTÅR |
-| Testad på Hostinger | ❌ ÅTERSTÅR |
-| Base44 kan sägas upp | ❌ ÄNNU INTE — Fas 1-3 kvar |
+|---|---|
+| Portabel frontend bygger utan Base44 | Ja |
+| Backend-funktioner kompilerar för Node | Ja (31/31) |
+| Serverkod syntaxkontrollerad | Ja |
+| Server körd mot PostgreSQL + RLS-test | **Nej** |
+| Data migrerad och jämförd | **Nej** |
+| Körd på Hostinger med skarp domän | **Nej** |
+| Base44 kan sägas upp | **Inte än** — först när ovanstående tre är klara |

@@ -25,6 +25,16 @@ export default async function(req) {
     if (!bookable.ok) {
       return Response.json({ error: bookable.error, code: bookable.code }, { status: bookable.status });
     }
+    // Behandlingar som inte tillåter gästbokning kräver inloggning med samma e-post som bokningen.
+    if (treatment.guest_booking_allowed === false) {
+      const u = await base44.auth.me().catch(() => null);
+      if (!u || (u.email || '').toLowerCase().trim() !== String(customer.email).toLowerCase().trim()) {
+        return Response.json({
+          error: 'Den här behandlingen kräver att du är inloggad. Logga in eller registrera dig med samma e-postadress och boka igen.',
+          code: 'login_required',
+        }, { status: 401 });
+      }
+    }
     const duration = treatment.duration || 30;
     const start = new Date(start_time);
     if (isNaN(start.getTime())) return Response.json({ error: 'Ogiltig starttid' }, { status: 400 });

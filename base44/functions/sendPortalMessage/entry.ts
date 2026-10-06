@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { findCustomerForUser } from '../../shared/portalCustomer.ts';
+import { isFlagActive } from '../../shared/featureFlags.ts';
 
 // Låter en inloggad kund skicka ett meddelande till kliniken från kundportalen.
 // Kunden matchas mot sin egen Customer-post via e-post; meddelandet skapas alltid
@@ -19,6 +20,9 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const customer = await findCustomerForUser(svc, user);
     if (!customer) return Response.json({ error: 'Ingen kundprofil hittades' }, { status: 404 });
+    if (!(await isFlagActive(svc, customer.clinic_id, 'messages'))) {
+      return Response.json({ error: 'Meddelanden är inte aktiverade ännu.', code: 'messages_not_active' }, { status: 409 });
+    }
 
     const since = new Date(Date.now() - 3600 * 1000).toISOString();
     const recent = await svc.entities.Message.filter(

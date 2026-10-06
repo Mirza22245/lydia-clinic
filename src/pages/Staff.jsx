@@ -9,6 +9,8 @@ import { getClinicId } from "@/lib/currentUser";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { syncStaffRole } from "@/functions/syncStaffRole";
+import StaffTreatmentPicker from "@/components/staff/StaffTreatmentPicker";
+import { parseAllowed } from "@/lib/staffCompetence";
 import {
   PERMISSION_AREAS, ROLE_PERMISSIONS, ROLE_LABELS, ROLE_DESCRIPTIONS,
   getPermissions,
@@ -26,7 +28,7 @@ const roleIcon = {
   reception: Headset,
 };
 
-const emptyForm = { name: "", email: "", phone: "", title: "", role: "behandlare", active: true, permissions: {} };
+const emptyForm = { name: "", email: "", phone: "", title: "", role: "behandlare", active: true, permissions: {}, allowed: null };
 
 export default function Staff() {
   const { toast } = useToast();
@@ -65,6 +67,7 @@ export default function Staff() {
       role: s.role || "behandlare",
       active: s.active !== false,
       permissions: getPermissions(s),
+      allowed: parseAllowed(s.allowed_treatment_ids),
     });
     setOpen(true);
   };
@@ -94,6 +97,8 @@ export default function Staff() {
         role: form.role,
         active: form.active,
         permissions: JSON.stringify(form.permissions),
+        // Tom sträng = får utföra alla behandlingar; annars endast de listade (kontrolleras server-side vid bokning).
+        allowed_treatment_ids: form.allowed === null ? "" : JSON.stringify(form.allowed),
       };
       if (editing) {
         await base44.entities.Staff.update(editing.id, data);
@@ -179,6 +184,7 @@ export default function Staff() {
                   <p className="truncate text-sm text-muted-foreground">
                     {[s.title, s.email, s.phone].filter(Boolean).join(" · ") || "Inga uppgifter"}
                     <span className="ml-1">· {granted}/{PERMISSION_AREAS.length} behörigheter</span>
+                    <span className="ml-1">· {parseAllowed(s.allowed_treatment_ids) === null ? "alla behandlingar" : `${parseAllowed(s.allowed_treatment_ids).length} behandlingar`}</span>
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -246,6 +252,8 @@ export default function Staff() {
               </div>
               <p className="text-xs text-muted-foreground">Kryssa ur för att begränsa åtkomst utöver rollens standard.</p>
             </div>
+
+            <StaffTreatmentPicker value={form.allowed} onChange={(v) => setForm((s) => ({ ...s, allowed: v }))} />
 
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" checked={form.active} onChange={(e) => setForm((s) => ({ ...s, active: e.target.checked }))} className="h-4 w-4 rounded border-input accent-primary" />

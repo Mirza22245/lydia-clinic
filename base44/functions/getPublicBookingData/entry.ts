@@ -30,8 +30,9 @@ export default async function(req) {
       clinic = await svc.entities.Clinic.get(body.clinic_id).catch(() => null);
     }
     if (!clinic) {
-      const clinics = await svc.entities.Clinic.filter({}, { limit: 1 });
-      clinic = (clinics.items || [])[0];
+      // list() ger en sida {items} eller en array beroende på körmiljö — hantera båda.
+      const clinics: any = await svc.entities.Clinic.list({ limit: 1 });
+      clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
     }
     if (!clinic) return Response.json({ error: 'Ingen klinik hittades' }, { status: 404 });
 
