@@ -1,4 +1,5 @@
-import { userClient, serviceRole } from '../../src/entities/index.js';
+import { userClient } from '../../src/entities/index.js';
+import { makeStore } from '../../src/entities/store.js';
 import { loadUser } from '../../src/auth/session.js';
 import { pool } from '../../src/db/pool.js';
 import { getGoogleToken } from '../../src/routes/google.js';
@@ -16,12 +17,14 @@ export function createClientFromRequest(req) {
   const { user, ip } = getContext(req);
   const u = normalizeUser(user);
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
-  const service = serviceRole();
+  const serviceEntities = new Proxy({}, {
+    get: (_, name) => makeStore(String(name), { bypass: true }),
+  });
   return {
     ...client,
     auth: { me: async () => u },
     asServiceRole: {
-      entities: service.entities,
+      entities: serviceEntities,
       integrations: {
         Core: {
           SendEmail: async (args) => { const { sendMail } = await import('../../src/lib/email.js'); return sendMail(args); },
