@@ -28,8 +28,8 @@ mkdirSync(OUT, { recursive: true });
 const plugin = {
   name: 'lydia-compat',
   setup(build) {
-    build.onResolve({ filter: /^npm:@base44\/sdk/ }, () => ({ path: sdkShimPath, external: true }));
-    build.onResolve({ filter: /^base44:runtime$/ }, () => ({ path: secretsShimPath, external: true }));
+    build.onResolve({ filter: /^npm:@base44\/sdk/ }, () => ({ path: sdkShimPath }));
+    build.onResolve({ filter: /^base44:runtime$/ }, () => ({ path: secretsShimPath }));
     // TS-filer i base44/shared importeras via relativa sökvägar — esbuild löser dem.
   },
 };
