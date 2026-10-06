@@ -77,7 +77,7 @@ export default function ConsentsPanel({ customerId, customerName }) {
     if (!active) return;
     setBusy(type);
     try {
-      await base44.entities.Consent.update(active.id, { revoked_at: new Date().toISOString() });
+      await base44.functions.invoke('revokeConsent', { consent_id: active.id });
       await load();
     } finally {
       setBusy(null);

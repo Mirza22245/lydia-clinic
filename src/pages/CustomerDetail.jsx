@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText, BadgeCheck, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Loader2, Phone, Mail, MapPin, CalendarDays, FileText, BadgeCheck, ShieldCheck, Download } from "lucide-react";
 import ConsentsPanel from "@/components/ConsentsPanel";
 import FormSubmissionsPanel from "@/components/FormSubmissionsPanel";
 import HealthDeclarationsPanel from "@/components/HealthDeclarationsPanel";
@@ -26,6 +26,7 @@ export default function CustomerDetail() {
   const [consents, setConsents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -49,6 +50,24 @@ export default function CustomerDetail() {
       }
     })();
   }, [id]);
+
+  const exportData = async () => {
+    setExporting(true);
+    try {
+      const data = await base44.functions.invoke("exportPatientData", { customer_id: id });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "patient-" + (customer.name || "export").replace(/[^a-z0-9]/gi, "_") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed:", e);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return <div className="flex justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -88,6 +107,10 @@ export default function CustomerDetail() {
           <div className="flex gap-2">
             <Button size="sm" variant="outline" asChild><Link to="/app/journal"><FileText className="w-4 h-4 mr-1" />Ny journal</Link></Button>
             <Button size="sm" variant="outline" asChild><Link to="/app/bookings"><CalendarDays className="w-4 h-4 mr-1" />Ny bokning</Link></Button>
+            <Button size="sm" variant="outline" onClick={exportData} disabled={exporting}>
+              {exporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+              Exportera (GDPR)
+            </Button>
           </div>
         </div>
         {customer.notes && <p className="mt-4 rounded-lg bg-secondary/60 p-3 text-sm">{customer.notes}</p>}

@@ -74,6 +74,11 @@
       "default": false,
       "title": "Deposition betald"
     },
+    "calendar_event_id": {
+      "type": "string",
+      "title": "Kalenderh\u00e4ndelse-ID",
+      "description": "Google Calendar event-ID f\u00f6r synkronisering"
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"
