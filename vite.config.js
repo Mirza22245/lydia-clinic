@@ -5,8 +5,6 @@ import { defineConfig, loadEnv } from 'vite'
 
 const src = path.resolve(process.cwd(), 'src');
 
-// VITE_USE_BASE44=false => portabelt bygge för Hostinger.
-// Läs både riktiga process-env och .env så Hostinger/CI inte missar variabeln.
 const readUseBase44 = (mode) => {
   const env = loadEnv(mode, process.cwd(), '');
   const value = (process.env.VITE_USE_BASE44 ?? env.VITE_USE_BASE44 ?? 'true')
@@ -15,7 +13,6 @@ const readUseBase44 = (mode) => {
   return value !== 'false';
 };
 
-// Ersätter Base44-pluginens virtuella moduler "@/functions/<namn>" med anrop mot Lydias API.
 const portableFunctions = () => ({
   name: 'lydia-portable-functions',
   enforce: 'pre',
@@ -27,10 +24,10 @@ const portableFunctions = () => ({
     if (!id.startsWith('\0lydia-fn:')) return null;
     const name = id.slice('\0lydia-fn:'.length);
     return [
-      `import { base44 } from '@/lib/api';`,
+      "import { base44 } from '@/lib/api';",
       `export const ${name} = (payload) => base44.functions.invoke('${name}', payload);`,
       `export default ${name};`,
-    ].join('\\n');
+    ].join('\n');
   },
 });
 
