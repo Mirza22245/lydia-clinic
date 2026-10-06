@@ -28,7 +28,7 @@ export function verifySession(token) {
   if (parts.length !== 3) return null;
   const [header, payload, sig] = parts;
   const expected = b64url(createHmac('sha256', config.jwtSecret).update(`${header}.${payload}`).digest());
-  const a = Buffer.from(sig); const b = b64urlDecode(expected);
+  const a = b64urlDecode(sig); const b = b64urlDecode(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const p = JSON.parse(b64urlDecode(payload).toString());
