@@ -1,7 +1,7 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
 // ../base44/functions/getPublicBookingData/entry.ts
-import { createClientFromRequest } from "/app/server/src/runtime/sdk-shim.js";
+import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
 // ../base44/shared/staffCompetence.ts
 function parseAllowedTreatments(raw) {
