@@ -27,13 +27,14 @@ export function createClientFromRequest(req) {
   const { user, ip } = getContext(req);
   const u = normalizeUser(user);
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
+  const service = serviceRole();
   return {
     ...client,
     auth: {
       me: async () => u,
     },
     asServiceRole: {
-      ...serviceRole(),
+      entities: service.entities,
       integrations: {
         Core: {
           SendEmail: async (args) => { const { sendMail } = await import('../lib/email.js'); return sendMail(args); },
