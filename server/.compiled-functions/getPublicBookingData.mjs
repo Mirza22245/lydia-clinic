@@ -40,7 +40,7 @@ async function entry_default(req) {
       clinic = await svc.entities.Clinic.get(body.clinic_id).catch(() => null);
     }
     if (!clinic) {
-      const clinics = await svc.entities.Clinic.list({ limit: 1 });
+      const clinics = await svc.entities.Clinic.filter({}, { limit: 1 });
       clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
     }
     if (!clinic) return Response.json({ error: "Ingen klinik hittades" }, { status: 404 });
