@@ -31,7 +31,7 @@ export default async function(req) {
     }
     if (!clinic) {
       // list() ger en sida {items} eller en array beroende på körmiljö — hantera båda.
-      const clinics: any = await svc.entities.Clinic.list({ limit: 1 });
+      const clinics: any = await svc.entities.Clinic.filter({}, { limit: 1 });
       clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
     }
     if (!clinic) return Response.json({ error: 'Ingen klinik hittades' }, { status: 404 });
@@ -85,6 +85,7 @@ export default async function(req) {
       campaigns: activeCampaigns,
     });
   } catch (error) {
+    console.error('getPublicBookingData:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
