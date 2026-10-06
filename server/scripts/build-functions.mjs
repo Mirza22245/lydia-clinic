@@ -64,8 +64,8 @@ for (const name of names) {
   });
   const outfile = join(OUT, `${name}.mjs`);
   const compiled = readFileSync(outfile, 'utf8')
-    .replace(/\/.*\/server\/src\/runtime\/sdk-shim\\.js/g, './runtime/sdk-shim.js')
-    .replace(/\/.*\/server\/src\/runtime\/secrets-shim\\.js/g, './runtime/secrets-shim.js');
+    .replace(/\/.*\/server\/src\/runtime\/sdk-shim\.js/g, './runtime/sdk-shim.js')
+    .replace(/\/.*\/server\/src\/runtime\/secrets-shim\.js/g, './runtime/secrets-shim.js');
   writeFileSync(outfile, compiled);
 }
 console.log(`[build-functions] ${names.length} funktioner kompilerade till ${OUT}`);
