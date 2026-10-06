@@ -1,7 +1,13 @@
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import { config } from './config.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DIST_DIR = resolve(__dirname, '../../dist');
 import { authRouter } from './auth/routes.js';
 import { entityRouter } from './entities/routes.js';
 import { functionsRouter } from './runtime/functions.js';
@@ -49,6 +55,16 @@ app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', googleRouter);
 app.use('/api/functions', functionsRouter);
+
+// Statisk frontend + SPA-fallback för Hostinger Cloud (enkel Node-app utan nginx).
+// API-rutter (/api/*) hanteras ovan; allt annat som inte är en fil → index.html.
+if (existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    res.sendFile(join(DIST_DIR, 'index.html'), (err) => err && next());
+  });
+}
 
 app.use((req, res) => res.status(404).json({ error: 'Hittades inte' }));
 app.use((err, req, res, next) => {
