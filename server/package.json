@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "build:functions": "node scripts/build-functions.mjs",
+    "migrate": "node scripts/migrate.mjs",
     "create-admin": "node scripts/create-admin.mjs",
     "import": "node scripts/import-from-base44.mjs"
   },

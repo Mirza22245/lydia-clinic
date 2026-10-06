@@ -1,4 +1,4 @@
-import { pool, withTx } from '../db/pool.js';
+import { withTx } from '../db/pool.js';
 import { getEntity, QueryError } from './registry.js';
 import { compileRule, matchDoc } from './policy.js';
 import { buildWhere, buildOrderBy, flatten, QErr } from './query.js';
@@ -49,6 +49,15 @@ export function makeStore(entityName, userCtx) {
   const entity = getEntity(entityName);
   const bypass = userCtx?.bypass;
   const user = userCtx?.user;
+
+  // Alla frågor körs med RLS-kontext (klinik eller service-role bypass) så att
+  // PostgreSQL FORCE RLS är det yttersta skyddet, utöver applikationslagrets regler.
+  const pool = {
+    query: (sql, params) => withTx(
+      (client) => client.query(sql, params),
+      bypass ? { bypassRls: true } : { clinicId: getUserClinicId(user) }
+    ),
+  };
 
   function requireAuth() {
     if (bypass) return;
@@ -127,7 +136,7 @@ export function makeStore(entityName, userCtx) {
       const merged = { ...(row.data || {}), ...data };
       const upd = await client.query(`UPDATE ${entity.table} SET data = $1::jsonb, updated_date = NOW() WHERE id = $2 RETURNING *`, [JSON.stringify(merged), id]);
       return upd.rows[0];
-    }, { clinicId: bypass ? undefined : getUserClinicId(user) });
+    }, { bypassRls: !!bypass, clinicId: bypass ? undefined : getUserClinicId(user) });
     if (!res) throw new QueryError('Not found', 404);
     return flatten(res);
   }
@@ -144,7 +153,7 @@ export function makeStore(entityName, userCtx) {
       }
       await client.query(`DELETE FROM ${entity.table} WHERE id = $1`, [id]);
       return row;
-    }, { clinicId: bypass ? undefined : getUserClinicId(user) });
+    }, { bypassRls: !!bypass, clinicId: bypass ? undefined : getUserClinicId(user) });
     if (!res) throw new QueryError('Not found', 404);
     return { id };
   }
@@ -207,5 +216,18 @@ export function makeStore(entityName, userCtx) {
     return `data->${JSON.stringify(f)}`;
   }
 
-  return { filter, get, create, update, delete: deleteFn, count, aggregate };
+  // updateMany: stöder $set (används av stripeWebhook). Varje rad går via update()
+  // så att skrivregler och skyddade fält gäller. Max 500 rader per anrop.
+  async function updateMany(query = {}, op = {}) {
+    if (!bypass) { requireAuth(); checkArea(entityName, user, 'write'); }
+    const page = await filter(query, { limit: 500 });
+    let updated = 0;
+    for (const row of page.items) {
+      await update(row.id, op.$set || {});
+      updated++;
+    }
+    return { updated, has_more: page.has_more };
+  }
+
+  return { filter, get, create, update, delete: deleteFn, count, aggregate, updateMany };
 }

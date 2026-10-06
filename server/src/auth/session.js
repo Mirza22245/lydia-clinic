@@ -62,11 +62,14 @@ export function setSessionCookie(res, token) {
   };
   if (config.cookieDomain) opts.domain = config.cookieDomain;
   res.cookie('lydia_session', token, opts);
+  // Läsbar "inloggad"-markör (innehåller ingen hemlighet) så gränssnittet vet om det ska fråga /auth/me.
+  res.cookie('lydia_logged_in', '1', { ...opts, httpOnly: false });
 }
 export function clearSessionCookie(res) {
   const opts = { httpOnly: true, secure: config.isProd, sameSite: 'strict', path: '/' };
   if (config.cookieDomain) opts.domain = config.cookieDomain;
   res.clearCookie('lydia_session', opts);
+  res.clearCookie('lydia_logged_in', { ...opts, httpOnly: false });
 }
 
 export function readCookie(req, name) {

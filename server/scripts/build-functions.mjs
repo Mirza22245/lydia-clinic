@@ -44,6 +44,8 @@ for (const name of names) {
     outfile: join(OUT, `${name}.mjs`),
     plugins: [plugin],
     logLevel: 'warning',
+    // Några funktioner läser env via Deno.env.get — mappa till process.env i Node.
+    banner: { js: 'globalThis.Deno ??= { env: { get: (k) => process.env[k] } };' },
   });
 }
 console.log(`[build-functions] ${names.length} funktioner kompilerade till ${OUT}`);

@@ -7,7 +7,7 @@ import { audit } from '../lib/audit.js';
 
 export const googleRouter = Router();
 
-const ENC_KEY = () => Buffer.from(config.jwtSecret.slice(0, 64), 'hex').slice(0, 32);
+const ENC_KEY = () => createHash('sha256').update(config.encryptionKey).digest();
 
 function encrypt(text) {
   const iv = randomBytes(12);

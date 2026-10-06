@@ -1,10 +1,11 @@
-import { pool } from './pool.js';
 import { entities } from '../entities/registry.js';
 
 // Skapar alla tabeller, index och FORCE RLS-policyer utifrån entitets-
-// definitionerna i base44/entities/. Idempotent. Körs vid startup.
-export async function ensureSchema() {
-  await pool.query(`
+// definitionerna i base44/entities/. Idempotent. Körs via `npm run migrate` med
+// ägar-/admin-rollen (MIGRATE_DATABASE_URL) — INTE av appens DML-roll lydia_app.
+export async function ensureSchema(db) {
+  await db.query(`
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT UNIQUE NOT NULL,
@@ -39,9 +40,10 @@ export async function ensureSchema() {
     );
   `);
 
+  const clinicMatch = `clinic_id IS NOT NULL AND clinic_id <> '' AND clinic_id = current_setting('app.clinic_id', true)`;
   for (const e of entities.values()) {
     const t = e.table;
-    await pool.query(`
+    await db.query(`
       CREATE TABLE IF NOT EXISTS ${t} (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         data JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -57,11 +59,22 @@ export async function ensureSchema() {
       ALTER TABLE ${t} FORCE ROW LEVEL SECURITY;
       DROP POLICY IF EXISTS ${t}_clinic ON ${t};
       CREATE POLICY ${t}_clinic ON ${t}
-        USING (clinic_id = current_setting('app.clinic_id', true))
-        WITH CHECK (clinic_id = current_setting('app.clinic_id', true));
+        USING (${clinicMatch})
+        WITH CHECK (${clinicMatch});
       DROP POLICY IF EXISTS ${t}_bypass ON ${t};
-      CREATE POLICY ${t}_bypass ON ${t} USING (current_setting('app.bypass_rls', true) = '1') WITH CHECK (current_setting('app.bypass_rls', true) = '1');
+      CREATE POLICY ${t}_bypass ON ${t}
+        USING (current_setting('app.bypass_rls', true) = '1')
+        WITH CHECK (current_setting('app.bypass_rls', true) = '1');
     `);
   }
-  console.log(`[schema] ${entities.size} entitetstabeller klara.`);
+
+  // Appens DML-roll (om den finns) får läsa/skriva men aldrig ändra schema/policyer.
+  await db.query(`
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lydia_app') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO lydia_app;
+      END IF;
+    END $$;
+  `);
+  console.log(`[schema] ${entities.size} entitetstabeller + auth-tabeller klara.`);
 }

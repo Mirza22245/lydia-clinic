@@ -11,18 +11,17 @@ export const pool = new Pool({
   ssl: config.isProd && /sslmode=/i.test(config.databaseUrl) ? { rejectUnauthorized: true } : false,
 });
 
-// Kör ett block inom en transaktion. Sätter app.clinic_id / app.bypass_rls
-// per request så PostgreSQL FORCE RLS isolerar per klinik (defense-in-depth).
+// Kör ett block i en transaktion med RLS-kontext. ALLA datafrågor ska gå hit:
+// FORCE RLS-policyerna läser app.clinic_id / app.bypass_rls, så en fråga utan
+// kontext returnerar inga rader och nekas vid skrivning (fail-closed).
 export async function withTx(fn, opts = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     if (opts.bypassRls) {
-      await client.query("SET LOCAL app.bypass_rls = '1'");
-    } else if (opts.clinicId) {
-      await client.query(`SET LOCAL app.clinic_id = '${opts.clinicId.replace(/'/g, "''")}'`);
+      await client.query("SELECT set_config('app.bypass_rls', '1', true)");
     } else {
-      await client.query("SET LOCAL app.clinic_id = ''");
+      await client.query("SELECT set_config('app.clinic_id', $1, true)", [opts.clinicId || '']);
     }
     const result = await fn(client);
     await client.query('COMMIT');
