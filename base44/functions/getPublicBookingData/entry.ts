@@ -23,11 +23,17 @@ export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
+
+    // Stöd både den nya direkta entity-accessorn och äldre runtime-shim
+    // där entities är en Proxy. Detta gör funktionen robust vid deploy-cache.
     const entity = (name: string) => {
-      const store = svc.entity?.(name);
-      if (!store || typeof store.filter !== 'function') throw new Error(`Service entity unavailable: ${name}`);
+      const store = svc.entity?.(name) ?? svc.entities?.[name];
+      if (!store || typeof store.filter !== 'function') {
+        throw new Error(`Service entity unavailable: ${name}`);
+      }
       return store;
     };
+
     const body = await req.json().catch(() => ({}));
 
     let clinic;
@@ -35,7 +41,6 @@ export default async function(req) {
       clinic = await entity('Clinic').get(body.clinic_id).catch(() => null);
     }
     if (!clinic) {
-      // list() ger en sida {items} eller en array beroende på körmiljö — hantera båda.
       const clinics: any = await entity('Clinic').filter({}, { limit: 1 });
       clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
     }
@@ -67,22 +72,21 @@ export default async function(req) {
         faq: parseFaq(clinic.faq),
       },
       treatments: (treatments.items || []).map((t) => ({
-        id: t.id, name: t.name, duration: t.duration, price: t.price, category: t.category, description: t.description,
+        id: t.id, name: t.name, duration: t.duration, price: t.price, category: t.category,
+        description: t.description,
         requires_health_declaration: !!t.requires_health_declaration,
         requires_consent: t.requires_consent !== false,
         requires_treatment_info: !!t.requires_treatment_info,
         requires_aftercare: !!t.requires_aftercare,
         requires_payment: !!t.requires_payment,
         guest_booking_allowed: t.guest_booking_allowed !== false,
-        // Injektioner har alltid lägst 18 år (IVO), oavsett inställt min_age — styr även födelsedatumsfältet i bokningen.
-        min_age: t.treatment_type === 'injektion' ? Math.max(18, t.min_age || 0) : (t.min_age || 0),
+        min_age: t.treatment_type === 'injektion' ? Math.max(18, t.min_age || 0) : t.min_age || 0,
         waiting_period_days: t.waiting_period_days || 0,
         betanketid_hours: t.betanketid_hours || 0,
         cancellation_hours: t.cancellation_hours ?? 24,
         no_show_fee: t.no_show_fee || 0,
-        required_form_ids: t.required_form_ids || "",
+        required_form_ids: t.required_form_ids || '',
       })),
-      // allowed_treatment_ids: null = får utföra alla, annars lista med Treatment-ID.
       staff: (staff.items || []).map((s) => ({
         id: s.id, name: s.name, title: s.title,
         allowed_treatment_ids: parseAllowedTreatments(s.allowed_treatment_ids),
@@ -90,7 +94,6 @@ export default async function(req) {
       campaigns: activeCampaigns,
     });
   } catch (error) {
-    console.error('getPublicBookingData:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
