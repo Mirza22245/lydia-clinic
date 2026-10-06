@@ -1,6 +1,5 @@
 import { userClient, serviceRole } from '../../src/entities/index.js';
 import { loadUser } from '../../src/auth/session.js';
-import { sendMail } from '../../src/lib/email.js';
 import { pool } from '../../src/db/pool.js';
 import { getGoogleToken } from '../../src/routes/google.js';
 
@@ -24,7 +23,7 @@ export function createClientFromRequest(req) {
       ...serviceRole(),
       integrations: {
         Core: {
-          SendEmail: (args) => sendMail(args),
+          SendEmail: async (args) => { const { sendMail } = await import('../../src/lib/email.js'); return sendMail(args); },
           UploadPrivateFile: async ({ file }) => {
             const { saveFile, validateMime } = await import('../../src/lib/storage.js');
             const buf = Buffer.from(await file.arrayBuffer());
