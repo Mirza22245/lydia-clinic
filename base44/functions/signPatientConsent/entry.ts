@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { recordAudit } from '../../shared/audit.ts';
+import { sha256 } from '../../shared/hash.ts';
 
 // Låter en inloggad patient digitalt signera (bevilja) ett samtycke.
 // Vid signering sparas en elektronisk stämpel (IP, enhet, UTC-tid, dokumentversion)
@@ -13,11 +14,6 @@ const consentTypeLabels = {
   communication: 'Kommunikationssamtycke',
   marketing: 'Marknadsföringssamtycke',
 };
-
-async function sha256(str: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 function getClientIp(req: any): string {
   const fwd = req.headers.get('x-forwarded-for');

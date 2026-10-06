@@ -12,6 +12,10 @@ const PROTECTED_FIELDS = {
   ClinicalTreatmentRecord: new Set(['is_signed', 'signed_at', 'signed_by', 'signature_hash']),
   Consent: new Set(['granted', 'granted_at', 'granted_by', 'signed_text', 'document_version', 'ip_address', 'device_info', 'signature_hash', 'revoked_at']),
   Payment: new Set(['status', 'paid_at', 'receipt_number', 'stripe_payment_intent_id']),
+  // Bokningens tid, behandlare, behandling och status ändras ENDAST via validerade funktioner
+  // (saveStaffBooking, rescheduleBooking, updateBookingStatus) som tillämpar kravkontroll,
+  // dubbelbokningsskydd och behandlarens behörighet. Direkta entity-anrop kan inte kringgå dem.
+  Booking: new Set(['status', 'staff_name', 'start_time', 'end_time', 'treatment_id', 'room_id', 'resource_ids']),
   AuditLog: new Set(['event_type', 'entity_type', 'entity_id', 'description', 'user_id', 'user_name', 'metadata', 'clinic_id']),
 };
 

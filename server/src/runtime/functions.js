@@ -17,7 +17,7 @@ const PUBLIC_FUNCS = new Set([
   'getPublicBookingData', 'getAvailableSlots', 'createPublicBooking',
   'createPaymentIntent', 'getStripeConfig', 'stripeWebhook', 'sendDueReminders',
 ]);
-const HEAVY_FUNCS = new Set(['createPublicBooking', 'sendSms', 'verifyBankid', 'exportPatientData']);
+const HEAVY_FUNCS = new Set(['createPublicBooking', 'sendSms', 'verifyBankid', 'exportPatientData', 'verifyPhone', 'sendPortalMessage']);
 
 functionsRouter.use('/:name', (req, res, next) => {
   if (HEAVY_FUNCS.has(req.params.name)) return heavyLimiter(req, res, next);
