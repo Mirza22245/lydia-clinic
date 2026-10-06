@@ -10,6 +10,17 @@
       "type": "string",
       "title": "Formul\u00e4r"
     },
+    "template_version": {
+      "type": "number",
+      "title": "Mallversion",
+      "default": 1,
+      "description": "Vilken version av mallen som anv\u00e4ndes vid inl\u00e4mning. Gamla inl\u00e4mningar visar alltid den version kunden fyllde i."
+    },
+    "questions_snapshot": {
+      "type": "string",
+      "title": "Fr\u00e5gor vid inl\u00e4mning (JSON)",
+      "description": "Of\u00f6r\u00e4nderlig kopia av fr\u00e5gorna exakt som de s\u00e5g ut vid inl\u00e4mningstillf\u00e4llet"
+    },
     "customer_id": {
       "type": "string",
       "title": "Kund-ID"

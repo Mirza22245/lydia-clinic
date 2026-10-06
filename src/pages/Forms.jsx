@@ -117,7 +117,7 @@ export default function Forms() {
         description: tplForm.description || undefined,
         questions: JSON.stringify(tplForm.questions.filter((q) => q.label)),
       };
-      if (editingTpl) await base44.entities.FormTemplate.update(editingTpl.id, data);
+      if (editingTpl) await base44.entities.FormTemplate.update(editingTpl.id, { ...data, version: (editingTpl.version || 1) + 1 });
       else await base44.entities.FormTemplate.create(data);
       setTplOpen(false);
       setEditingTpl(null);
@@ -156,6 +156,8 @@ export default function Forms() {
         clinic_id,
         template_id: fillTpl.id,
         template_name: fillTpl.name,
+        template_version: fillTpl.version || 1,
+        questions_snapshot: JSON.stringify(fillTpl.questions || []),
         customer_id: fillForm.customer_id,
         customer_name: cust?.name || "",
         booking_id: fillForm.booking_id || undefined,
@@ -228,7 +230,7 @@ export default function Forms() {
                         <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", typeColors[t.type] || typeColors.custom)}>{typeLabels[t.type] || t.type}</span>
                       </div>
                       {t.description && <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>}
-                      <p className="mt-1 text-xs text-muted-foreground">{qs.length} frågor</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{qs.length} frågor · v{t.version || 1}</p>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" onClick={() => openFill(t)}><ClipboardCheck className="w-4 h-4 mr-1" />Fyll i</Button>
@@ -370,12 +372,12 @@ export default function Forms() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{viewSub?.template_name}</DialogTitle>
-            <DialogDescription>{viewSub?.customer_name} · {fmtDateTime(viewSub?.submitted_at)}{viewSub?.submitted_by ? ` · ${viewSub.submitted_by}` : ""}</DialogDescription>
+            <DialogDescription>{viewSub?.customer_name} · {fmtDateTime(viewSub?.submitted_at)}{viewSub?.submitted_by ? ` · ${viewSub.submitted_by}` : ""} · v{viewSub?.template_version || 1}</DialogDescription>
           </DialogHeader>
           {(() => {
             if (!viewSub) return null;
             const tpl = templates.find((t) => t.id === viewSub.template_id);
-            const qs = tpl ? parseQuestions(tpl.questions) : [];
+            const qs = viewSub.questions_snapshot ? parseQuestions(viewSub.questions_snapshot) : (tpl ? parseQuestions(tpl.questions) : []);
             const ans = parseAnswers(viewSub.answers);
             return (
               <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">

@@ -24,6 +24,22 @@
       "type": "string",
       "title": "Fr\u00e5gor (JSON)"
     },
+    "version": {
+      "type": "number",
+      "title": "Version",
+      "default": 1,
+      "description": "Versionsnummer \u2014 \u00f6kas automatiskt n\u00e4r formul\u00e4ret \u00e4ndras. Gamla inl\u00e4mningar beh\u00e5ller sin version."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "archived"
+      ],
+      "default": "active",
+      "title": "Status"
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"

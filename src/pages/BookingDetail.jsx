@@ -9,6 +9,7 @@ import { updateBookingStatus } from "@/functions/updateBookingStatus";
 import TreatmentCompliancePanel from "@/components/TreatmentCompliancePanel";
 import ClinicalRecordPanel from "@/components/ClinicalRecordPanel";
 import BeforeAfterPanel from "@/components/BeforeAfterPanel";
+import ReadyForTreatmentPanel from "@/components/ReadyForTreatmentPanel";
 import RescheduleDialog from "@/components/RescheduleDialog";
 
 const statusLabels = {
@@ -175,6 +176,11 @@ export default function BookingDetail() {
           )}
         </div>
       </div>
+
+      {/* Redo för behandling-status */}
+      {hasReqs && (
+        <ReadyForTreatmentPanel booking={booking} reqs={reqs} />
+      )}
 
       {/* Krav inför behandling */}
       {hasReqs && (

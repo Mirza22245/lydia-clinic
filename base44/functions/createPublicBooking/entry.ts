@@ -110,6 +110,25 @@ export default async function(req) {
       deposit_amount: treatment.deposit_amount || 0,
     });
 
+    // Auto-skapa placeholder-journalpost — INTE en falsk behandlingsanteckning.
+    // Status "Väntar på behandling" — personal fyller i faktiska anteckningar
+    // under/efter behandlingen. Kopplas till patient, bokning, behandling, behandlare.
+    try {
+      await svc.entities.JournalEntry.create({
+        clinic_id,
+        customer_id: cust.id,
+        customer_name: cust.name,
+        treatment_id: treatment.id,
+        treatment_name: treatment.name,
+        booking_id: booking.id,
+        provider: staff_name,
+        entry_date: start.toISOString(),
+        notes: 'Väntar på behandling',
+        is_signed: false,
+        version: 1,
+      });
+    } catch { /* swallow — journal creation must not block booking */ }
+
     // Kravlista som kunden måste komplettera i kundportalen innan behandling.
     const requirements = [];
     if (treatment.requires_health_declaration) requirements.push('Hälsodeklaration');
