@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { makeStore } from '../entities/store.js';
-import { parseAllowedTreatments } from '../../../base44/shared/staffCompetence.ts';
-import { clinicDateOf } from '../../../base44/shared/availability.ts';
+function parseAllowedTreatments(raw) { if (raw === undefined || raw === null || raw === '') return null; try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(v) ? v.map((x) => String(x)) : null; } catch { return null; } }
+function clinicDateOf(ms) { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms)); }
 
 export const publicBookingRouter = Router();
 
