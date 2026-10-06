@@ -79,6 +79,16 @@
       "title": "Kalenderh\u00e4ndelse-ID",
       "description": "Google Calendar event-ID f\u00f6r synkronisering"
     },
+    "reminder_24h_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "24h-p\u00e5minnelse skickad"
+    },
+    "reminder_2h_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "2h-p\u00e5minnelse skickad"
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"

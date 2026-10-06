@@ -1,74 +1,65 @@
-// Lydia — Portabel Express-backend (ersätter Base44 Deno-runtime)
-// Körs på Hostinger eller annan Node-host. PostgreSQL som databas.
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
-import { pool } from "./db/client.js";
-import { authMiddleware } from "./auth/middleware.js";
-import authRoutes from "./routes/auth.js";
-import bookingRoutes from "./routes/bookings.js";
-import journalRoutes from "./routes/journals.js";
-import paymentRoutes from "./routes/payments.js";
-import consentRoutes from "./routes/consents.js";
-import healthRoutes from "./routes/health.js";
-import customerRoutes from "./routes/customers.js";
-import auditRoutes from "./routes/audit.js";
-import treatmentRoutes from "./routes/treatments.js";
-import staffRoutes from "./routes/staff.js";
-import smsRoutes from "./routes/sms.js";
-import googleCalendarRoutes from "./routes/googleCalendar.js";
-import bankidRoutes from "./routes/bankid.js";
-import featureFlagRoutes from "./routes/featureFlags.js";
-import exportRoutes from "./routes/exports.js";
-
-dotenv.config();
+import express from 'express';
+import helmet from 'helmet';
+import compression from 'compression';
+import { config } from './config.js';
+import { ensureSchema } from './db/schema.js';
+import { authRouter } from './auth/routes.js';
+import { entityRouter } from './entities/routes.js';
+import { functionsRouter } from './runtime/functions.js';
+import { filesRouter } from './routes/files.js';
+import { googleRouter } from './routes/google.js';
+import { apiLimiter, authLimiter, publicLimiter } from './lib/rateLimit.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc: ["'self'", 'https://api.stripe.com'],
+      frameSrc: ["'self'", 'https://js.stripe.com'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
+app.use(compression());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Security middleware
-app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
-app.use(express.json({ limit: "10mb" }));
-app.use(morgan("combined"));
-
-// Rate limiting
-app.use("/api/", rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }));
-
-// Health check
-app.get("/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
-
-// Public routes (no auth)
-app.use("/api/auth", authRoutes);
-app.use("/api/payments/webhook", paymentRoutes.webhookHandler); // Stripe webhook verifieras via signatur, ej auth
-
-// Authenticated routes
-app.use("/api/bookings", authMiddleware, bookingRoutes);
-app.use("/api/journals", authMiddleware, journalRoutes);
-app.use("/api/payments", authMiddleware, paymentRoutes.router);
-app.use("/api/consents", authMiddleware, consentRoutes);
-app.use("/api/health", authMiddleware, healthRoutes);
-app.use("/api/customers", authMiddleware, customerRoutes);
-app.use("/api/audit", authMiddleware, auditRoutes);
-app.use("/api/treatments", authMiddleware, treatmentRoutes);
-app.use("/api/staff", authMiddleware, staffRoutes);
-app.use("/api/sms", authMiddleware, smsRoutes);
-app.use("/api/google-calendar", authMiddleware, googleCalendarRoutes);
-app.use("/api/bankid", authMiddleware, bankidRoutes);
-app.use("/api/feature-flags", authMiddleware, featureFlagRoutes);
-app.use("/api/exports", authMiddleware, exportRoutes);
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ error: err.message || "Server error" });
+// Raw body för functions (Stripe webhook behöver raw body).
+app.use('/api/functions', (req, res, next) => {
+  express.raw({ type: '*/*', limit: '2mb' })(req, res, (err) => {
+    if (err) return res.status(400).json({ error: 'Ogiltig body' });
+    next();
+  });
 });
 
-// Start
-app.listen(PORT, () => {
-  console.log(`Lydia backend running on port ${PORT}`);
-  pool.query("SELECT 1").then(() => console.log("PostgreSQL connected")).catch((e) => console.error("DB error:", e.message));
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
+app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/entities', apiLimiter, entityRouter);
+app.use('/api/files', apiLimiter, filesRouter);
+app.use('/api/google', googleRouter);
+app.use('/api/functions', functionsRouter);
+
+app.use((req, res) => res.status(404).json({ error: 'Hittades inte' }));
+app.use((err, req, res, next) => {
+  console.error('[unhandled]', err);
+  res.status(500).json({ error: 'Internt serverfel' });
+});
+
+ensureSchema().then(() => {
+  app.listen(config.port, '127.0.0.1', () => console.log(`Lydia backend på 127.0.0.1:${config.port}`));
+}).catch((e) => {
+  console.error('Kunde inte starta — schemafel?', e);
+  process.exit(1);
 });

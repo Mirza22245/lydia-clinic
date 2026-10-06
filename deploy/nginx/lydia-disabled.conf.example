@@ -1,0 +1,12 @@
+# Exempel: när du är redo att byta från WordPress-bokning till Lydia på
+# lydiaestetisk.se, lägg in detta (eller en include av lydia.conf) i WordPress
+# nginx-config. WordPress fortsätter driva lydiaestetisk.se; /boka dirigeras
+# till Lydia-appen, och /api dirigeras till Lydia-backend.
+#
+# VIKTIGT: WordPress behåller sin egen databas och admin. Lydia delar INTE
+# databas med WordPress. Ingen DNS-ändring krävs — samma domän, nya sub-paths.
+#
+# location /boka { return 302 https://app.lydiaestetisk.se/book; }
+# location /api { proxy_pass http://127.0.0.1:3001; ... }
+#
+# Filen är inaktiverad (.example) och aktiveras först när du verifierat Lydia.
