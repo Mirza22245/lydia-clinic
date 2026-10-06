@@ -152,10 +152,3 @@ authRouter.patch('/me', async (req, res) => {
 function hashShort(s) {
   return createHash('sha256').update(String(s)).digest('hex');
 }
-function randomBytes32() {
-  const b = new Uint8Array(32);
-  crypto.getRandomValues(b);
-  return Buffer.from(b);
-}
-function genOtp() { return String(Math.floor(Math.random() * 1000000)).padStart(6, '0'); }
-function genToken() { return randomBytes32().toString('base64url'); }

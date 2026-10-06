@@ -1,144 +1,164 @@
-// Frontend API-abstraktionslager — gör Base44→egen backend byte mekaniskt.
-// När USE_BASE44=false, anropar denna egen backend istället för @base44/sdk.
-// Detta är nyckeln till portabilitet: 38+ filer behöver inte skrivas om,
-// bara denna fil byter implementering.
+// Portabel frontend-klient för Lydia. Används när VITE_USE_BASE44=false.
+// Speglar den del av @base44/sdk som appen använder: entities (filter/list/get/
+// create/update/delete/bulkCreate/bulkUpdate/updateMany/deleteMany/count/
+// aggregate/upsert/subscribe), auth, integrations.Core (upload/sign),
+// analytics, users.inviteUser samt functions.invoke.
+import { appParams } from '@/lib/app-params';
 
-const USE_BASE44 = import.meta.env.VITE_USE_BASE44 !== "false";
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+const API = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '');
 
-// --- Base44-implementering (nuvarande) ---
-import { base44 as base44Client } from "@/api/base44Client";
+function err(status, msg) {
+  const e = new Error(msg || 'Förfrågan misslyckades'); e.status = status; return e;
+}
 
-// --- Egen backend-implementering ---
-const portableApi = {
-  entities: new Proxy(
-    {},
-    {
-      get(_, entityName) {
-        return {
-          filter: async (query, opts) => {
-            const params = new URLSearchParams({ ...query, ...opts });
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}?${params}`, {
-              headers: authHeaders(),
-            });
-            const data = await res.json();
-            return { items: data.items || data, has_more: data.has_more };
-          },
-          get: async (id) => {
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}/${id}`, {
-              headers: authHeaders(),
-            });
-            return res.json();
-          },
-          create: async (data) => {
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}`, {
-              method: "POST",
-              headers: { ...authHeaders(), "Content-Type": "application/json" },
-              body: JSON.stringify(data),
-            });
-            return res.json();
-          },
-          update: async (id, data) => {
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}/${id}`, {
-              method: "PUT",
-              headers: { ...authHeaders(), "Content-Type": "application/json" },
-              body: JSON.stringify(data),
-            });
-            return res.json();
-          },
-          delete: async (id) => {
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}/${id}`, {
-              method: "DELETE",
-              headers: authHeaders(),
-            });
-            return res.json();
-          },
-          count: async (query) => {
-            const params = new URLSearchParams({ ...query, _count: "true" });
-            const res = await fetch(`${API_BASE}/${entityName.toLowerCase()}?${params}`, {
-              headers: authHeaders(),
-            });
-            const data = await res.json();
-            return data.count || 0;
-          },
-        };
-      },
-    }
-  ),
-  auth: {
-    me: async () => {
-      const res = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders() });
-      if (!res.ok) throw new Error("Not authenticated");
-      return res.json();
+async function http(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    credentials: 'include',
+  });
+  if (res.status === 204) return null;
+  const text = await res.text();
+  let data = null;
+  if (text) { try { data = JSON.parse(text); } catch { data = text; } }
+  if (!res.ok) throw err(res.status, data?.error || (typeof data === 'string' ? data : undefined));
+  return data;
+}
+
+function entityApi(name) {
+  return {
+    async filter(query = {}, opts = {}) {
+      return http(`/entities/${name}/filter`, { method: 'POST', body: JSON.stringify({ query, opts }) });
     },
-    isAuthenticated: async () => {
-      try {
-        await portableApi.auth.me();
-        return true;
-      } catch {
-        return false;
-      }
+    async list(opts = {}) {
+      return http(`/entities/${name}/list`, { method: 'POST', body: JSON.stringify({ opts }) });
     },
-    loginViaEmailPassword: async (email, password) => {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      localStorage.setItem("lydia_token", data.token);
+    async get(id) {
+      return http(`/entities/${name}/get`, { method: 'POST', body: JSON.stringify({ id }) });
+    },
+    async create(data) {
+      return http(`/entities/${name}/create`, { method: 'POST', body: JSON.stringify({ data }) });
+    },
+    async bulkCreate(items) {
+      return http(`/entities/${name}/bulk-create`, { method: 'POST', body: JSON.stringify({ items }) });
+    },
+    async update(id, data) {
+      return http(`/entities/${name}/update`, { method: 'POST', body: JSON.stringify({ id, data }) });
+    },
+    async bulkUpdate(items) {
+      return http(`/entities/${name}/bulk-update`, { method: 'POST', body: JSON.stringify({ items }) });
+    },
+    async updateMany(query, update) {
+      return http(`/entities/${name}/update-many`, { method: 'POST', body: JSON.stringify({ query, update }) });
+    },
+    async delete(id) {
+      return http(`/entities/${name}/delete`, { method: 'POST', body: JSON.stringify({ id }) });
+    },
+    async deleteMany(query) {
+      return http(`/entities/${name}/delete-many`, { method: 'POST', body: JSON.stringify({ query }) });
+    },
+    async count(query = {}) {
+      return http(`/entities/${name}/count`, { method: 'POST', body: JSON.stringify({ query }) });
+    },
+    async aggregate(opts) {
+      return http(`/entities/${name}/aggregate`, { method: 'POST', body: JSON.stringify({ opts }) });
+    },
+    async upsert(records, opts) {
+      return http(`/entities/${name}/upsert`, { method: 'POST', body: JSON.stringify({ records, opts }) });
+    },
+    subscribe(handler) {
+      // Portabel läge har ingen realtime-socket; returnera no-op unsubscribe.
+      return () => {};
+    },
+  };
+}
+
+const ENTITIES = new Proxy({}, { get: (_, name) => entityApi(name) });
+
+const auth = {
+  me: () => http('/auth/me'),
+  isAuthenticated: async () => { try { await http('/auth/me'); return true; } catch { return false; } },
+  async loginViaEmailPassword(email, password) {
+    const r = await http('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    return r;
+  },
+  async loginWithProvider(provider, fromUrl) {
+    window.location.href = `${API}/auth/${provider}?return=${encodeURIComponent(fromUrl || window.location.pathname)}`;
+  },
+  async register({ email, password }) {
+    return http('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) });
+  },
+  async verifyOtp({ email, otpCode }) {
+    return http('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email, otpCode }) });
+  },
+  resendOtp(email) {
+    return http('/auth/resend-otp', { method: 'POST', body: JSON.stringify({ email }) });
+  },
+  resetPasswordRequest(email) {
+    return http('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+  },
+  async resetPassword({ resetToken, newPassword }) {
+    return http('/auth/reset-password', { method: 'POST', body: JSON.stringify({ resetToken, newPassword }) });
+  },
+  async logout(redirectUrl) {
+    await http('/auth/logout', { method: 'POST' });
+    if (redirectUrl) window.location.href = redirectUrl;
+    else window.location.reload();
+  },
+  async updateMe(data) {
+    return http('/auth/me', { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  redirectToLogin(nextUrl) {
+    const next = nextUrl ? `?next=${encodeURIComponent(nextUrl)}` : '';
+    window.location.href = `/login${next}`;
+  },
+};
+
+const integrations = {
+  Core: {
+    async UploadPrivateFile({ file }) {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch(`${API}/files/upload`, { method: 'POST', body: fd, credentials: 'include' });
+      const data = await res.json(); if (!res.ok) throw err(res.status, data.error);
       return data;
     },
-    logout: async () => {
-      localStorage.removeItem("lydia_token");
-      window.location.href = "/login";
+    async UploadPublicFile({ file }) {
+      // Portabel drift har inga publika filer — allt privat, signat vid behov.
+      return this.UploadPrivateFile({ file });
     },
-  },
-  functions: {
-    invoke: async (name, payload) => {
-      const res = await fetch(`${API_BASE}/${name}`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return res.json();
-    },
-  },
-  integrations: {
-    Core: {
-      UploadPrivateFile: async ({ file }) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch(`${API_BASE}/files/upload`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: formData,
-        });
-        return res.json();
-      },
-      CreateFileSignedUrl: async ({ file_uri }) => {
-        const res = await fetch(`${API_BASE}/files/sign`, {
-          method: "POST",
-          headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ file_uri }),
-        });
-        return res.json();
-      },
-      SendEmail: async (payload) => {
-        return portableApi.functions.invoke("sendEmail", payload);
-      },
+    async CreateFileSignedUrl({ file_uri }) {
+      const res = await fetch(`${API}/files/sign?uri=${encodeURIComponent(file_uri)}`, { credentials: 'include' });
+      const data = await res.json(); if (!res.ok) throw err(res.status, data.error);
+      return data;
     },
   },
 };
 
-function authHeaders() {
-  const token = localStorage.getItem("lydia_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+const users = {
+  async inviteUser(email, role) {
+    return http('/auth/invite', { method: 'POST', body: JSON.stringify({ email, role }) });
+  },
+};
 
-// Exportera rätt implementering baserat på miljö
-export const api = USE_BASE44 ? base44Client : portableApi;
+const analytics = {
+  track({ eventName, properties }) {
+    // Best-effort, brandbart.
+    try { navigator.sendBeacon(`${API}/analytics/track`, JSON.stringify({ eventName, properties })); } catch {}
+  },
+};
 
-// För bakåtkompatibilitet: om befintlig kod importerar { base44 } från @/api/base44Client,
-// kan den byta till { api } från @/lib/api istället.
-// Migrering: sök/ersätt "from '@/api/base44Client'" → "from '@/lib/api'" i alla filer.
+const functions = {
+  async invoke(name, payload) {
+    return http(`/functions/${name}`, { method: 'POST', body: JSON.stringify(payload || {}) });
+  },
+};
+
+export const base44 = {
+  entities: ENTITIES,
+  auth,
+  integrations,
+  users,
+  analytics,
+  functions,
+  asServiceRole: { entities: ENTITIES, integrations, connectors: { getConnection: () => { throw err(503, 'Ej tillgängligt i portabelt läge'); } } },
+};
