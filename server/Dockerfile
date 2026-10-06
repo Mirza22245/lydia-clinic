@@ -5,7 +5,7 @@ FROM node:20-slim
 WORKDIR /app
 
 COPY server/package*.json ./server/
-RUN cd server && npm ci --production
+RUN cd server && if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev --no-audit --no-fund; fi
 
 COPY server ./server
 COPY base44 ./base44

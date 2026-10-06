@@ -9,7 +9,8 @@
     "migrate": "node scripts/migrate.mjs",
     "backup": "sh scripts/backup.sh",
     "create-admin": "node scripts/create-admin.mjs",
-    "import": "node scripts/import-from-base44.mjs"
+    "import": "node scripts/import-from-base44.mjs",
+    "test:security": "node scripts/security-test.mjs"
   },
   "dependencies": {
     "compression": "^1.7.4",

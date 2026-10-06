@@ -1,11 +1,29 @@
 import { Router } from 'express';
-import { createHash, createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createHash, createHmac, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto';
+import { safeRouter } from '../lib/safeRouter.js';
 import { loadUser } from '../auth/session.js';
 import { pool } from '../db/pool.js';
 import { config } from '../config.js';
 import { audit } from '../lib/audit.js';
 
-export const googleRouter = Router();
+export const googleRouter = safeRouter(Router());
+
+// OAuth-state signeras (HMAC) och går ut efter 10 min. Utan signatur kunde vem som helst skicka
+// en callback med ett godtyckligt användar-id och koppla sitt Google-konto till en annan användare.
+function signState(obj) {
+  const p = Buffer.from(JSON.stringify({ ...obj, exp: Date.now() + 10 * 60000 })).toString('base64url');
+  return `${p}.${createHmac('sha256', config.jwtSecret).update(p).digest('base64url')}`;
+}
+function readState(str) {
+  try {
+    const [p, s] = String(str).split('.');
+    const expected = createHmac('sha256', config.jwtSecret).update(p).digest('base64url');
+    if (!s || s.length !== expected.length || !timingSafeEqual(Buffer.from(s), Buffer.from(expected))) return null;
+    const o = JSON.parse(Buffer.from(p, 'base64url').toString());
+    return o.exp > Date.now() ? o : null;
+  } catch { return null; }
+}
+const safeReturn = (r) => (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') ? r : '/app/settings');
 
 const ENC_KEY = () => createHash('sha256').update(config.encryptionKey).digest();
 
@@ -51,14 +69,14 @@ googleRouter.get('/connect', async (req, res) => {
   if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   if (!config.google.clientId) return res.status(503).json({ error: 'Google Calendar inte konfigurerad' });
   const redirect = `${config.appBaseUrl}/api/google/callback`;
-  const state = Buffer.from(JSON.stringify({ uid: user.id, ret: req.query.return || '/app/settings' })).toString('base64url');
+  const state = signState({ uid: user.id, ret: safeReturn(req.query.return) });
   const url = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({ client_id: config.google.clientId, redirect_uri: redirect, response_type: 'code', scope: 'https://www.googleapis.com/auth/calendar.events', access_type: 'offline', prompt: 'consent', state })}`;
   res.redirect(url);
 });
 
 googleRouter.get('/callback', async (req, res) => {
   const code = req.query.code;
-  const state = req.query.state ? JSON.parse(Buffer.from(req.query.state, 'base64url').toString()) : {};
+  const state = readState(req.query.state) || {};
   if (!code || !state.uid) return res.status(400).send('Ogiltig callback');
   const body = new URLSearchParams({ client_id: config.google.clientId, client_secret: config.google.clientSecret, code, grant_type: 'authorization_code', redirect_uri: `${config.appBaseUrl}/api/google/callback` });
   const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });

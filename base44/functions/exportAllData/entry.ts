@@ -20,7 +20,8 @@ export default async function (req) {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me().catch(() => null);
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
+    // Endast plattformsadmin (app-ägaren, utan klinikkoppling): funktionen exporterar ALLA kliniker.
+    if (user.role !== "admin" || (user.clinic_id ?? user.data?.clinic_id)) return Response.json({ error: "Forbidden" }, { status: 403 });
 
     const { entity, cursor } = await req.json().catch(() => ({}));
     if (!ENTITIES.includes(entity)) {
