@@ -34,6 +34,11 @@
       "title": "Beh\u00f6righeter (JSON)",
       "description": "JSON-str\u00e4ng med explicita beh\u00f6righeter per omr\u00e5de"
     },
+    "allowed_treatment_ids": {
+      "type": "string",
+      "title": "Behandlingar personen f\u00e5r utf\u00f6ra (JSON)",
+      "description": "JSON-array med Treatment-ID:n. Tomt/saknas = alla behandlingar. Bokningssystemet nekar bokning av behandlingar som inte finns i listan."
+    },
     "active": {
       "type": "boolean",
       "default": true,

@@ -40,7 +40,8 @@ export default async function(req) {
     }
 
     const prev = booking.status;
-    await base44.entities.Booking.update(booking_id, { status });
+    // Service-role: status är ett skyddat fält på entity-API:t så att kravkontrollen ovan inte kan förbigås.
+    await svc.entities.Booking.update(booking_id, { status });
 
     // Audit-logg (får inte blockera).
     try {

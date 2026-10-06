@@ -40,8 +40,8 @@ export default async function (req) {
       const customer = b.customer_id ? await svc.entities.Customer.get(b.customer_id).catch(() => null) : null;
       const email = customer?.email || "";
       const phone = customer?.phone || "";
-      const dateStr = new Date(b.start_time).toLocaleDateString("sv-SE", { day: "numeric", month: "long" });
-      const timeStr = new Date(b.start_time).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+      const dateStr = new Date(b.start_time).toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm", day: "numeric", month: "long" });
+      const timeStr = new Date(b.start_time).toLocaleTimeString("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", minute: "2-digit" });
       if (email) {
         try {
           await svc.integrations.Core.SendEmail({
@@ -70,7 +70,7 @@ export default async function (req) {
     for (const b of (due2.items || [])) {
       const customer = b.customer_id ? await svc.entities.Customer.get(b.customer_id).catch(() => null) : null;
       const phone = customer?.phone || "";
-      const timeStr = new Date(b.start_time).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+      const timeStr = new Date(b.start_time).toLocaleTimeString("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", minute: "2-digit" });
       const smsConfig = resolveSMSConfig((n) => envGet(n));
       if (phone && smsConfig) {
         try {

@@ -136,7 +136,7 @@ export default async function(req) {
       label: 'Behandlingsinformation lämnad',
       passed: infoPassed,
       detail: infoPassed
-        ? new Date(compliance.information_given_at).toLocaleString('sv-SE')
+        ? new Date(compliance.information_given_at).toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })
         : 'Ej registrerad — klicka "Registrera information"',
     });
 
@@ -150,8 +150,8 @@ export default async function(req) {
         passed: betanketidPassed,
         detail: betanketidEnds
           ? (betanketidPassed
-            ? `Uppfylld sedan ${betanketidEnds.toLocaleString('sv-SE')}`
-            : `Uppfylls ${betanketidEnds.toLocaleString('sv-SE')}`)
+            ? `Uppfylld sedan ${betanketidEnds.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })}`
+            : `Uppfylls ${betanketidEnds.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })}`)
           : 'Ej startad',
       });
     }
@@ -165,7 +165,7 @@ export default async function(req) {
       if (consentSigned && consentEligible) {
         consentPassed = consentSigned >= consentEligible;
         consentDetail = consentPassed
-          ? `Signerat ${consentSigned.toLocaleString('sv-SE')}`
+          ? `Signerat ${consentSigned.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })}`
           : `Signerat FÖRE betänketidens slut — ogiltigt`;
       }
       checks.push({
@@ -191,7 +191,7 @@ export default async function(req) {
         label: `Kontroll: tidigare behandling (${months} mån)`,
         passed: true, // flaggar men blockerar inte — kliniken måste vara medveten
         detail: prevFound
-          ? `Tidigare behandling ${new Date(prevDate).toLocaleDateString('sv-SE')} — dokumentera upprepning`
+          ? `Tidigare behandling ${new Date(prevDate).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} — dokumentera upprepning`
           : `Ingen tidigare behandling inom ${months} månader`,
       });
 

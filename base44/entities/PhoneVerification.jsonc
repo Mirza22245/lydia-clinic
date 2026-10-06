@@ -1,0 +1,68 @@
+{
+  "name": "PhoneVerification",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefonnummer (normaliserat)"
+    },
+    "code_hash": {
+      "type": "string",
+      "title": "SHA-256-hash av eng\u00e5ngskoden"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Giltig till"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Skapad"
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0,
+      "title": "Felaktiga f\u00f6rs\u00f6k"
+    },
+    "consumed": {
+      "type": "boolean",
+      "default": false,
+      "title": "Anv\u00e4nd"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "required": [
+    "customer_id",
+    "code_hash"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "__none__"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "__none__"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "__none__"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "__none__"
+      }
+    }
+  }
+}

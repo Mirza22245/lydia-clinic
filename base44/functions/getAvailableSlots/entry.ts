@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { computeAvailableSlots, fetchAvailabilityData, parseResourceIds } from '../../shared/availability.ts';
+import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 
 // Returnerar lediga starttider för en behandlare en viss dag. Tar hänsyn till
 // personalens arbetsschema, semester/sjuk/blockerade tider, befintliga bokningar,
@@ -13,6 +14,12 @@ export default async function(req) {
     const { clinic_id, staff_name, date, duration, treatment_id } = body;
     if (!date || !staff_name) {
       return Response.json({ error: 'staff_name och date krävs' }, { status: 400 });
+    }
+
+    // Behandlaren måste vara aktiv och behörig för behandlingen — annars inga tider.
+    if (treatment_id && clinic_id) {
+      const bookable = await checkStaffBookable(svc, { clinic_id, staff_name, treatment_id });
+      if (!bookable.ok) return Response.json({ error: bookable.error, code: bookable.code, slots: [] }, { status: bookable.status });
     }
 
     let durationMin = duration || 30;

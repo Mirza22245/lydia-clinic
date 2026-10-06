@@ -11,7 +11,7 @@ const methodLabels: Record<string, string> = {
 
 const fmtDateTime = (d: string) =>
   d
-    ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? new Date(d).toLocaleString("sv-SE", { timeZone: "Europe/Stockholm", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : "";
 
 const fmtSEK = (n: number) => new Intl.NumberFormat("sv-SE").format(n || 0);

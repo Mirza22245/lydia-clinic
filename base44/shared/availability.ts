@@ -41,11 +41,45 @@ export interface SlotInput {
   now?: number;            // default Date.now()
 }
 
+// Kliniken arbetar i svensk tid. Servern (Base44-runtime och Docker/Node) kör i UTC,
+// så alla "HH:mm"-tider i scheman och dygnsgränser måste tolkas i klinikens tidszon —
+// annars hamnar en 09:00-tid på 11:00 för kunden.
+export const CLINIC_TZ = 'Europe/Stockholm';
+
+function tzOffsetMs(epoch: number): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: CLINIC_TZ, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p: Record<string, string> = {};
+  for (const part of dtf.formatToParts(new Date(epoch))) p[part.type] = part.value;
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return asUtc - Math.floor(epoch / 1000) * 1000;
+}
+
+// "YYYY-MM-DD" + "HH:mm" i klinikens tidszon -> epoch ms.
+export function zonedToEpoch(date: string, hhmm: string): number {
+  const [y, mo, d] = date.split('-').map((x) => parseInt(x, 10));
+  const [h, mi] = hhmm.split(':').map((x) => parseInt(x, 10));
+  const guess = Date.UTC(y, (mo || 1) - 1, d || 1, h || 0, mi || 0, 0);
+  const off1 = tzOffsetMs(guess);
+  let t = guess - off1;
+  const off2 = tzOffsetMs(t);
+  if (off2 !== off1) t = guess - off2;
+  return t;
+}
+
+// Klinikens kalenderdatum (YYYY-MM-DD) för ett givet ögonblick.
+export function clinicDateOf(ms: number): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: CLINIC_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+}
+
+function nextDate(date: string): string {
+  return new Date(Date.parse(`${date}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
+}
+
 function parseHHmmToEpoch(date: string, hhmm: string): number {
-  const [h, m] = hhmm.split(':').map((x) => parseInt(x, 10));
-  const d = new Date(`${date}T00:00:00`);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return d.getTime();
+  return zonedToEpoch(date, hhmm);
 }
 
 function overlaps(a: Interval, b: Interval): boolean {
@@ -182,13 +216,14 @@ export interface AvailabilityData {
 
 export async function fetchAvailabilityData(
   svc: any,
-  params: { clinic_id: string; staff_name: string; date: string; requireRoomId?: string; requireResourceIds?: string[] }
+  params: { clinic_id: string; staff_name: string; date: string; requireRoomId?: string; requireResourceIds?: string[]; excludeBookingId?: string }
 ): Promise<AvailabilityData> {
   const { clinic_id, staff_name, date } = params;
   const requireResourceIds = (params.requireResourceIds || []).filter(Boolean);
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59.999`);
-  const weekday = dayStart.getDay();
+  const dayStart = new Date(zonedToEpoch(date, '00:00'));
+  const dayEnd = new Date(zonedToEpoch(nextDate(date), '00:00') - 1);
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  const notExcluded = (b: any) => !params.excludeBookingId || b.id !== params.excludeBookingId;
 
   const toIv = (b: any): Interval => ({
     start: new Date(b.start_time).getTime(),
@@ -223,7 +258,7 @@ export async function fetchAvailabilityData(
     },
     { sort: 'start_time', limit: 200 }
   );
-  const staffBookings = (bookPage.items || []).map(toIv);
+  const staffBookings = (bookPage.items || []).filter(notExcluded).map(toIv);
 
   let roomBookings: Interval[] = [];
   if (params.requireRoomId) {
@@ -235,7 +270,7 @@ export async function fetchAvailabilityData(
       },
       { limit: 200 }
     );
-    roomBookings = (roomPage.items || []).map(toIv);
+    roomBookings = (roomPage.items || []).filter(notExcluded).map(toIv);
   }
 
   let resourceBookings: { resource_id: string; interval: Interval }[] = [];
@@ -250,6 +285,7 @@ export async function fetchAvailabilityData(
       { limit: 300 }
     );
     for (const b of (resPage.items || [])) {
+      if (!notExcluded(b)) continue;
       const ids = parseResourceIds(b.resource_ids);
       const iv = toIv(b);
       for (const rid of ids) {

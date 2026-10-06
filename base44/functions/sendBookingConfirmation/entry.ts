@@ -39,7 +39,7 @@ export default async function(req) {
     const baseUrl = host ? `${proto}://${host}` : '';
     const portalUrl = baseUrl ? `${baseUrl}/portal` : '';
     const fmtTime = (d) => d
-      ? new Date(d).toLocaleString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      ? new Date(d).toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : '';
 
     await svc.integrations.Core.SendEmail({

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
-import { fetchAvailabilityData, isSlotFree, parseResourceIds } from '../../shared/availability.ts';
+import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
+import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 
 // Skapar en offentlig bokning utan inloggning. Validerar behandling, kontrollerar
 // alla schemakonflikter (behandlare, rum, resurser, buffertider, framförhållning),
@@ -19,8 +20,14 @@ export default async function(req) {
     if (!treatment || treatment.clinic_id !== clinic_id) {
       return Response.json({ error: 'Ogiltig behandling' }, { status: 400 });
     }
+    // Behandlaren måste vara aktiv och behörig att utföra just denna behandling.
+    const bookable = await checkStaffBookable(svc, { clinic_id, staff_name, treatment_id });
+    if (!bookable.ok) {
+      return Response.json({ error: bookable.error, code: bookable.code }, { status: bookable.status });
+    }
     const duration = treatment.duration || 30;
     const start = new Date(start_time);
+    if (isNaN(start.getTime())) return Response.json({ error: 'Ogiltig starttid' }, { status: 400 });
     const end = new Date(start.getTime() + duration * 60000);
 
     // --- Behandlingsspecifika arbetsflödesregler (FAS 6/10) ---
@@ -29,7 +36,7 @@ export default async function(req) {
       const earliest = new Date(Date.now() + treatment.waiting_period_days * 86400000);
       if (start < earliest) {
         return Response.json({
-          error: `Denna behandling har en väntetid på ${treatment.waiting_period_days} dagar. Tidigaste möjliga datum är ${earliest.toLocaleDateString('sv-SE')}.`,
+          error: `Denna behandling har en väntetid på ${treatment.waiting_period_days} dagar. Tidigaste möjliga datum är ${earliest.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}.`,
           code: 'waiting_period',
           earliest: earliest.toISOString(),
         }, { status: 400 });
@@ -51,7 +58,7 @@ export default async function(req) {
     // Full schemavalidering: behandlarens schema, frånvaro, buffertider,
     // minsta/max framförhållning, rum och resurser. Motorn garanterar att ingen
     // tid kan bokas om någon dimension är upptagen (race-skydd innan create).
-    const dateStr = start.toISOString().slice(0, 10);
+    const dateStr = clinicDateOf(start.getTime());
     const requireRoomId = treatment.room_id || undefined;
     const requireResourceIds = parseResourceIds(treatment.required_resource_ids);
     const availData = await fetchAvailabilityData(svc, { clinic_id, staff_name, date: dateStr, requireRoomId, requireResourceIds });
@@ -151,7 +158,7 @@ export default async function(req) {
       const portalUrl = baseUrl ? `${baseUrl}/portal` : '';
       const clinic = await svc.entities.Clinic.get(clinic_id).catch(() => null);
       const clinicName = clinic?.name || 'Klinik';
-      const fmtTime = (d) => new Date(d).toLocaleString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const fmtTime = (d) => new Date(d).toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       await svc.integrations.Core.SendEmail({
         to: customer.email,
         template_name: 'BookingConfirmation',

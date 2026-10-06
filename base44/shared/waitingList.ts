@@ -39,7 +39,7 @@ export async function notifyWaitingListOnCancellation(svc: any, cancelledBooking
     if (entry.customer_email) {
       try {
         const fmtTime = (d: string) => new Date(d).toLocaleString('sv-SE', {
-          day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+          timeZone: 'Europe/Stockholm', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
         });
         const clinic = await svc.entities.Clinic.get(clinicId).catch(() => null);
         const clinicName = clinic?.name || 'Klinik';

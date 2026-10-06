@@ -1,9 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
+import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 
 // Låter en patient eller personal omboka en bokning till en ny tid.
-// Bevarar befintliga formulär, samtycken och betalningar. Kontrollerar
-// tillgänglighet (inga överlappande bokningar för samma behandlare) och
-// behandlingens min_lead_hours.
+// Bevarar befintliga formulär, samtycken och betalningar. Den nya tiden valideras
+// av samma tillgänglighetsmotor som onlinebokningen: behandlarens arbetsschema,
+// frånvaro, dubbelbokning, buffertider, rum, resurser, framförhållning och
+// behandlarens behörighet för behandlingen.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -39,7 +42,7 @@ export default async function(req) {
       }
     }
 
-    // Bokningen måste vara avbokningsbar (ej redan genomförd/inställd)
+    // Bokningen måste vara ombokningsbar (ej redan genomförd/inställd)
     if (['cancelled', 'completed', 'no_show'].includes(booking.status)) {
       return Response.json({ error: 'Bokningen kan inte ombokas' }, { status: 409 });
     }
@@ -52,39 +55,49 @@ export default async function(req) {
       return Response.json({ error: 'Kan inte boka tid i det förflutna' }, { status: 400 });
     }
 
-    // Minsta framförhållning
-    if (treatment?.min_lead_hours > 0) {
-      const minStart = new Date(Date.now() + treatment.min_lead_hours * 3600000);
-      if (newStart < minStart) {
-        return Response.json({ error: `Minsta framförhållning är ${treatment.min_lead_hours} timmar` }, { status: 400 });
-      }
-    }
-
-    // Beräkna ny sluttid
     const durationMin = treatment?.duration || 30;
-    const bufferBefore = treatment?.buffer_before || 0;
-    const bufferAfter = treatment?.buffer_after || 0;
     const newEnd = new Date(newStart.getTime() + durationMin * 60000);
 
-    // Kontrollera konflikter: inga andra bokningar för samma behandlare som överlappar
-    // (inklusive buffertider)
-    if (booking.staff_name) {
-      const blockStart = new Date(newStart.getTime() - bufferBefore * 60000);
-      const blockEnd = new Date(newEnd.getTime() + bufferAfter * 60000);
-      const conflicts = await svc.entities.Booking.filter({
-        staff_name: booking.staff_name,
-        status: { $nin: ['cancelled', 'no_show'] },
-        start_time: { $lt: blockEnd.toISOString() },
-        end_time: { $gt: blockStart.toISOString() },
-      }, { limit: 50 });
-      const hasConflict = (conflicts.items || []).some((b) => b.id !== booking_id);
-      if (hasConflict) {
-        return Response.json({ error: 'Tiden är inte tillgänglig — kollision med annan bokning' }, { status: 409 });
+    // Full validering mot tillgänglighetsmotorn (om bokningen har en behandlare).
+    if (booking.staff_name && booking.clinic_id) {
+      if (booking.treatment_id) {
+        const bookable = await checkStaffBookable(svc, {
+          clinic_id: booking.clinic_id, staff_name: booking.staff_name, treatment_id: booking.treatment_id,
+        });
+        if (!bookable.ok) return Response.json({ error: bookable.error, code: bookable.code }, { status: bookable.status });
+      }
+      const dateStr = clinicDateOf(newStart.getTime());
+      const requireRoomId = treatment?.room_id || booking.room_id || undefined;
+      const requireResourceIds = parseResourceIds(treatment?.required_resource_ids || booking.resource_ids);
+      const avail = await fetchAvailabilityData(svc, {
+        clinic_id: booking.clinic_id, staff_name: booking.staff_name, date: dateStr,
+        requireRoomId, requireResourceIds, excludeBookingId: booking_id,
+      });
+      const free = isSlotFree({
+        date: dateStr,
+        durationMin,
+        bufferBeforeMin: treatment?.buffer_before || 0,
+        bufferAfterMin: treatment?.buffer_after || 0,
+        minLeadHours: treatment?.min_lead_hours || 0,
+        maxLeadDays: treatment?.max_lead_days || 0,
+        schedule: avail.schedule,
+        timeOff: avail.timeOff,
+        staffBookings: avail.staffBookings,
+        roomBookings: avail.roomBookings,
+        resourceBookings: avail.resourceBookings,
+        resourceQuantities: avail.resourceQuantities,
+        requireRoomId,
+        requireResourceIds,
+      }, newStart.getTime());
+      if (!free) {
+        return Response.json({ error: 'Tiden är inte tillgänglig. Välj en annan tid.', code: 'slot_unavailable' }, { status: 409 });
       }
     }
 
     const prevStart = booking.start_time;
-    const updated = await base44.entities.Booking.update(booking_id, {
+    // Skrivs som service-role: start/sluttid är skyddade fält på entity-API:t, så att
+    // bokningstider endast kan ändras via validerade funktioner.
+    const updated = await svc.entities.Booking.update(booking_id, {
       start_time: newStart.toISOString(),
       end_time: newEnd.toISOString(),
     });
@@ -108,7 +121,7 @@ export default async function(req) {
       if (booking.customer_id) {
         const customer = await svc.entities.Customer.get(booking.customer_id).catch(() => null);
         if (customer?.email) {
-          const dateStr = newStart.toLocaleString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+          const dateStr = newStart.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
           await base44.asServiceRole.integrations.Core.SendEmail({
             to: customer.email,
             subject: 'Bokning ombokad — ny tid bekräftad',

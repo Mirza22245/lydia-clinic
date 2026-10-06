@@ -25,6 +25,31 @@
     "industry": {
       "type": "string",
       "title": "Bransch"
+    },
+    "brand_name": {
+      "type": "string",
+      "title": "Namn p\u00e5 webbplatsen",
+      "description": "Visas i webbplatsens rubrik och sidfot. Om tomt anv\u00e4nds kliniknamnet."
+    },
+    "description": {
+      "type": "string",
+      "title": "Presentationstext",
+      "description": "Kort presentation av kliniken p\u00e5 startsidan"
+    },
+    "opening_hours": {
+      "type": "string",
+      "title": "\u00d6ppettider",
+      "description": "En rad per rad, t.ex. 'M\u00e5n\u2013Fre: 09:00\u201318:00'"
+    },
+    "faq": {
+      "type": "string",
+      "title": "Vanliga fr\u00e5gor (JSON)",
+      "description": "JSON-array med {q, a}"
+    },
+    "logo_url": {
+      "type": "string",
+      "title": "Logotyp (URL)",
+      "description": "S\u00f6kv\u00e4g eller URL till logotypen, t.ex. /logo.png"
     }
   },
   "required": [
