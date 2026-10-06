@@ -25,6 +25,7 @@ export function createClientFromRequest(req) {
     auth: { me: async () => u },
     asServiceRole: {
       entities: serviceEntities,
+      entity: (name) => makeStore(String(name), { bypass: true }),
       integrations: {
         Core: {
           SendEmail: async (args) => { const { sendMail } = await import('../../src/lib/email.js'); return sendMail(args); },
