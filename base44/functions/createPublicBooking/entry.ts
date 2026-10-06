@@ -36,13 +36,15 @@ export default async function(req) {
       }
     }
     // Ålderskontroll baserat på kundens födelsedatum.
-    if ((treatment.min_age || 0) > 0) {
+    // Injektionsbehandlingar kräver alltid minst 18 år (IVO), även om min_age är 0.
+    const minAge = treatment.treatment_type === 'injektion' ? Math.max(18, treatment.min_age || 0) : (treatment.min_age || 0);
+    if (minAge > 0) {
       if (!customer.birth_date) {
-        return Response.json({ error: `Denna behandling kräver att du är minst ${treatment.min_age} år. Ange ditt födelsedatum.`, code: 'age_required' }, { status: 400 });
+        return Response.json({ error: `Denna behandling kräver att du är minst ${minAge} år. Ange ditt födelsedatum.`, code: 'age_required' }, { status: 400 });
       }
       const ageAtStart = Math.floor((start.getTime() - new Date(customer.birth_date).getTime()) / (365.25 * 86400000));
-      if (ageAtStart < treatment.min_age) {
-        return Response.json({ error: `Denna behandling kräver att du är minst ${treatment.min_age} år gammal.`, code: 'under_age' }, { status: 400 });
+      if (ageAtStart < minAge) {
+        return Response.json({ error: `Denna behandling kräver att du är minst ${minAge} år gammal.`, code: 'under_age' }, { status: 400 });
       }
     }
 

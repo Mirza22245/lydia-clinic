@@ -35,7 +35,8 @@ export default async function(req) {
         requires_aftercare: !!t.requires_aftercare,
         requires_payment: !!t.requires_payment,
         guest_booking_allowed: t.guest_booking_allowed !== false,
-        min_age: t.min_age || 0,
+        // Injektioner har alltid lägst 18 år (IVO), oavsett inställt min_age — styr även födelsedatumsfältet i bokningen.
+        min_age: t.treatment_type === 'injektion' ? Math.max(18, t.min_age || 0) : (t.min_age || 0),
         waiting_period_days: t.waiting_period_days || 0,
         cancellation_hours: t.cancellation_hours ?? 24,
         no_show_fee: t.no_show_fee || 0,
