@@ -1,8 +1,8 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
 // ../base44/functions/createPaymentIntent/entry.ts
-import { createClientFromRequest } from "/app/server/src/runtime/sdk-shim.js";
-import { secrets } from "/app/server/src/runtime/secrets-shim.js";
+import { createClientFromRequest } from "./runtime/sdk-shim.js";
+import { secrets } from "./runtime/secrets-shim.js";
 
 // ../base44/shared/authz.ts
 function getUserClinicId(user) {
