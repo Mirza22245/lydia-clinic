@@ -89,6 +89,11 @@
       "format": "date-time",
       "title": "2h-p\u00e5minnelse skickad"
     },
+    "pay_token_hash": {
+      "type": "string",
+      "title": "Betalningstoken (hash)",
+      "description": "SHA-256 av g\u00e4stens eng\u00e5ngs-betalningstoken. S\u00e4tts endast av createPublicBooking."
+    },
     "clinic_id": {
       "type": "string",
       "title": "Klinik-ID"

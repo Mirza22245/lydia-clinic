@@ -34,19 +34,20 @@ function userStore(ctx) {
     filter: async (query = {}, opts = {}) => {
       if (!ctx.bypass) throw Object.assign(new Error('Forbidden'), { status: 403 });
       const { pool } = await import('../db/pool.js');
-      const where = Object.entries(query).map(([k, v], i) => {
-        if (k === 'email') return `lower(email) = lower($${i + 1})`;
-        if (k === 'id') return `id = $${i + 1}`;
-        return 'TRUE';
-      }).join(' AND ') || 'TRUE';
-      const vals = Object.values(query).map((v) => v);
-      const res = await pool.query(`SELECT id, email, role, full_name, clinic_id, staff_role, created_date FROM users WHERE ${where} LIMIT ${Number(opts.limit) || 100}`, vals);
+      const conds = [];
+      const vals = [];
+      for (const [k, v] of Object.entries(query)) {
+        if (k === 'email') { vals.push(String(v)); conds.push(`lower(email) = lower($${vals.length})`); }
+        else if (k === 'id') { vals.push(String(v)); conds.push(`id::text = $${vals.length}`); }
+      }
+      const where = conds.join(' AND ') || 'TRUE';
+      const res = await pool.query(`SELECT id, email, role, full_name, clinic_id, staff_role, email_verified, created_date FROM users WHERE ${where} LIMIT ${Math.min(Number(opts.limit) || 100, 500)}`, vals);
       return { items: res.rows.map(normalizeUser), has_more: false, next_cursor: null };
     },
     get: async (id) => {
       if (!ctx.bypass) throw Object.assign(new Error('Forbidden'), { status: 403 });
       const { pool } = await import('../db/pool.js');
-      const res = await pool.query('SELECT id, email, role, full_name, clinic_id, staff_role, created_date FROM users WHERE id = $1', [id]);
+      const res = await pool.query('SELECT id, email, role, full_name, clinic_id, staff_role, email_verified, created_date FROM users WHERE id::text = $1', [String(id)]);
       if (!res.rows[0]) throw Object.assign(new Error('Not found'), { status: 404 });
       return normalizeUser(res.rows[0]);
     },
@@ -67,8 +68,8 @@ function userStore(ctx) {
       if (!ctx.bypass) throw Object.assign(new Error('Forbidden'), { status: 403 });
       const { pool } = await import('../db/pool.js');
       if (op.$unset?.staff_role !== undefined) {
-        const id = query.id;
-        await pool.query('UPDATE users SET staff_role = NULL WHERE id = $1', [id]);
+        const id = String(query.id);
+        await pool.query(`UPDATE users SET staff_role = NULL${op.$unset.clinic_id !== undefined ? ', clinic_id = NULL' : ''} WHERE id::text = $1`, [id]);
         return { has_more: false };
       }
       if (op.$set) {
@@ -88,6 +89,7 @@ function normalizeUser(u) {
   return {
     id: u.id, email: u.email, role: u.role, full_name: u.full_name,
     clinic_id: u.clinic_id || '', staff_role: u.staff_role || '',
+    email_verified: u.email_verified,
     created_date: u.created_date,
     data: { clinic_id: u.clinic_id || '', staff_role: u.staff_role || '' },
   };

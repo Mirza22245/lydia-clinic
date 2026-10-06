@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { computeBookingRequirements, ADVANCING_STATUSES } from '../../shared/bookingRequirements.ts';
+import { canAccessClinic } from '../../shared/authz.ts';
 
 // Advancerar en boknings status och blockerar övergång till bekräftad/
 // incheckad/pågår/klar om behandlingens obligatoriska krav (hälsodeklaration,
@@ -21,7 +22,7 @@ export default async function(req) {
     const booking = await svc.entities.Booking.get(booking_id).catch(() => null);
     if (!booking) return Response.json({ error: 'Bokning hittades inte' }, { status: 404 });
 
-    if (user.role !== 'admin' && booking.clinic_id && user.data?.clinic_id && booking.clinic_id !== user.data.clinic_id) {
+    if (!canAccessClinic(user, booking.clinic_id)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

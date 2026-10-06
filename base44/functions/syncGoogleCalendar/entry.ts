@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { recordAudit } from "../../shared/audit.ts";
+import { requireStaff, canAccessClinic } from "../../shared/authz.ts";
 
 // Synkar bokningar till personalens Google Calendar.
 // Kräver Google Calendar-connector (app-user mode).
@@ -46,7 +47,7 @@ export default async function (req) {
 
     // Klinikisolering
     const userClinicId = user?.clinic_id ?? user?.data?.clinic_id ?? null;
-    if (booking.clinic_id && userClinicId && booking.clinic_id !== userClinicId) {
+    if (!requireStaff(user).ok || !canAccessClinic(user, booking.clinic_id)) {
       return Response.json({ error: "Åtkomst nekad" }, { status: 403 });
     }
 

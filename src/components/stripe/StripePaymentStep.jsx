@@ -21,7 +21,7 @@ export default function StripePaymentStep({ booking, amountLabel, onPaid, onErro
         const stripe = await loadStripe(cfg.data.publishable_key);
         if (!active) return;
         setStripePromise(stripe);
-        const res = await createPaymentIntent({ booking_id: booking.id });
+        const res = await createPaymentIntent({ booking_id: booking.id, payment_token: booking.payment_token });
         if (!active) return;
         setClientSecret(res.data.client_secret);
       } catch (e) {

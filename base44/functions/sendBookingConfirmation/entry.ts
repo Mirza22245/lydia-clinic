@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { requireStaff, canAccessClinic } from '../../shared/authz.ts';
 
 // Skickar en bokningsbekräftelse till patientens e-post när personal skapar en
 // bokning inifrån appen. Anropas med booking_id; funktionen hämtar bokningen,
@@ -16,6 +17,9 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const booking = await svc.entities.Booking.get(bookingId);
     if (!booking) return Response.json({ error: 'Booking not found' }, { status: 404 });
+    if (!requireStaff(user).ok || !canAccessClinic(user, booking.clinic_id)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     let email = '';
     let customerName = booking.customer_name || '';

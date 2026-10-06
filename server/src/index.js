@@ -8,6 +8,9 @@ import { functionsRouter } from './runtime/functions.js';
 import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
 import { apiLimiter, authLimiter } from './lib/rateLimit.js';
+import { csrfGuard } from './lib/csrf.js';
+
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
 
 const app = express();
 app.disable('x-powered-by');
@@ -36,6 +39,8 @@ app.use(compression());
 app.use('/api/functions', express.raw({ type: '*/*', limit: '2mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+app.use('/api', csrfGuard);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 

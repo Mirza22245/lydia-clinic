@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { recordAudit } from "../../shared/audit.ts";
+import { requireClinicalStaff, canAccessClinic } from "../../shared/authz.ts";
 
 // Återkallar ett samtycke server-side med audit-loggning.
 // Signerade/återkallade samtycken bevaras i historiken (raderas ej).
@@ -24,7 +25,7 @@ export default async function (req) {
 
     // Klinikisolering
     const userClinicId = user?.clinic_id ?? user?.data?.clinic_id ?? null;
-    if (consent.clinic_id && userClinicId && consent.clinic_id !== userClinicId) {
+    if (!requireClinicalStaff(user).ok || !canAccessClinic(user, consent.clinic_id)) {
       return Response.json({ error: "Åtkomst nekad" }, { status: 403 });
     }
 

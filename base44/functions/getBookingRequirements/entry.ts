@@ -5,6 +5,8 @@ import { computeBookingRequirements } from '../../shared/bookingRequirements.ts'
 // per krav. Används av personal på bokningsdetaljen och av kunden i portalen.
 // Auktorisering: personal ser bokningar i sin klinik; kund ser endast egna
 // bokningar (matchning via e-post).
+import { canAccessClinic } from '../../shared/authz.ts';
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -22,7 +24,7 @@ export default async function(req) {
     // Auktorisering: personal (klinikmatch) eller kund (egen bokning via e-post).
     const isStaff = user.role === 'admin' || !!user.data?.staff_role;
     if (isStaff) {
-      if (user.role !== 'admin' && booking.clinic_id && user.data?.clinic_id && booking.clinic_id !== user.data.clinic_id) {
+      if (!canAccessClinic(user, booking.clinic_id)) {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
       }
     } else {

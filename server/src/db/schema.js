@@ -5,7 +5,6 @@ import { entities } from '../entities/registry.js';
 // ägar-/admin-rollen (MIGRATE_DATABASE_URL) — INTE av appens DML-roll lydia_app.
 export async function ensureSchema(db) {
   await db.query(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email TEXT UNIQUE NOT NULL,
@@ -45,7 +44,7 @@ export async function ensureSchema(db) {
     const t = e.table;
     await db.query(`
       CREATE TABLE IF NOT EXISTS ${t} (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         data JSONB NOT NULL DEFAULT '{}'::jsonb,
         clinic_id TEXT,
         created_by_id UUID,

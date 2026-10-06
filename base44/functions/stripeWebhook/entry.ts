@@ -1,6 +1,7 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { sendReceiptForPayment } from "../../shared/receipt.ts";
+import { computeBookingRequirements } from "../../shared/bookingRequirements.ts";
 
 // Tar emot Stripe-webhooks. Validerar signaturen med STRIPE_WEBHOOK_SECRET
 // (Web Crypto, asynkron) och uppdaterar bokning + betalning vid lyckad betalning.
@@ -86,10 +87,17 @@ export default async function(req) {
             receipt_number: `R-${year}-${seq}`,
             clinic_id: clinicId,
           });
-          await svc.entities.Booking.update(bookingId, {
-            status: "confirmed",
-            deposit_paid: (booking?.deposit_amount || 0) > 0,
-          });
+          // Betalning bekräftar bara bokningen om alla övriga obligatoriska krav (hälsodeklaration,
+          // samtycke, formulär) också är uppfyllda — annars förbigås Requirement Engine med ett kort.
+          if (booking) {
+            const patch = { deposit_paid: (booking.deposit_amount || 0) > 0 };
+            if (booking.status === "pending") {
+              const treatment = booking.treatment_id ? await svc.entities.Treatment.get(booking.treatment_id).catch(() => null) : null;
+              const check = await computeBookingRequirements(svc, booking, treatment);
+              if (!treatment || check.enforceableCount === 0 || check.allCompleted) patch.status = "confirmed";
+            }
+            await svc.entities.Booking.update(bookingId, patch);
+          }
           // Skicka kvitto automatiskt — fel fångas tyst så att webhook:en
           // aldrig misslyckas på grund av e-postproblem.
           await sendReceiptForPayment(svc, created.id).catch((e) => {

@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
 import { checkStaffBookable } from '../../shared/staffCompetence.ts';
+import { sha256 } from '../../shared/hash.ts';
 
 // Skapar en offentlig bokning utan inloggning. Validerar behandling, kontrollerar
 // alla schemakonflikter (behandlare, rum, resurser, buffertider, framförhållning),
@@ -100,6 +101,18 @@ export default async function(req) {
       { limit: 1 }
     );
     let cust = (custPage.items || [])[0];
+    // E-postadressen är overifierad för gäster. En adress som redan tillhör en kund får därför
+    // bara användas av den inloggade (verifierade) kunden själv — annars kunde en gäst koppla en
+    // bokning till, och ändra uppgifter på, en annan persons kundpost.
+    if (cust) {
+      const me = await base44.auth.me().catch(() => null);
+      if (!me || (me.email || '').toLowerCase().trim() !== email) {
+        return Response.json({
+          error: 'Det finns redan en kund med den här e-postadressen. Logga in (eller registrera dig med samma e-postadress) och boka igen.',
+          code: 'account_exists',
+        }, { status: 409 });
+      }
+    }
     if (!cust) {
       cust = await svc.entities.Customer.create({
         clinic_id, name: customer.name, email: customer.email, phone: customer.phone, birth_date: customer.birth_date, personnummer: customer.personnummer, status: 'lead',
@@ -112,6 +125,10 @@ export default async function(req) {
       if (!cust.personnummer && customer.personnummer) patch.personnummer = customer.personnummer;
       if (Object.keys(patch).length) cust = await svc.entities.Customer.update(cust.id, patch);
     }
+
+    // Engångs-betalningstoken: returneras endast till den som skapade bokningen, lagras som hash.
+    const payToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+    const payHash = await sha256(payToken);
 
     const booking = await svc.entities.Booking.create({
       clinic_id,
@@ -127,6 +144,7 @@ export default async function(req) {
       room_id: treatment.room_id || '',
       resource_ids: treatment.required_resource_ids || '[]',
       deposit_amount: treatment.deposit_amount || 0,
+      pay_token_hash: payHash,
     });
 
     // Auto-skapa placeholder-journalpost — INTE en falsk behandlingsanteckning.
@@ -196,6 +214,7 @@ export default async function(req) {
         price: treatment.price,
       },
       requirements,
+      payment_token: treatment.requires_payment && (treatment.price || 0) > 0 ? payToken : undefined,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

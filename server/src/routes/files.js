@@ -26,7 +26,11 @@ filesRouter.get('/sign', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
     const uri = String(req.query.uri || '');
-    if (!uri.startsWith('lydia://')) return res.status(400).json({ error: 'Ogiltig URI' });
+    if (!uri.startsWith('lydia://') || uri.includes('..')) return res.status(400).json({ error: 'Ogiltig URI' });
+    // Klinikisolering: filer ligger under lydia://<klinik-id>/ och får bara signeras av den kliniken.
+    const platformAdmin = user.role === 'admin' && !user.clinic_id;
+    const fileClinic = uri.slice('lydia://'.length).split('/')[0];
+    if (!platformAdmin && (!user.clinic_id || fileClinic !== user.clinic_id)) return res.status(403).json({ error: 'Forbidden' });
     res.json({ signed_url: signFileUri(uri, { expiresIn: 300 }) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
+import { canAccessClinic } from '../../shared/authz.ts';
 import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 
 // Låter en patient eller personal omboka en bokning till en ny tid.
@@ -29,7 +30,7 @@ export default async function(req) {
     // Auktorisering: personal (klinikmatch) eller kund (egen bokning via e-post)
     const isStaff = user.role === 'admin' || !!user.data?.staff_role;
     if (isStaff) {
-      if (user.role !== 'admin' && booking.clinic_id && user.data?.clinic_id && booking.clinic_id !== user.data.clinic_id) {
+      if (!canAccessClinic(user, booking.clinic_id)) {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
       }
     } else {

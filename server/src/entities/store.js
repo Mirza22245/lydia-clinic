@@ -15,8 +15,13 @@ const PROTECTED_FIELDS = {
   // Bokningens tid, behandlare, behandling och status ändras ENDAST via validerade funktioner
   // (saveStaffBooking, rescheduleBooking, updateBookingStatus) som tillämpar kravkontroll,
   // dubbelbokningsskydd och behandlarens behörighet. Direkta entity-anrop kan inte kringgå dem.
-  Booking: new Set(['status', 'staff_name', 'start_time', 'end_time', 'treatment_id', 'room_id', 'resource_ids']),
+  Booking: new Set(['status', 'staff_name', 'start_time', 'end_time', 'treatment_id', 'room_id', 'resource_ids', 'pay_token_hash']),
   AuditLog: new Set(['event_type', 'entity_type', 'entity_id', 'description', 'user_id', 'user_name', 'metadata', 'clinic_id']),
+};
+// Vid SKAPANDE gäller en snävare lista för Payment: personal registrerar kassabetalningar (status,
+// kvittonummer) direkt, men stripe_payment_intent_id sätts endast av Stripe-webhooken.
+const PROTECTED_ON_CREATE = {
+  Payment: new Set(['stripe_payment_intent_id']),
 };
 
 function ctxFor(user, { bypass } = {}) {
@@ -39,11 +44,14 @@ function checkArea(entityName, user, op) {
   }
 }
 
-function stripImmutable(entity, doc, { protect }) {
+function stripImmutable(entity, doc, { protect, creating }) {
+  const prot = (creating && PROTECTED_ON_CREATE[entity.name]) || PROTECTED_FIELDS[entity.name];
   const out = {};
   for (const [k, v] of Object.entries(doc)) {
     if (IMMUTABLE.has(k)) continue;
-    if (protect && PROTECTED_FIELDS[entity.name]?.has(k)) continue;
+    if (protect && prot?.has(k)) continue;
+    // En post får aldrig flyttas till en annan klinik via vanliga uppdateringar.
+    if (protect && !creating && k === 'clinic_id') continue;
     out[k] = v;
   }
   return out;
@@ -81,14 +89,15 @@ export function makeStore(entityName, userCtx) {
     const qWhere = buildWhere(entity, query, params);
     where = where ? (qWhere ? `${where} AND (${qWhere})` : where) : qWhere;
     const sql = `SELECT * FROM ${entity.table} ${where ? 'WHERE ' + where : ''}`;
-    const limit = Number(opts.limit) || 0;
-    const limitClause = limit > 0 ? ` LIMIT ${limit + 1}` : '';
+    const limit = Math.min(Math.max(Math.floor(Number(opts.limit)) || 0, 0), 5000);
+    const offset = Math.max(Math.floor(Number(opts.cursor)) || 0, 0);
+    const limitClause = limit > 0 ? ` LIMIT ${limit + 1} OFFSET ${offset}` : '';
     const order = buildOrderBy(entity, opts.sort);
     const res = await pool.query(`${sql} ORDER BY ${order}${limitClause}`, params);
     let items = res.rows.map(flatten);
     let hasMore = false;
     if (limit > 0 && items.length > limit) { items = items.slice(0, limit); hasMore = true; }
-    return { items, has_more: hasMore, next_cursor: hasMore ? String(opts.cursor ? Number(opts.cursor) + limit : limit) : null };
+    return { items, has_more: hasMore, next_cursor: hasMore ? String(offset + limit) : null };
   }
 
   async function get(id) {
@@ -105,7 +114,7 @@ export function makeStore(entityName, userCtx) {
 
   async function create(doc) {
     if (!bypass) { requireAuth(); checkArea(entityName, user, 'write'); }
-    const data = stripImmutable(entity, doc || {}, { protect: !bypass });
+    const data = stripImmutable(entity, doc || {}, { protect: !bypass, creating: true });
     // Auto-stampa clinic_id för klinikentiteter (alla utom Clinic).
     if (entityName !== 'Clinic') {
       if (bypass) {
@@ -197,27 +206,24 @@ export function makeStore(entityName, userCtx) {
     const maxs = opts.max ? (Array.isArray(opts.max) ? opts.max : [opts.max]) : [];
     const select = [];
     const groupCols = groupBy.map((g) => {
-      if (['id', 'created_date', 'clinic_id'].includes(g)) return g;
-      return `(${buildJsonPath(g)})::text`;
+      if (['id', 'created_date', 'clinic_id'].includes(g)) return `${g}::text`;
+      return `(${buildJsonPath(g)})`;
     });
     groupBy.forEach((g, i) => { select.push(`${groupCols[i]} AS ${g}`); });
     select.push('COUNT(*)::int AS count');
-    const numExpr = (f) => `COALESCE((${buildJsonPath(f)})::numeric, 0)`;
-    sums.forEach((f) => select.push(`SUM(${numExpr(f)}) AS sum_${f}`));
-    avgs.forEach((f) => select.push(`AVG(${numExpr(f)}) AS avg_${f}`));
-    mins.forEach((f) => select.push(`MIN(${numExpr(f)}) AS min_${f}`));
-    maxs.forEach((f) => select.push(`MAX(${numExpr(f)}) AS max_${f}`));
-    if (!groupBy.length && !sums.length && !avgs.length && !mins.length && !maxs.length) {
-      // bara count, inget sum -> returnera som rad med count + ev sum
-    }
+    const numExpr = (f) => `COALESCE(NULLIF(${buildJsonPath(f)}, '')::numeric, 0)`;
+    sums.forEach((f) => select.push(`SUM(${numExpr(f)})::float8 AS sum_${f}`));
+    avgs.forEach((f) => select.push(`AVG(${numExpr(f)})::float8 AS avg_${f}`));
+    mins.forEach((f) => select.push(`MIN(${numExpr(f)})::float8 AS min_${f}`));
+    maxs.forEach((f) => select.push(`MAX(${numExpr(f)})::float8 AS max_${f}`));
     const sql = `SELECT ${select.join(', ')} FROM ${entity.table} ${where ? 'WHERE ' + where : ''} ${groupBy.length ? 'GROUP BY ' + groupCols.join(', ') : ''}`;
     const res = await pool.query(sql, params);
     return { rows: res.rows, truncated: false };
   }
 
   function buildJsonPath(f) {
-    if (!entity.fields.includes(f)) throw new QErr(`Okänt fält: ${f}`);
-    return `data->${JSON.stringify(f)}`;
+    if (!/^[a-z0-9_]+$/i.test(f) || !entity.fields.includes(f)) throw new QErr(`Okänt fält: ${f}`);
+    return `data->>'${f}'`;
   }
 
   // updateMany: stöder $set (används av stripeWebhook). Varje rad går via update()

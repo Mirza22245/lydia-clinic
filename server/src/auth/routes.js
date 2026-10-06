@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
+import { safeRouter } from '../lib/safeRouter.js';
 import { pool } from '../db/pool.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { signSession, setSessionCookie, clearSessionCookie, loadUser } from './session.js';
@@ -7,14 +8,26 @@ import { config } from '../config.js';
 import { sendMail } from '../lib/email.js';
 import { audit } from '../lib/audit.js';
 
-export const authRouter = Router();
+export const authRouter = safeRouter(Router());
 
 function fail(res, status, message) {
   return res.status(status).json({ error: message });
 }
 
 function genOtp() {
-  return String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+  return String(randomInt(0, 1000000)).padStart(6, '0');
+}
+
+// Skapar och mejlar en ny verifieringskod. Högst en kod per minut och konto: begränsar både
+// mejlspam och gissning (varje ny kod nollställer försöksräknaren).
+async function issueVerifyCode(userId, email) {
+  const recent = await pool.query("SELECT 1 FROM auth_codes WHERE user_id = $1 AND kind = 'verify' AND created_date > NOW() - INTERVAL '60 seconds' LIMIT 1", [userId]);
+  if (recent.rows.length) return;
+  const code = genOtp();
+  await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'15 minutes\')', [userId, hashShort(code + userId), 'verify']);
+  try {
+    await sendMail({ to: email, template_name: 'EmailVerification', variables: { first_name: '', app_name: 'Lydia', otp_code: code } });
+  } catch (e) { console.error('verify mail:', e.message); }
 }
 function genToken() {
   return randomBytes32().toString('base64url');
@@ -44,11 +57,7 @@ authRouter.post('/register', async (req, res) => {
     const hash = await hashPassword(password);
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
   }
-  const code = genOtp();
-  await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'15 minutes\')', [userId, hashShort(code + userId), 'verify']);
-  try {
-    await sendMail({ to: email, template_name: 'EmailVerification', variables: { first_name: '', app_name: 'Lydia', otp_code: code } });
-  } catch (e) { console.error('verify mail:', e.message); }
+  await issueVerifyCode(userId, email);
   res.json({ ok: true });
 });
 
@@ -76,11 +85,8 @@ authRouter.post('/verify-otp', async (req, res) => {
 authRouter.post('/resend-otp', async (req, res) => {
   const email = String(req.body?.email || '').toLowerCase().trim();
   const u = (await pool.query('SELECT id, email_verified FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
-  if (!u?.email_verified) {
-    const code = genOtp();
-    await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'15 minutes\')', [u?.id, hashShort(code + u?.id), 'verify']);
-    try { await sendMail({ to: email, template_name: 'EmailVerification', variables: { first_name: '', app_name: 'Lydia', otp_code: code } }); } catch {}
-  }
+  // Okänd e-post eller redan verifierad: gör inget men svara lika (ingen kontoläcka).
+  if (u && !u.email_verified) await issueVerifyCode(u.id, email);
   res.json({ ok: true });
 });
 

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { sendReceiptForPayment } from '../../shared/receipt.ts';
+import { requireStaff, canAccessClinic } from '../../shared/authz.ts';
 
 // Skickar det genererade kvittot till kundens e-post efter att en betalning
 // registrerats i kassan. Anropas med payment_id; den delade receipt-modulen
@@ -14,6 +15,12 @@ export default async function(req) {
     const body = await req.json().catch(() => ({}));
     const paymentId = body.payment_id;
     if (!paymentId) return Response.json({ error: 'payment_id required' }, { status: 400 });
+
+    const payment = await base44.asServiceRole.entities.Payment.get(paymentId).catch(() => null);
+    if (!payment) return Response.json({ error: 'Payment not found' }, { status: 404 });
+    if (!requireStaff(user).ok || !canAccessClinic(user, payment.clinic_id)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const result = await sendReceiptForPayment(base44.asServiceRole, paymentId);
     return Response.json(result);

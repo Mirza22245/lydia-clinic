@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { recordAudit } from '../../shared/audit.ts';
+import { requireClinicalStaff, canAccessClinic } from '../../shared/authz.ts';
 
 // Låter en inloggad behandlare signera (låsa) en journalanteckning server-side.
 // Vid signering sparas en elektronisk stämpel (UTC-tid, behandlare från auth.me,
@@ -26,6 +27,11 @@ export default async function(req) {
     const svc = base44.asServiceRole;
     const journal = await svc.entities.JournalEntry.get(journalId);
     if (!journal) return Response.json({ error: 'Journal not found' }, { status: 404 });
+
+    // Endast behandlande personal i samma klinik — kontrolleras FÖRE allt som returnerar journalen.
+    if (!requireClinicalStaff(user).ok || !canAccessClinic(user, journal.clinic_id)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Idempotent: redan signerad post returneras oförändrad.
     if (journal.is_signed) {

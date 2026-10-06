@@ -1,52 +1,66 @@
-// Mongo-style query -> SQL WHERE (JSONB doc-store). Säker parametriserad
-// översättning med fältnamns-validering och typ-medvetna cast för numeriska/
-// datumjämförelser. Stöder $eq, $ne, $gt/$gte/$lt/$lte, $in/$nin, $exists, $regex,
-// $and/$or. Kräver att fältnamn matchar entitetens schema (data-fält) eller
-// är kända kolumner (id/created_date/updated_date/created_by_id/clinic_id).
+// Mongo-style query -> SQL WHERE (JSONB doc-store). Parametriserad översättning med
+// fältnamnsvalidering. Datafält läses som text med ->> (aldrig ->, som ger JSON-citerad text) och
+// castas efter schemats typ (number/boolean/date/date-time). Stöder $eq, $ne, $gt/$gte/$lt/$lte,
+// $in/$nin, $exists, $regex, $and/$or. Fältnamn måste finnas i entitetens schema eller vara kända
+// kolumner (id/created_date/updated_date/created_by_id/clinic_id). Prefixet "data." (från RLS-regler)
+// motsvarar samma fält.
 
 const COLS = new Set(['id', 'created_date', 'updated_date', 'created_by_id', 'clinic_id']);
 const FIELD_RE = /^[a-z0-9_]+$/i;
-
-function isNumber(v) { return typeof v === 'number' && Number.isFinite(v); }
-function isBool(v) { return typeof v === 'boolean'; }
 
 class QErr extends Error {
   constructor(m) { super(m); this.status = 400; }
 }
 
-function colExpr(entity, field) {
-  if (COLS.has(field)) return field;
-  if (!entity.fields.includes(field)) throw new QErr(`Okänt fält: ${field}`);
-  return `data->>${JSON.stringify(field)}`;
+function normField(field) {
+  const f = field.startsWith('data.') ? field.slice(5) : field;
+  if (!FIELD_RE.test(f)) throw new QErr(`Ogiltigt fältnamn: ${field}`);
+  return f;
 }
 
-function jsonbPath(field) { return `data->${JSON.stringify(field)}`; }
+// Fältnamnet är validerat mot FIELD_RE och entitetens schema, så det kan inlinas som SQL-literal.
+function txt(field) { return `(data->>'${field}')`; }
 
-function cmpExpr(entity, field, op, val, params) {
-  if (COLS.has(field)) {
-    params.push(val);
-    return `${field} ${op} $${params.length}`;
-  }
+function schemaType(entity, field) {
+  const p = entity.properties?.[field] || {};
+  if (p.format === 'date-time') return 'timestamptz';
+  if (p.format === 'date') return 'date';
+  if (p.type === 'number' || p.type === 'integer') return 'numeric';
+  if (p.type === 'boolean') return 'boolean';
+  return 'text';
+}
+
+// SQL-uttryck för ett fält: kolumn, eller datafält castat efter schematyp.
+function expr(entity, field) {
+  if (COLS.has(field)) return field;
   if (!entity.fields.includes(field)) throw new QErr(`Okänt fält: ${field}`);
-  // data-fält: casta efter typ
-  if (isNumber(val)) { params.push(val); return `(${jsonbPath(field)})::numeric ${op} $${params.length}`; }
-  if (typeof val === 'string' && /^\d{4}-\d\d-\d\d/.test(val) && (field.endsWith('_date') || field.endsWith('_at') || field === 'entry_date')) {
-    params.push(val); return `(${jsonbPath(field)})::timestamptz ${op} $${params.length}`;
-  }
-  params.push(String(val));
-  return `(${jsonbPath(field)})::text ${op} $${params.length} COLLATE "C"`;
+  const t = schemaType(entity, field);
+  return t === 'text' ? txt(field) : `(NULLIF(${txt(field)}, '')::${t})`;
+}
+
+function asText(entity, field) {
+  if (COLS.has(field)) return `${field}::text`;
+  if (!entity.fields.includes(field)) throw new QErr(`Okänt fält: ${field}`);
+  return txt(field);
+}
+
+function isTextual(entity, field) {
+  return !COLS.has(field) && schemaType(entity, field) === 'text';
+}
+
+function bind(entity, field, v, params) {
+  params.push(isTextual(entity, field) || COLS.has(field) ? (v === null ? null : String(v)) : v);
+  return `$${params.length}`;
 }
 
 export function buildWhere(entity, query, params) {
   if (!query || typeof query !== 'object') return '';
   const parts = [];
   for (const [k, v] of Object.entries(query)) {
-    if (k === '$or') {
+    if (k === '$or' || k === '$and') {
+      if (!Array.isArray(v)) throw new QErr(`${k} kräver array`);
       const subs = v.map((sub) => buildWhere(entity, sub, params)).filter(Boolean);
-      if (subs.length) parts.push(`(${subs.join(' OR ')})`);
-    } else if (k === '$and') {
-      const subs = v.map((sub) => buildWhere(entity, sub, params)).filter(Boolean);
-      if (subs.length) parts.push(`(${subs.join(' AND ')})`);
+      if (subs.length) parts.push(`(${subs.join(k === '$or' ? ' OR ' : ' AND ')})`);
     } else if (k.startsWith('$')) {
       throw new QErr(`Top-level operator ${k} stöds ej`);
     } else {
@@ -56,8 +70,8 @@ export function buildWhere(entity, query, params) {
   return parts.length ? parts.join(' AND ') : '';
 }
 
-function buildCond(entity, field, v, params) {
-  if (!FIELD_RE.test(field)) throw new QErr(`Ogiltigt fältnamn: ${field}`);
+function buildCond(entity, rawField, v, params) {
+  const field = normField(rawField);
   if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
     const ops = [];
     for (const [op, ov] of Object.entries(v)) {
@@ -66,69 +80,48 @@ function buildCond(entity, field, v, params) {
     }
     return ops.length ? `(${ops.join(' AND ')})` : 'TRUE';
   }
-  // equality
-  if (COLS.has(field)) {
-    if (v === null) return `${field} IS NULL`;
-    params.push(v); return `${field} = $${params.length}`;
-  }
-  if (!entity.fields.includes(field)) throw new QErr(`Okänt fält: ${field}`);
-  if (v === null) return `(data->>${JSON.stringify(field)} IS NULL)`;
-  if (isNumber(v)) { params.push(v); return `(${jsonbPath(field)})::numeric = $${params.length}`; }
-  if (isBool(v)) { params.push(v); return `(${jsonbPath(field)})::boolean = $${params.length}`; }
-  params.push(String(v));
-  return `(${jsonbPath(field)})::text = $${params.length} COLLATE "C"`;
+  const e = expr(entity, field);
+  if (v === null) return `(${e} IS NULL)`;
+  return `${e} = ${bind(entity, field, v, params)}`;
 }
 
 function buildOp(entity, field, op, ov, params) {
-  const isCol = COLS.has(field);
+  const e = expr(entity, field);
   switch (op) {
-    case '$ne': {
-      if (isCol) { params.push(ov); return `${field} IS DISTINCT FROM $${params.length}`; }
-      if (ov === null) return `(data->>${JSON.stringify(field)} IS NOT NULL)`;
-      if (isNumber(ov)) { params.push(ov); return `COALESCE((${jsonbPath(field)})::numeric,0) IS DISTINCT FROM $${params.length}`; }
-      params.push(String(ov)); return `COALESCE((${jsonbPath(field)})::text,'') IS DISTINCT FROM $${params.length} COLLATE "C"`;
-    }
-    case '$in': {
-      if (!Array.isArray(ov)) throw new QErr('$in kräver array');
-      if (!ov.length) return 'FALSE';
-      const phs = ov.map((x) => { params.push(x); return `$${params.length}`; }).join(',');
-      return isCol ? `${field} IN (${phs})` : `(${jsonbPath(field)})::text IN (${phs}) COLLATE "C"`;
-    }
+    case '$ne':
+      if (ov === null) return `(${e} IS NOT NULL)`;
+      return `${e} IS DISTINCT FROM ${bind(entity, field, ov, params)}`;
+    case '$in':
     case '$nin': {
-      if (!Array.isArray(ov)) throw new QErr('$nin kräver array');
-      if (!ov.length) return 'TRUE';
-      const phs = ov.map((x) => { params.push(x); return `$${params.length}`; }).join(',');
-      return isCol ? `(${field} IS NULL OR ${field} NOT IN (${phs}))` : `((${jsonbPath(field)})::text IS NULL OR (${jsonbPath(field)})::text NOT IN (${phs}) COLLATE "C")`;
+      if (!Array.isArray(ov)) throw new QErr(`${op} kräver array`);
+      if (!ov.length) return op === '$in' ? 'FALSE' : 'TRUE';
+      const phs = ov.map((x) => bind(entity, field, x, params)).join(',');
+      return op === '$in' ? `${e} IN (${phs})` : `(${e} IS NULL OR ${e} NOT IN (${phs}))`;
     }
-    case '$gt': return cmpExpr(entity, field, '>', ov, params);
-    case '$gte': return cmpExpr(entity, field, '>=', ov, params);
-    case '$lt': return cmpExpr(entity, field, '<', ov, params);
-    case '$lte': return cmpExpr(entity, field, '<=', ov, params);
-    case '$exists': {
-      if (isCol) return ov ? `${field} IS NOT NULL` : `${field} IS NULL`;
-      return ov ? `jsonb_exists(data, ${JSON.stringify(field)})` : `(NOT jsonb_exists(data, ${JSON.stringify(field)}))`;
-    }
+    case '$gt': return `${e} > ${bind(entity, field, ov, params)}`;
+    case '$gte': return `${e} >= ${bind(entity, field, ov, params)}`;
+    case '$lt': return `${e} < ${bind(entity, field, ov, params)}`;
+    case '$lte': return `${e} <= ${bind(entity, field, ov, params)}`;
+    case '$exists':
+      if (COLS.has(field)) return ov ? `${field} IS NOT NULL` : `${field} IS NULL`;
+      return ov ? `jsonb_exists(data, '${field}')` : `(NOT jsonb_exists(data, '${field}'))`;
     case '$regex': {
       if (typeof ov !== 'string' || ov.length > 500) throw new QErr('Ogiltigt regex');
       params.push(ov);
-      return isCol ? `${field} ~* $${params.length}` : `(${jsonbPath(field)})::text ~* $${params.length}`;
+      return `${asText(entity, field)} ~* $${params.length}`;
     }
-    case '$options': return 'TRUE';
     default: throw new QErr(`Operator ${op} stöds ej`);
   }
 }
 
 export function buildOrderBy(entity, sort) {
-  if (!sort) return 'created_date DESC, id DESC';
+  if (!sort || typeof sort !== 'string') return 'created_date DESC, id DESC';
   const dir = sort.startsWith('-') ? 'DESC' : 'ASC';
-  const field = sort.replace(/^-/, '');
-  if (!FIELD_RE.test(field)) throw new QErr('Ogiltig sortering');
-  if (COLS.has(field)) return `${field} ${dir}, id ${dir}`;
-  if (entity.fields.includes(field)) return `(${jsonbPath(field)})::text ${dir} COLLATE "C", id ${dir}`;
-  throw new QErr(`Okänd sortering: ${field}`);
+  const field = normField(sort.replace(/^-/, ''));
+  return `${expr(entity, field)} ${dir}, id ${dir}`;
 }
 
-export function buildSelectFields(entity, fields) {
+export function buildSelectFields() {
   // Vi hämtar alltid hela raden; fields-filtrering sker i appen (låg kostnad).
   return '*';
 }

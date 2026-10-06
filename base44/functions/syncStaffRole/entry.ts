@@ -1,7 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { getUserClinicId } from '../../shared/authz.ts';
 
-// Admin-only: synkar en personalposts roll till motsvarande User-posts data.staff_role
+// Admin-only: synkar en personalposts roll till motsvarande User-posts staff_role (och klinik)
 // så att RLS kan styra åtkomst till känslig journal-/hälsodata på datanivå.
+// Säkerhet: bara en verifierad e-postadress kan få personalroll, och en admin kan aldrig
+// flytta en användare som redan tillhör en annan klinik.
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -21,10 +24,19 @@ export default async function(req) {
     const target = (page.items || [])[0];
     if (!target) return Response.json({ error: 'Användare hittades inte — inbjuden ännu?' }, { status: 404 });
 
+    const adminClinic = getUserClinicId(user);
+    const targetClinic = getUserClinicId(target);
+    if (adminClinic && targetClinic && targetClinic !== adminClinic) {
+      return Response.json({ error: 'Användaren tillhör en annan klinik' }, { status: 403 });
+    }
+    if (staff_role && target.email_verified === false) {
+      return Response.json({ error: 'Användarens e-postadress är inte verifierad ännu' }, { status: 400 });
+    }
+
     if (staff_role) {
-      await base44.asServiceRole.entities.User.update(target.id, { staff_role });
+      await base44.asServiceRole.entities.User.update(target.id, adminClinic ? { staff_role, clinic_id: adminClinic } : { staff_role });
     } else {
-      await base44.asServiceRole.entities.User.updateMany({ id: target.id }, { $unset: { staff_role: '' } });
+      await base44.asServiceRole.entities.User.updateMany({ id: target.id }, { $unset: adminClinic ? { staff_role: '', clinic_id: '' } : { staff_role: '' } });
     }
 
     return Response.json({ ok: true, user_id: target.id, staff_role });

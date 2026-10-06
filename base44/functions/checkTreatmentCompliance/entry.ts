@@ -13,6 +13,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 //   5. Kontroll av tidigare behandling av samma typ inom N månader
 //
 // Endast personal kan anropa.
+import { canAccessClinic } from '../../shared/authz.ts';
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -36,8 +38,7 @@ export default async function(req) {
     if (!customer) return Response.json({ error: 'Kund hittades inte' }, { status: 404 });
 
     // Klinikisolering
-    if (user.role !== 'admin' && treatment.clinic_id && user.data?.clinic_id &&
-        treatment.clinic_id !== user.data.clinic_id) {
+    if (!canAccessClinic(user, treatment.clinic_id) || !canAccessClinic(user, customer.clinic_id)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 

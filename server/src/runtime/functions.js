@@ -17,6 +17,14 @@ const PUBLIC_FUNCS = new Set([
   'getPublicBookingData', 'getAvailableSlots', 'createPublicBooking',
   'createPaymentIntent', 'getStripeConfig', 'stripeWebhook', 'sendDueReminders',
 ]);
+// Funktioner som även en inloggad kund (utan personalroll) får anropa. De kontrollerar själva att
+// posten tillhör kunden (findCustomerForUser). ALLT annat kräver personalroll: en kund kan aldrig
+// nå personalfunktioner som exportPatientData eller signJournalEntry, även om en funktion skulle
+// sakna egen behörighetskontroll.
+const PATIENT_FUNCS = new Set([
+  'getPatientPortalData', 'cancelPatientBooking', 'signPatientConsent', 'submitHealthDeclarationConsent',
+  'sendPortalMessage', 'verifyPhone', 'getBookingRequirements', 'rescheduleBooking',
+]);
 const HEAVY_FUNCS = new Set(['createPublicBooking', 'sendSms', 'verifyBankid', 'exportPatientData', 'verifyPhone', 'sendPortalMessage']);
 
 functionsRouter.use('/:name', (req, res, next) => {
@@ -32,6 +40,8 @@ functionsRouter.all('/:name', async (req, res) => {
   let user = null;
   try { user = await loadUser(req); } catch { user = null; }
   if (!PUBLIC_FUNCS.has(name) && !user) return res.status(401).json({ error: 'Unauthorized' });
+  const staffUser = !!user && (user.role === 'admin' || !!user.staff_role);
+  if (!PUBLIC_FUNCS.has(name) && !PATIENT_FUNCS.has(name) && !staffUser) return res.status(403).json({ error: 'Forbidden' });
 
   let mod;
   try {

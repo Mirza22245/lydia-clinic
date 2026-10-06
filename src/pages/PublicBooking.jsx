@@ -120,7 +120,7 @@ export default function PublicBooking() {
         start_time: slot,
         customer,
       });
-      const booking = res.data.booking;
+      const booking = { ...res.data.booking, payment_token: res.data.payment_token };
       setPendingReqs(res.data.requirements || []);
       if (treatment.requires_payment && treatment.price > 0) {
         setPendingBooking(booking);
@@ -159,8 +159,8 @@ export default function PublicBooking() {
         </header>
         <main className="mx-auto max-w-2xl px-4 py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
-          <h1 className="text-2xl font-semibold font-heading">Bokning bekräftad!</h1>
-          <p className="mt-2 text-muted-foreground">Vi ser fram emot att se dig.</p>
+          <h1 className="text-2xl font-semibold font-heading">Bokning mottagen!</h1>
+          <p className="mt-2 text-muted-foreground">Vi bekräftar din tid så snart kraven nedan är uppfyllda. Du får ett mejl från oss.</p>
           <div className="mx-auto mt-6 max-w-sm rounded-xl border border-border bg-card p-5 text-left">
             <p className="font-medium">{confirmation.treatment_name}</p>
             <p className="text-sm text-muted-foreground">{fmtFull(confirmation.start_time)}</p>

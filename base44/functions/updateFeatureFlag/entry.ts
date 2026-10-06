@@ -3,6 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 // Uppdaterar en feature flag. Endast administratörer kan ändra flaggor.
 // Auditar ändringen och returnerar den uppdaterade flaggan.
 // Status cyklar mellan: disabled → test → enabled → disabled.
+import { canAccessClinic } from '../../shared/authz.ts';
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -26,8 +28,7 @@ export default async function(req) {
     if (!flag) return Response.json({ error: 'Flaggan hittades inte' }, { status: 404 });
 
     // Klinikisolering
-    if (user.role !== 'admin' && flag.clinic_id && user.data?.clinic_id &&
-        flag.clinic_id !== user.data.clinic_id) {
+    if (!canAccessClinic(user, flag.clinic_id)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
