@@ -1,7 +1,7 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
 // ../base44/functions/getStripeConfig/entry.ts
-import { secrets } from "/app/server/src/runtime/secrets-shim.js";
+import { secrets } from "./runtime/secrets-shim.js";
 async function entry_default(req) {
   try {
     const publishable_key = secrets.get("STRIPE_PUBLISHABLE_KEY");
