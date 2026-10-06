@@ -1,61 +1,75 @@
 #!/usr/bin/env node
-// Importerar data från Base44 till PostgreSQL. Kräver en admin-token (LYDIA_ADMIN_TOKEN)
-// och API-rot (LYDIA_API_BASE, t.ex. https://app.lydiaestetisk.se/api).
-// Används EFTER att den portabla backend är igång och schema är skapat.
-import { pool } from '../src/db/pool.js';
+// Importerar all data från Base44 till PostgreSQL via funktionen exportAllData
+// (deploya den på Base44-appen, kör som app-admin, ta bort den efteråt).
+//
+//   BASE44_FUNCTIONS_URL=https://<din-app>.base44.app/functions \
+//   BASE44_ADMIN_TOKEN=<admin-token från webbläsarens localStorage "base44_access_token"> \
+//   DATABASE_URL=postgresql://lydia:<pw>@host:5432/lydia   (ÄGAR-rollen, inte lydia_app) \
+//   npm run import
+//
+// Idempotent: samma id skrivs över (ON CONFLICT). Privata filer kopieras till Lydias fillagring
+// och file_uri skrivs om till lydia://. Användarkonton migreras INTE (lösenordshashar finns
+// inte tillgängliga): personal registrerar sig på nytt och kopplas via Staff-posten (syncStaffRole).
+import { withTx, pool } from '../src/db/pool.js';
 import { entities } from '../src/entities/registry.js';
-import { signFileUri, saveFile, validateMime } from '../src/lib/storage.js';
+import { saveFile, validateMime } from '../src/lib/storage.js';
 
-const TOKEN = process.env.LYDIA_ADMIN_TOKEN;
-const API = process.env.LYDIA_API_BASE || 'http://localhost:3001/api';
-if (!TOKEN) { console.error('Sätt LYDIA_ADMIN_TOKEN'); process.exit(1); }
+const BASE = (process.env.BASE44_FUNCTIONS_URL || '').replace(/\/$/, '');
+const TOKEN = process.env.BASE44_ADMIN_TOKEN;
+if (!BASE || !TOKEN) { console.error('Sätt BASE44_FUNCTIONS_URL och BASE44_ADMIN_TOKEN'); process.exit(1); }
 
-async function fetchAll(name) {
-  const out = [];
-  let cursor = null;
-  do {
-    const res = await fetch(`${API}/entities/${name}/filter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: `lydia_session=${TOKEN}`, 'X-Requested-With': 'fetch' },
-      body: JSON.stringify({ query: {}, opts: { limit: 500, cursor } }),
-    });
-    if (!res.ok) { console.warn(`${name}: ${res.status}`); return out; }
-    const page = await res.json();
-    out.push(...(page.items || []));
-    cursor = page.next_cursor;
-  } while (cursor);
-  return out;
+const BUILTIN = new Set(['id', 'created_date', 'updated_date', 'created_by_id', 'created_by', 'is_sample', '_signed_url']);
+
+async function fetchPage(entity, cursor) {
+  const res = await fetch(`${BASE}/exportAllData`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify({ entity, cursor }),
+  });
+  if (!res.ok) throw new Error(`${entity}: HTTP ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function copyFile(rec, clinicId) {
+  if (!rec._signed_url) return rec.file_uri;
+  const buf = Buffer.from(await (await fetch(rec._signed_url)).arrayBuffer());
+  const m = validateMime(buf);
+  return saveFile({ buffer: buf, clinicId: clinicId || '_global', ext: m.ext });
 }
 
 const report = {};
 for (const e of entities.values()) {
-  const rows = await fetchAll(e.name);
-  report[e.name] = { source: rows.length };
-  let inserted = 0;
-  for (const r of rows) {
-    const { id, created_date, updated_date, created_by_id, clinic_id, ...data } = r;
-    // Migrera filer (file_uri) — hämta via Base44 signed URL, spara lokalt.
-    for (const f of ['file_uri', 'file_url']) {
-      if (data[f] && String(data[f]).startsWith('http')) {
-        try {
-          const buf = Buffer.from(await (await fetch(data[f])).arrayBuffer());
-          const m = validateMime(buf);
-          data[f] = saveFile({ buffer: buf, clinicId: clinic_id || '_global', ext: m.ext });
-        } catch { /* behåll original-URL som referens */ }
+  if (e.name === 'User') continue;
+  report[e.name] = { exported: 0, imported: 0, failed: 0 };
+  let cursor = null;
+  do {
+    const page = await fetchPage(e.name, cursor);
+    for (const rec of page.items || []) {
+      report[e.name].exported++;
+      try {
+        const data = {};
+        for (const [k, v] of Object.entries(rec)) if (!BUILTIN.has(k)) data[k] = v;
+        const clinicId = e.name === 'Clinic' ? rec.id : (rec.clinic_id || null);
+        if (rec._signed_url) data.file_uri = await copyFile(rec, clinicId);
+        await withTx((c) => c.query(
+          `INSERT INTO ${e.table} (id, data, clinic_id, created_by_id, created_date, updated_date)
+           VALUES ($1, $2::jsonb, $3, NULL, $4, $5)
+           ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, clinic_id = EXCLUDED.clinic_id, updated_date = EXCLUDED.updated_date`,
+          [rec.id, JSON.stringify(data), clinicId, rec.created_date || new Date(), rec.updated_date || new Date()]
+        ), { bypassRls: true });
+        report[e.name].imported++;
+      } catch (err) {
+        report[e.name].failed++;
+        console.warn(`${e.name} ${rec.id}: ${err.message}`);
       }
     }
-    try {
-      await pool.query(
-        `INSERT INTO ${e.table} (id, data, clinic_id, created_by_id, created_date, updated_date)
-         VALUES ($1, $2::jsonb, $3, $4, $5, $6)
-         ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, clinic_id = $3`,
-        [id, JSON.stringify(data), clinic_id || null, created_by_id || null, created_date || new Date(), updated_date || new Date()]
-      );
-      inserted++;
-    } catch (e2) { console.warn(`${e.name} rad ${id}: ${e2.message}`); }
-  }
-  report[e.name].imported = inserted;
+    cursor = page.has_more ? page.next_cursor : null;
+  } while (cursor);
 }
-console.log('Import klar:', JSON.stringify(report, null, 2));
-console.log('NOTERA: Användarkonton kan inte migreras från Base44 (lösenordshash ej tillgänglig). Alla användare måste återställa lösenord via /forgot-password efter migrering.');
+
+console.table(report);
+const failed = Object.values(report).reduce((n, r) => n + r.failed, 0);
+const mismatch = Object.entries(report).filter(([, r]) => r.exported !== r.imported + r.failed);
+console.log(failed || mismatch.length ? 'KLAR MED FEL — granska ovan.' : 'KLAR — alla poster importerade.');
 await pool.end();
+process.exit(failed ? 1 : 0);

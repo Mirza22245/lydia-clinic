@@ -1,11 +1,12 @@
-# Bygger den portabla Lydia-frontend (statisk SPA) utan Base44-beroende.
-# VITE_USE_BASE44=false gör att vite.config.js byter alias till portableClient.
+# Bygger Lydia-frontend som statisk SPA utan Base44. VITE_USE_BASE44=false gör att
+# vite.config.js hoppar över Base44-pluginen och pekar om SDK-anropen till src/lib/api.js.
+# API nås på samma ursprung (/api) via nginx, så ingen CORS behövs och cookien är same-site.
 FROM node:20-slim AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN VITE_USE_BASE44=false VITE_API_BASE=https://api.lydiaestetisk.se/api npm run build
+RUN VITE_USE_BASE44=false VITE_API_BASE=/api npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html

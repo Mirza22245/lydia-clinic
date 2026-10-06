@@ -2,6 +2,7 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { resolveBankIDConfig, initiateBankIDAuth, collectBankID, cancelBankID } from "../../shared/bankid.ts";
 import { recordAudit } from "../../shared/audit.ts";
+import { requireStaff } from "../../shared/authz.ts";
 
 // BankID-integration för identitetsverifiering.
 // Kräver secrets: BANKID_MODE, BANKID_API_URL, BANKID_CLIENT_SECRET
@@ -14,6 +15,10 @@ import { recordAudit } from "../../shared/audit.ts";
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
+    // Endast personal startar/följer BankID-verifiering (annars kan personnummer sondas av vem som helst).
+    const user = await base44.auth.me().catch(() => null);
+    const chk = requireStaff(user);
+    if (!chk.ok) return Response.json({ error: chk.error }, { status: chk.status });
     const body = await req.json().catch(() => ({}));
     const action = body.action;
 

@@ -69,7 +69,7 @@ export default function IntegrationsPanel() {
       icon: Mail,
       label: "E-post",
       desc: "Bekräftelser, kvitton, påminnelser och uppföljning",
-      secrets: ["Inbyggd (Base44 SendEmail)"],
+      secrets: ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"],
       activate: "Aktiv som standard. Använd feature flags för specifika mallar",
     },
   ];

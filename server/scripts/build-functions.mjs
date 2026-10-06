@@ -18,7 +18,8 @@ const sdkShimPath = resolve(ROOT, 'src/runtime/sdk-shim.js');
 const secretsShimPath = resolve(ROOT, 'src/runtime/secrets-shim.js');
 
 const names = readdirSync(SRC, { withFileTypes: true })
-  .filter((d) => d.isDirectory())
+  // exportAllData är en engångsfunktion för Base44-sidan och får aldrig exponeras i portabel drift.
+  .filter((d) => d.isDirectory() && d.name !== 'exportAllData')
   .map((d) => d.name);
 
 rmSync(OUT, { recursive: true, force: true });

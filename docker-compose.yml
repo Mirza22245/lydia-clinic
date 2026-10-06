@@ -1,13 +1,12 @@
-# Lydia — Docker Compose för portabel drift (Hostinger VPS eller lokal).
-# Startar: PostgreSQL (med icke-superuser app-role) + Lydia backend + Lydia frontend (nginx).
-# Använd: docker-compose up -d --build
+# Lydia — portabel drift (Hostinger VPS). PostgreSQL + backend + frontend.
 #
-# VIKTIGT: Innan första start, skapa app-rollen:
-#   docker-compose exec db psql -U lydia -d lydia -v pw='<starkt lösenord>' -f /init-role.sql
-# och sätt DATABASE_URL med lydia_app:<lösenord>.
-
-version: "3.8"
-
+# Första gången:
+#   1. cp server/.env.example server/.env   (fyll i hemligheter)
+#   2. export DB_PASSWORD=... LYDIA_APP_PASSWORD=...   (eller en .env bredvid denna fil)
+#   3. docker compose up -d db
+#   4. docker compose --profile tools run --rm migrate
+#   5. LYDIA_ADMIN_EMAIL=... LYDIA_ADMIN_PASSWORD=... docker compose --profile tools run --rm create-admin
+#   6. docker compose up -d --build
 services:
   db:
     image: postgres:16-alpine
@@ -15,17 +14,16 @@ services:
     environment:
       POSTGRES_DB: lydia
       POSTGRES_USER: lydia
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Sätt DB_PASSWORD}
+      LYDIA_APP_PASSWORD: ${LYDIA_APP_PASSWORD:?Sätt LYDIA_APP_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./server/src/db/init-role.sh:/docker-entrypoint-initdb.d/init-role.sh:ro
-    ports:
-      - "127.0.0.1:5432:5432"
+      - ./server/src/db/init-role.sh:/docker-entrypoint-initdb.d/10-init-role.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lydia"]
+      test: ["CMD-SHELL", "pg_isready -U lydia -d lydia"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build:
@@ -38,11 +36,13 @@ services:
     env_file:
       - ./server/.env
     environment:
-      DATABASE_URL: postgresql://lydia_app:${LYDIA_APP_PASSWORD:-change-me}@db:5432/lydia
+      HOST: 0.0.0.0
+      TRUST_PROXY: "2"
+      NODE_ENV: production
+      # Appen kör som lydia_app (endast DML, ingen BYPASSRLS) så FORCE RLS gäller.
+      DATABASE_URL: postgresql://lydia_app:${LYDIA_APP_PASSWORD}@db:5432/lydia
     volumes:
       - ${STORAGE_DIR:-/var/lydia/files}:/var/lydia/files
-    ports:
-      - "127.0.0.1:3001:3001"
 
   frontend:
     build:
@@ -54,7 +54,37 @@ services:
     ports:
       - "127.0.0.1:8080:80"
     volumes:
-      - ./deploy/nginx/lydia.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/container.conf:/etc/nginx/conf.d/default.conf:ro
+
+  # Engångsjobb (profil "tools"): körs med ägar-rollen.
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MIGRATE_DATABASE_URL: postgresql://lydia:${DB_PASSWORD}@db:5432/lydia
+    command: ["node", "scripts/migrate.mjs"]
+
+  create-admin:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://lydia:${DB_PASSWORD}@db:5432/lydia
+      LYDIA_ADMIN_EMAIL: ${LYDIA_ADMIN_EMAIL:-}
+      LYDIA_ADMIN_PASSWORD: ${LYDIA_ADMIN_PASSWORD:-}
+      LYDIA_CLINIC_NAME: ${LYDIA_CLINIC_NAME:-Lydia Estetisk}
+    command: ["node", "scripts/create-admin.mjs"]
 
 volumes:
   pgdata:

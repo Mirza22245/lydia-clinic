@@ -2,6 +2,7 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { resolveSMSConfig, sendSMS, SMS_TEMPLATES } from "../../shared/sms.ts";
 import { recordAudit } from "../../shared/audit.ts";
+import { requireStaff } from "../../shared/authz.ts";
 
 // Skickar SMS via konfigurerad provider.
 // Kräver secrets: SMS_PROVIDER, SMS_API_KEY, SMS_API_SECRET, SMS_SENDER
@@ -13,6 +14,10 @@ import { recordAudit } from "../../shared/audit.ts";
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
+    // Endast inloggad personal får skicka SMS (annars kan vem som helst köra upp SMS-kostnader).
+    const user = await base44.auth.me().catch(() => null);
+    const chk = requireStaff(user);
+    if (!chk.ok) return Response.json({ error: chk.error }, { status: chk.status });
     const body = await req.json().catch(() => ({}));
     const { to, template, template_args, message, customer_id, booking_id } = body;
 
@@ -39,6 +44,9 @@ export default async function (req) {
 
     if (!text) {
       return Response.json({ error: "Meddelande saknas" }, { status: 400 });
+    }
+    if (String(text).length > 480) {
+      return Response.json({ error: "Meddelandet är för långt (max 480 tecken)" }, { status: 400 });
     }
 
     const result = await sendSMS(config, to, text);

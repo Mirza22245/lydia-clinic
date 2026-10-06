@@ -54,7 +54,8 @@ export default function CustomerDetail() {
   const exportData = async () => {
     setExporting(true);
     try {
-      const data = await base44.functions.invoke("exportPatientData", { customer_id: id });
+      const res = await base44.functions.invoke("exportPatientData", { customer_id: id });
+      const data = res?.data ?? res;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
