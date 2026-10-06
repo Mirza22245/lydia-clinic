@@ -33,6 +33,23 @@ function parseFaq(raw) {
   }
 }
 
+async function readStore(store, query = {}, opts = {}) {
+  if (typeof store?.filter === 'function') return store.filter(query, opts);
+  if (typeof store?.list === 'function') {
+    const result = await store.list({ ...opts, limit: Math.max(Number(opts.limit) || 1000, 1000) });
+    const items = Array.isArray(result) ? result : (result?.items || []);
+    const matches = items.filter((row) => Object.entries(query).every(([key, value]) => row?.[key] === value));
+    if (opts.sort) {
+      const descending = String(opts.sort).startsWith('-');
+      const key = descending ? String(opts.sort).slice(1) : String(opts.sort);
+      matches.sort((a, b) => String(a?.[key] ?? '').localeCompare(String(b?.[key] ?? ''), 'sv'));
+      if (descending) matches.reverse();
+    }
+    return { items: matches.slice(0, Number(opts.limit) || 1000), has_more: false, next_cursor: null };
+  }
+  throw new Error('Entity store saknar filter/list');
+}
+
 export async function getPublicBookingData(body = {}) {
   const clinicStore = makeStore('Clinic', { bypass: true });
   const treatmentStore = makeStore('Treatment', { bypass: true });
@@ -41,7 +58,7 @@ export async function getPublicBookingData(body = {}) {
 
   let clinic = body.clinic_id ? await clinicStore.get(body.clinic_id).catch(() => null) : null;
   if (!clinic) {
-    const clinics = await clinicStore.filter({}, { limit: 1 });
+    const clinics = await readStore(clinicStore, {}, { limit: 1 });
     clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
   }
   if (!clinic) {
@@ -51,9 +68,9 @@ export async function getPublicBookingData(body = {}) {
   }
 
   const [treatments, staff, campaigns] = await Promise.all([
-    treatmentStore.filter({ clinic_id: clinic.id }, { sort: 'name', limit: 200 }),
+    readStore(treatmentStore, { clinic_id: clinic.id }, { sort: 'name', limit: 200 }),
     staffStore.filter({ clinic_id: clinic.id }, { sort: 'name', limit: 100 }),
-    campaignStore.filter({ clinic_id: clinic.id, status: 'active' }, { sort: '-created_date', limit: 20 }),
+    readStore(campaignStore, { clinic_id: clinic.id, status: 'active' }, { sort: '-created_date', limit: 20 }),
   ]);
 
   const today = clinicDateOf(Date.now());
