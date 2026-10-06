@@ -36,9 +36,31 @@
       "type": "string",
       "format": "date",
       "title": "F\u00f6rfallodatum"
+    },
+    "assigned_to": {
+      "type": "string",
+      "title": "Tilldelad"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
     }
   },
   "required": [
     "title"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "update": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "delete": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    }
+  }
 }
