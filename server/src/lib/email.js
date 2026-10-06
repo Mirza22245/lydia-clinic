@@ -33,8 +33,13 @@ function renderTemplate(templateName, variables = {}) {
   try { raw = readFileSync(file, 'utf8'); } catch { throw new Error(`E-postmall saknas: ${templateName}`); }
   // Substituera variabler INNAN MJML-kompilering (HTML-escapa värden).
   const filled = raw.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (m, key) => escapeHtml(variables[key] ?? ''));
-  const { html, errors } = mjml2html(filled, { validationLevel: 'soft' });
-  if (errors && errors.length) console.error('mjml errors:', errors);
+  // Systemmejl (EmailVerification, PasswordReset) är färdig HTML; övriga mallar är MJML.
+  let html = filled;
+  if (/^\s*<mjml/i.test(filled)) {
+    const r = mjml2html(filled, { validationLevel: 'soft' });
+    html = r.html;
+    if (r.errors && r.errors.length) console.error('mjml errors:', r.errors);
+  }
   // Ämne från <mj-title> eller <title>.
   const titleMatch = raw.match(/<mj-title>([^<]+)<\/mj-title>|<title>([^<]+)<\/title>/);
   let subject = titleMatch ? (titleMatch[1] || titleMatch[2]) : 'Lydia';

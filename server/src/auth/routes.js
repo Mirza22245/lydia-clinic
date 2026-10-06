@@ -117,7 +117,7 @@ authRouter.post('/forgot-password', async (req, res) => {
   if (u?.email_verified) {
     const token = genToken();
     await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'1 hour\')', [u.id, hashShort(token), 'reset']);
-    try { await sendMail({ to: email, template_name: 'PasswordReset', variables: { action_url: `${config.appBaseUrl}/reset-password?token=${token}` } }); } catch (e) { console.error('reset mail:', e.message); }
+    try { await sendMail({ to: email, template_name: 'PasswordReset', variables: { action_url: `${config.appBaseUrl}/reset-password?token=${token}`, app_name: 'Lydia' } }); } catch (e) { console.error('reset mail:', e.message); }
   }
   res.json({ ok: true });
 });
