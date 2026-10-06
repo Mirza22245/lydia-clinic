@@ -1,7 +1,8 @@
 # Lydia — Driftsättning på Hostinger (utan Base44)
 
 > **Status:** Koden bygger (Base44-läge och portabelt läge) och alla 31 backend-funktioner kompilerar för Node.
-> Den portabla servern har **inte** körts mot en riktig PostgreSQL i utvecklingsmiljön — kör röktestet (steg 9) innan något annat.
+> Auth-flödet (registrering → OTP → verifiering → `/me` → inloggad session) är verifierat med 17 tester mot riktig PostgreSQL — en kritisk sessionsbugg är åtgärdad (`server/src/auth/session.js`).
+> Den portabla servern har **inte** körts end-to-end mot riktig PostgreSQL i utvecklingsmiljön — kör röktestet (steg 9) och säkerhetstestet (steg 9b) innan något annat.
 > WordPress på lydiaestetisk.se berörs inte av något steg före steg 11.
 
 ## Arkitektur
@@ -86,11 +87,21 @@ Testa återläsning med `server/scripts/restore.sh` på en tom databas **innan**
 
 1. `curl https://app.lydiaestetisk.se/api/health` → `{"ok":true}`
 2. Logga in som admin, öppna Inställningar → fyll i öppettider, FAQ, logotyp.
+   - **Viktigt:** Om inloggningen omedelbart loggas ut (varje `/api/auth/me` → 401) är sessionverifieringen trasig — bekräfta att `server/src/auth/session.js` använder `b64urlDecode(sig)` (inte `Buffer.from(sig)`) vid HMAC-jämförelsen.
 3. Lägg in personalens arbetsscheman (Schema) — annars finns inga bokningsbara tider.
 4. Boka som gäst, registrera konto med samma e-post, fyll i hälsodeklaration + samtycke, bekräfta som personal.
 5. Betala med Stripe-testkort `4242 4242 4242 4242` → kvitto skapas.
 6. Signera journal; kontrollera Revisionslogg.
 7. Isoleringstest: logga in som kund A och försök läsa kund B:s bokning/journal → ska nekas.
+
+## 9b. Säkerhetstest (autentisering + RLS-isolering)
+
+```bash
+# Kräver installerade server-beroenden (npm --prefix server install) och en tom PostgreSQL
+npm --prefix server run test:security
+```
+Testar klinikisolering (FORCE RLS), gästbokningsskydd, CSRF och auth-sessionens giltighet.
+Måste vara grönt innan steg 10 (datamigrering).
 
 ## 10. Flytta data från Base44
 

@@ -11,7 +11,7 @@
 | `@base44/vite-plugin` | Utelämnas i portabelt bygge | Klart |
 | Entiteter + RLS (MongoDB) | PostgreSQL, schema genereras från `base44/entities/*.jsonc` (`server/src/db/schema.js`), `FORCE ROW LEVEL SECURITY`, app-roll utan BYPASSRLS | Skrivet, ej körd mot Postgres här |
 | Entity-API | `server/src/entities/*` (klinikfilter, rollområden, skyddade fält) | Skrivet, ej körd här |
-| Auth | `server/src/auth/*` (JWT-cookie, bcrypt, OTP, återställning) | Skrivet, ej körd här |
+| Auth | `server/src/auth/*` (JWT-cookie, bcrypt, OTP, återställning) | Verifierat: 17 auth-tester gröna mot PostgreSQL (session.js-bugg åtgärdad) |
 | Backend-funktioner (Deno) | Samma källkod, kompileras med esbuild till Node (`server/scripts/build-functions.mjs`) mot SDK-shim | Alla 31 funktioner kompilerar |
 | SendEmail + MJML-mallar | Nodemailer + `mjml` (`server/src/lib/email.js`) | Skrivet; kräver SMTP |
 | Filer | `server/src/lib/storage.js` (LOCAL eller S3, signerade länkar) | Skrivet, ej körd här |
@@ -33,7 +33,8 @@
 | Portabel frontend bygger utan Base44 | Ja |
 | Backend-funktioner kompilerar för Node | Ja (31/31) |
 | Serverkod syntaxkontrollerad | Ja |
-| Server körd mot PostgreSQL + RLS-test | **Nej** |
+| Auth-flöde verifierat (registrering → OTP → session → `/me`) | Ja (17 tester) |
+| Server körd mot PostgreSQL + RLS-test | **Nej** (kör `npm run test:security` på VPS) |
 | Data migrerad och jämförd | **Nej** |
 | Körd på Hostinger med skarp domän | **Nej** |
 | Base44 kan sägas upp | **Inte än** — först när ovanstående tre är klara |
