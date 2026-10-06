@@ -42,10 +42,10 @@ export async function computeBookingRequirements(svc, booking, treatment) {
     let completed = false;
     if (cid) {
       const c = await svc.entities.Consent.filter(
-        { customer_id: cid, type: 'treatment', granted: true, revoked_at: { $exists: false } },
-        { limit: 1 }
+        { customer_id: cid, type: 'treatment', granted: true },
+        { limit: 50 }
       );
-      completed = !!(c.items && c.items.length);
+      completed = !!((c.items || []).some((x) => !x.revoked_at));
     }
     requirements.push({ key: 'consent', label: 'Samtycke till behandling', required: true, completed });
   }
