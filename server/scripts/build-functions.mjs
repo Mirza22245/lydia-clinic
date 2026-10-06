@@ -29,6 +29,7 @@ const sdkOut = join(OUT, 'runtime', 'sdk-shim.js');
 let sdkSource = readFileSync(sdkShimPath, 'utf8');
 sdkSource = sdkSource
   .replaceAll("'../entities/index.js'", "'../../src/entities/index.js'")
+  .replaceAll("'../entities/store.js'", "'../../src/entities/store.js'")
   .replaceAll("'../auth/session.js'", "'../../src/auth/session.js'")
   .replaceAll("'../lib/email.js'", "'../../src/lib/email.js'")
   .replaceAll("'../db/pool.js'", "'../../src/db/pool.js'")
