@@ -1,189 +1,111 @@
-# Lydia — WordPress-integration, deployment & migration
+# Lydia — Hostinger Deployment Guide
 
-Detta dokument beskriver hur Lydia (byggt på Base44) samexisterar med
-klinikens WordPress-webbplats på **lydiaestetisk.se**, hur integrationen
-läggs upp, och hur Lydia senare kan flyttas till Hostinger utan att WordPress
-eller domänen påverkas.
+> **Mål:** Deploya Lydia på Hostinger utan Base44. WordPress på lydiaestetisk.se förblir oförändrad.
 
----
-
-## 1. Arkitekturöversikt
+## Arkitektur
 
 ```
-lydiaestetisk.se
-│
-├── WordPress  (Hostinger)        — publik webbplats, SEO, marknadsföring
-│   ├── Startsida / behandlingar / priser / bilder / FAQ / kontakt
-│   └── "Boka tid"-knapp  →  länkar till Lydia
-│
-└── Lydia  (Base44 under utveckling → Hostinger i produktion)
-    ├── /book        — publik onlinebokning (ingen inloggning)
-    ├── /portal      — kundportal (inloggning krävs)
-    ├── /app/*       — personal- & adminportal (inloggning + RBAC)
-    └── backend      — entiteter, funktioner, betalning, integrationer
+lydiaestetisk.se          → WordPress (Hostinger, oförändrad)
+app.lydiaestetisk.se      → Lydia frontend (React, statisk bundle)
+api.lydiaestetisk.se      → Lydia backend (Node/Express)
+                          → PostgreSQL (Hostinger databas)
+                          → S3-fillagring (Hostinger Object Storage)
 ```
 
-**Ansvarsfördelning**
-- **WordPress** = publik marknadsföring och information. Ingen direkt åtkomst
-  till journal, hälsodata eller samtycken.
-- **Lydia** = bokningsmotor, kundkonto, kundportal, personalportal, adminportal,
-  kalender, journal, hälsodeklarationer, formulär, samtycken, betalningar,
-  kvitton och audit-logg.
-- **Hostinger** = framtida permanent driftmiljö.
-- **GitHub** = källkod och versionering.
-- **Base44** = bygg-/utvecklingsmiljö under utvecklingsfasen.
+## Steg 1 — Förbered Hostinger VPS
 
----
+1. Köp VPS-plan (minst 2GB RAM, 20GB SSD)
+2. Installera Docker + Docker Compose:
+   ```bash
+   curl -fsSL https://get.docker.com | sh
+   sudo systemctl enable docker
+   ```
+3. Skapa PostgreSQL-databas via Hostinger-panel eller Docker
 
-## 2. Domänstrategi
+## Steg 2 — DNS-konfiguration (INTE WordPress!)
 
-Tre alternativ, att väljas efter teknisk kontroll av Hostinger. **Ingen DNS-
-ändring görs utan uttryckligt godkännande.**
+**Viktigt:** Ändra INTE befintliga DNS-poster för lydiaestetisk.se. Lägg till NYA subdomäner:
 
-### Alternativ A — Subdomän (rekommenderas)
-- `https://lydiaestetisk.se/` → WordPress (oförändrad)
-- `https://app.lydiaestetisk.se/` → Lydia (Base44-appen)
-- **Fördelar:** WordPress opåverkad; Lydia isolerat; SSL via separat certifikat;
-  enklast att flytta till Hostinger senare (peka om subdomänen).
-- **DNS:** Lägg till en CNAME-post `app` → Base44-appens domän. Berör inte apex
-  eller WordPress.
+```
+Typ    Namn                   Värde                     TTL
+A      app.lydiaestetisk.se   [Hostinger VPS IP]        3600
+A      api.lydiaestetisk.se   [Hostinger VPS IP]        3600
+```
 
-### Alternativ B — Path/reverse proxy
-- `https://lydiaestetisk.se/boka` → Lydia
-- Kräver reverse proxy i Hostinger (nginx/.htaccess) som vidarebefordrar `/boka`
-  och `/portal` till Base44-appen.
-- **Fördelar:** samma domän, enhetlig URL.
-- **Nackdelar:** beror av Hostingers proxy-stöd; kan krocka med WordPress-
-  permalänkar; svårare att flytta.
+**WordPress-poster (A- och www-poster för lydiaestetisk.se) ska INTE röras.**
 
-### Alternativ C — Direktlänk
-- WordPress "Boka tid" länkar direkt till Base44-appens URL (t.ex.
-  `benign-quick-build-flow.base44.app/book` eller en egen kortlänk).
-- Enklast som interimlösning innan subdomän är konfigurerad.
+## Steg 3 — Deploya backend
 
-**Rekommendation:** Alternativ A (subdomän `app.lydiaestetisk.se`).
+```bash
+# På Hostinger VPS:
+git clone https://github.com/ditt-repo/lydia.git
+cd lydia/server
+cp .env.example .env
+# Redigera .env med riktiga värden
+npm install
+npm run migrate  # Kör schema.sql
+npm start
+```
 
----
+## Steg 4 — Deploya frontend
 
-## 3. Integrationspunkter
+```bash
+cd lydia
+npm install
+npm run build  # Bygg statisk bundle
+# Servera via nginx:
+# - app.lydiaestetisk.se → /usr/share/lydia/frontend/dist
+# - api.lydiaestetisk.se → proxy till localhost:3001
+```
 
-| Punkt | Beskrivning | Ägare |
-|---|---|---|
-| Boka-knapp i WordPress | Länk/CTA som pekar på `https://app.lydiaestetisk.se/book` | WordPress-admin |
-| Kundportal-länk | Länk från WordPress "Mitt konto" → `https://app.lydiaestetisk.se/portal` | WordPress-admin |
-| Visuell identitet | Lydia tema matchar WordPress (se §4) | Lydia (klart) |
-| Behandlingslista | Lydia hämtar behandlingar från sin egen databas; WordPress visar sin lista separat | respektive system |
-| Betalning | Stripe hanteras i Lydia (in-context); WordPress/WooCommerce berörs ej | Lydia |
-| E-post | Bekräftelser skickas från Lydia (app-domän krävs för icke-registrerade mottagare) | Lydia |
+## Steg 5 — Konfigurera secrets
 
-WordPress har **ingen** direkt åtkomst till känslig journal-/hälsodata. Om
-framtida API-behov uppstår exponeras ett explicit, autentiserat API från Lydia —
-aldrig direkt databasåtkomst.
+Sätt i `server/.env`:
+- `DATABASE_URL` — Hostinger PostgreSQL-anslutning
+- `JWT_SECRET` — generera med `openssl rand -hex 32`
+- `STRIPE_SECRET_KEY` — från Stripe-dashboard
+- `STRIPE_WEBHOOK_SECRET` — från Stripe webhook
+- `SMTP_*` — från e-postleverantör (t.ex. Hostinger Mail)
+- `SMS_*` — från SMS-leverantör (när vald)
+- `BANKID_*` — från BankID-leverantör (när avtal sluts)
+- `S3_*` — från Hostinger Object Storage
 
----
+## Steg 6 — Uppdatera Stripe webhook
 
-## 4. Visuell identitet (tema)
+I Stripe Dashboard → Webhooks:
+- Ändra URL till: `https://api.lydiaestetisk.se/api/payments/webhook`
+- Behåll samma events: `payment_intent.succeeded`, `charge.refunded`
 
-Lydia är anpassat till lydiaestetisk.se:
+## Steg 7 — Uppdatera WordPress-länk
 
-- **Färger:** cream `#f6f2ed` (bakgrund), charcoal `#1b2220` (primär/text),
-  sage `#d8e2d8` (accent/sekundär).
-- **Typografi:** Playfair Display (rubriker, serif), Inter (brödtext, sans).
-- **Kliniknamn:** "Lydia Estetisk Klinik" (sätts i Clinic-posten + UI-branding).
+I WordPress (lydiaestetisk.se):
+- Ändra "Boka tid"-länk från `https://lydiaestetisk.se/book` till `https://app.lydiaestetisk.se/book`
+- Detta är den ENDA ändringen i WordPress — ingen kod, ingen DNS
 
-Tema definieras i `src/index.css` (design tokens) och mappas via
-`tailwind.config.js`. Ändra färg/typografi där — inte i enskilda komponenter.
+## Steg 8 — Verifiera
 
----
+1. Besök `https://app.lydiaestetisk.se` — Lydia laddar
+2. Besök `https://lydiaestetisk.se` — WordPress oförändrad
+3. Klicka "Boka tid" på WordPress → omdirigeras till Lydia
+4. Testa bokning → betalning → kvitto
+5. Verifiera att journal skapas och signeras
+6. Kontrollera audit-logg
 
-## 5. Routing i Lydia
+## Migrering av data från Base44
 
-| Route | Syfte | Åtkomst |
-|---|---|---|
-| `/` | Landningssida (klarmärkt) | Publik |
-| `/book` | Onlinebokning | Publik |
-| `/portal` | Kundportal | Inloggad kund |
-| `/login`, `/register`, `/forgot-password`, `/reset-password` | Auth | Publik |
-| `/app/*` | Personal- & adminportal | Inloggad + RBAC |
+1. Exportera alla entiteter från Base44 som JSON (via Base44 API eller dashboard)
+2. Konvertera till SQL INSERTs (skript finns i `server/src/db/migrate-from-base44.js` — TODO)
+3. Importera till PostgreSQL: `psql -d lydia -f import.sql`
 
-När Lydia går live bakom WordPress bör `/` antingen omdirigera till `/book`
-eller visa en minimal klarmärkt ingång (Boka tid / Kundportal / Personal).
-Detta är en framtida justering — dokumenterad här.
+## Backup
 
----
+```bash
+# Daglig PostgreSQL-backup (cron):
+0 3 * * * pg_dump lydia | gzip > /backups/lydia-$(date +\%Y\%m\%d).sql.gz
+```
 
-## 6. Säkerhet & åtkomstkontroll
+## Övervakning
 
-- **RLS (Row-Level Security):** varje entitet isoleras per `clinic_id`. Känslig
-  journal-/hälsodata styrs dessutom per `staff_role` (administratör/behandlare/
-  reception) på datanivå — inte bara i menyn.
-- **Kundportal:** kunden ser endast sina egna bokningar/journaler/samtycken.
-- **Personalportal:** separat inloggning; RBAC via `staff_role`.
-- **Admin:** separat inloggning; fullständiga administrativa rättigheter.
-- **Audit-logg:** oföränderlig spårning av kritiska åtgärder (journal-signering,
-  samtyckes-signering, betalningar).
-- **WordPress** har ingen åtkomst till Lydia-backend utan ett explicit,
-  autentiserat API.
-
----
-
-## 7. Base44-beroenden (att ersätta vid migration)
-
-Lydia körs idag på Base44. Vid flytt till Hostinger ersätts följande:
-
-| Base44-komponent | Ersätts med på Hostinger |
-|---|---|
-| Entiteter (JSON-schema + RLS) | PostgreSQL-tabeller + RLS-policyer |
-| Backend-funktioner (`base44/functions/`) | Node/Deno HTTP-handlers (portabel TS) |
-| Auth (Base44 SDK) | Egen auth (t.ex. JWT + bcrypt) eller Hostinger-lösning |
-| `@base44/sdk` (entiteter, auth) | Egen data-lager + ORM (t.ex. Prisma/Drizzle) |
-| Core-integrationer (SendEmail, InvokeLLM, filuppladdning) | Respektive tjänst (SMTP, OpenAI, S3/Hostinger storage) |
-| Stripe-integration | Oförändrad (Stripe API direkt) |
-| Hosting | Hostinger VPS/delat |
-
-**Portabilitetsåtgärder redan tagna:**
-- Affärslogik ligger i backend-funktioner (portabel TypeScript), inte inbäddad i
-  UI-komponenter.
-- Entitetsscheman är rena JSON-definitioner som mappar 1:1 till tabeller.
-- Stripe-anrop är isolerade i `createPaymentIntent` / `stripeWebhook`.
-- Inga hårda beroenden till Base44 i UI förutom SDK-klienten (`@/api/base44Client`).
-
----
-
-## 8. Migrationsväg till Hostinger
-
-1. **Klara Lydia funktionellt** på Base44 (pågående — se "Lydia Production
-   Readiness"-planen).
-2. **Versionera all kod på GitHub** (2-way sync Base44 ↔ GitHub).
-3. **Sätt upp Hostinger-miljö:** Node-runtime + PostgreSQL + SSL.
-4. **Migrera databas:** export entiteter → PostgreSQL-tabeller med RLS.
-5. **Migrera backend-funktioner:** flytta `base44/functions/` till Hostinger-
-   endpoints; byt SDK-anrop mot egen data-lager.
-6. **Migrera auth:** portera användare + sessioner.
-7. **Peka om `app.lydiaestetisk.se`** från Base44 till Hostinger (CNAME-ändring,
-   dokumenteras innan genomförande).
-8. **Verifiera end-to-end** genom hela patientresan.
-9. **Stäng Base44-miljö** när Hostinger är grön.
-
-WordPress på `lydiaestetisk.se` berörs inte av steg 1–8 så länge apex och
-WordPress DNS lämnas oförändrade.
-
----
-
-## 9. DNS — säkerhetsregler
-
-- **Ingen DNS-ändring utan uttryckligt godkännande.**
-- Alla DNS-ändringar dokumenteras (post, gammalt värde, nytt värde, tid, vem)
-  innan de genomförs.
-- Apex `lydiaestetisk.se` och WordPress A/AAAA-poster rör **inte**.
-- Vid subdomän: lägg endast till ny CNAME för `app`.
-
----
-
-## 10. Öppna beslut (att ta efter Hostinger-kontroll)
-
-- [ ] Subdomän vs path/reverse proxy (rekommendation: subdomän).
-- [ ] Om Lydia ska visa egen landningssida eller omdirigera `/` → `/book`.
-- [ ] Om WooCommerce-konto ska kopplas till Lydia-kundkonto (SSO/mappning).
-- [ ] E-postdomän för Lydia-utskick (egen domän via Hostinger/SMTP).
-- [ ] SMS-provider för påminnelser (Twilio etc.) — se Fas F.
+- Health check: `GET https://api.lydiaestetisk.se/health`
+- Logs: `docker-compose logs -f backend`
+- DB health: `pg_isready -U lydia
