@@ -13,6 +13,7 @@ import { entityRouter } from './entities/routes.js';
 import { functionsRouter } from './runtime/functions.js';
 import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
+import { publicBookingRouter } from './routes/publicBooking.js';
 import { apiLimiter, authLimiter } from './lib/rateLimit.js';
 import { csrfGuard } from './lib/csrf.js';
 
@@ -54,6 +55,7 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', googleRouter);
+app.use('/api/public-booking-data', publicBookingRouter);
 app.use('/api/functions', functionsRouter);
 
 // Statisk frontend + SPA-fallback för Hostinger Cloud (enkel Node-app utan nginx).
