@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { parseAllowedTreatments } from '../../shared/staffCompetence.ts';
 import { clinicDateOf } from '../../shared/availability.ts';
+import { makeStore } from '../../../server/src/entities/store.js';
 
 // Offentlig data för klinikens webbplats och onlinebokning: klinik, behandlingar,
 // aktiv personal (inkl. vilka behandlingar de får utföra) och aktiva kampanjer.
@@ -22,18 +23,7 @@ function parseFaq(raw: any): { q: string; a: string }[] {
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    const svc = base44.asServiceRole;
-
-    // Stöd både den nya direkta entity-accessorn och äldre runtime-shim
-    // där entities är en Proxy. Detta gör funktionen robust vid deploy-cache.
-    const entity = (name: string) => {
-      const store = svc.entity?.(name) ?? svc.entities?.[name];
-      if (!store || typeof store.filter !== 'function') {
-        throw new Error(`Service entity unavailable: ${name}`);
-      }
-      return store;
-    };
-
+    const entity = (name: string) => makeStore(name, { bypass: true });
     const body = await req.json().catch(() => ({}));
 
     let clinic;
