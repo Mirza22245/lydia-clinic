@@ -239,5 +239,5 @@ export function makeStore(entityName, userCtx) {
     return { updated, has_more: page.has_more };
   }
 
-  return { filter, get, create, update, delete: deleteFn, count, aggregate, updateMany };
+  // Base44-compatible alias used by migrated functions.\n  async function list(opts = {}) { return filter({}, opts); }\n\n  return { filter, list, get, create, update, delete: deleteFn, count, aggregate, updateMany };
 }
