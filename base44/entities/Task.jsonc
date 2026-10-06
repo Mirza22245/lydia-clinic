@@ -54,7 +54,35 @@
       "data.clinic_id": "{{user.data.clinic_id}}"
     },
     "create": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administrat\u00f6r"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "behandlare"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "reception"
+              }
+            }
+          ]
+        }
+      ]
     },
     "update": {
       "data.clinic_id": "{{user.data.clinic_id}}"
