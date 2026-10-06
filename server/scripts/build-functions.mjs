@@ -7,6 +7,7 @@
 import { build } from 'esbuild';
 import { readdirSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,8 +29,18 @@ mkdirSync(OUT, { recursive: true });
 const plugin = {
   name: 'lydia-compat',
   setup(build) {
-    build.onResolve({ filter: /^npm:@base44\/sdk/ }, () => ({ path: sdkShimPath }));
-    build.onResolve({ filter: /^base44:runtime$/ }, () => ({ path: secretsShimPath }));
+    build.onResolve({ filter: /^npm:@base44\/sdk/ }, () => ({ path: sdkShimPath, namespace: 'lydia-shim' }));
+    build.onResolve({ filter: /^base44:runtime$/ }, () => ({ path: secretsShimPath, namespace: 'lydia-secrets' }));
+    build.onLoad({ filter: /.*/, namespace: 'lydia-shim' }, () => ({
+      contents: readFileSync(sdkShimPath, 'utf8'),
+      loader: 'js',
+      resolveDir: dirname(sdkShimPath),
+    }));
+    build.onLoad({ filter: /.*/, namespace: 'lydia-secrets' }, () => ({
+      contents: readFileSync(secretsShimPath, 'utf8'),
+      loader: 'js',
+      resolveDir: dirname(secretsShimPath),
+    }));
     // TS-filer i base44/shared importeras via relativa sökvägar — esbuild löser dem.
   },
 };
