@@ -64,8 +64,10 @@ for (const name of names) {
   });
   const outfile = join(OUT, `${name}.mjs`);
   const compiled = readFileSync(outfile, 'utf8')
-    .replaceAll(sdkShimPath, './runtime/sdk-shim.js')
-    .replaceAll(secretsShimPath, './runtime/secrets-shim.js');
+    .replace(new RegExp(sdkShimPath.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\.replaceAll(sdkShimPath, './runtime/sdk-shim.js')
+    .replaceAll(secretsShimPath, './runtime/secrets-shim.js');'), 'g'), './runtime/sdk-shim.js')
+    .replace(new RegExp(secretsShimPath.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\.replaceAll(sdkShimPath, './runtime/sdk-shim.js')
+    .replaceAll(secretsShimPath, './runtime/secrets-shim.js');'), 'g'), './runtime/secrets-shim.js');
   writeFileSync(outfile, compiled);
 }
 console.log(`[build-functions] ${names.length} funktioner kompilerade till ${OUT}`);
