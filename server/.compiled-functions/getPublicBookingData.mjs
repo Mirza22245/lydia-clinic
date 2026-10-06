@@ -34,20 +34,27 @@ async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
+    const entity = (name) => {
+      const store = svc.entity?.(name) ?? svc.entities?.[name];
+      if (!store || typeof store.filter !== "function") {
+        throw new Error(`Service entity unavailable: ${name}`);
+      }
+      return store;
+    };
     const body = await req.json().catch(() => ({}));
     let clinic;
     if (body.clinic_id) {
-      clinic = await svc.entities.Clinic.get(body.clinic_id).catch(() => null);
+      clinic = await entity("Clinic").get(body.clinic_id).catch(() => null);
     }
     if (!clinic) {
-      const clinics = await svc.entities.Clinic.filter({}, { limit: 1 });
+      const clinics = await entity("Clinic").filter({}, { limit: 1 });
       clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
     }
     if (!clinic) return Response.json({ error: "Ingen klinik hittades" }, { status: 404 });
     const [treatments, staff, campaigns] = await Promise.all([
-      svc.entities.Treatment.filter({ clinic_id: clinic.id }, { sort: "name", limit: 200 }),
-      svc.entities.Staff.filter({ clinic_id: clinic.id, active: true }, { sort: "name", limit: 100 }),
-      svc.entities.Campaign.filter({ clinic_id: clinic.id, status: "active" }, { sort: "-created_date", limit: 20 })
+      entity("Treatment").filter({ clinic_id: clinic.id }, { sort: "name", limit: 200 }),
+      entity("Staff").filter({ clinic_id: clinic.id, active: true }, { sort: "name", limit: 100 }),
+      entity("Campaign").filter({ clinic_id: clinic.id, status: "active" }, { sort: "-created_date", limit: 20 })
     ]);
     const today = clinicDateOf(Date.now());
     const activeCampaigns = (campaigns.items || []).filter((c) => (!c.valid_from || c.valid_from <= today) && (!c.valid_until || c.valid_until >= today)).map((c) => ({
