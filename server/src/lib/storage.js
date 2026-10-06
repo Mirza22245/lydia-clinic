@@ -1,53 +1,63 @@
-// Fillagring — ersätter Base44 UploadPrivateFile + CreateFileSignedUrl.
-// Använder S3-kompatibel lagring (Hostinger Object Storage, AWS S3, MinIO).
-// Genererar presigned URLs för säker nedladdning utan public exponering.
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { config } from '../config.js';
 
-let s3Client = null;
+export const LYDA_SCHEME = 'lydia://';
 
-function getS3Client() {
-  if (s3Client) return s3Client;
-  s3Client = new S3Client({
-    endpoint: process.env.S3_ENDPOINT,
-    region: process.env.S3_REGION || "auto",
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY,
-      secretAccessKey: process.env.S3_SECRET_KEY,
-    },
-    forcePathStyle: true,
-  });
-  return s3Client;
+const MIME = [
+  { sig: [0xff, 0xd8, 0xff], mime: 'image/jpeg', ext: 'jpg' },
+  { sig: [0x89, 0x50, 0x4e, 0x47], mime: 'image/png', ext: 'png' },
+  { sig: [0x25, 0x50, 0x44, 0x46], mime: 'application/pdf', ext: 'pdf' },
+  { sig: [0x52, 0x49, 0x46, 0x46], mime: 'image/webp', ext: 'webp' },
+];
+const ALLOWED = new Set(['image/jpeg', 'image/png', 'application/pdf', 'image/webp']);
+
+export function sniffMime(buf) {
+  for (const m of MIME) {
+    if (m.sig.every((b, i) => buf[i] === b)) return m;
+  }
+  return null;
 }
 
-export async function uploadFile(file, key) {
-  const client = getS3Client();
-  const bucket = process.env.S3_BUCKET;
-  const fileKey = key || `lydia/${Date.now()}-${file.originalname}`;
-
-  await client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: fileKey,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
-
-  return { file_uri: `s3://${bucket}/${fileKey}` };
+export function validateMime(buf) {
+  const m = sniffMime(buf);
+  if (!m || !ALLOWED.has(m.mime)) {
+    const err = new Error('Ogiltig filtyp. Tillåtet: jpg, png, pdf, webp.'); err.status = 400; throw err;
+  }
+  return m;
 }
 
-export async function createSignedUrl(fileUri, expiresIn = 300) {
-  const client = getS3Client();
-  const bucket = process.env.S3_BUCKET;
-  // Extrahera key från s3://bucket/key
-  const key = fileUri.replace(`s3://${bucket}/`, "");
+export function saveFile({ buffer, clinicId, ext }) {
+  const dir = join(config.storage.dir, clinicId || '_global');
+  mkdirSync(dir, { recursive: true });
+  const id = randomBytes(16).toString('hex');
+  const filename = `${id}.${ext}`;
+  const full = join(dir, filename);
+  writeFileSync(full, buffer);
+  return `${LYDA_SCHEME}${clinicId || '_global'}/${filename}`;
+}
 
-  const url = await getSignedUrl(
-    client,
-    new GetObjectCommand({ Bucket: bucket, Key: key }),
-    { expiresIn }
-  );
+export function resolvePath(uri) {
+  if (!uri || !uri.startsWith(LYDA_SCHEME)) return null;
+  const rel = uri.slice(LYDA_SCHEME.length);
+  if (rel.includes('..')) return null;
+  return join(config.storage.dir, rel);
+}
 
-  return { signed_url: url };
+export function signFileUri(uri, opts = {}) {
+  const exp = Math.floor((Date.now() + (opts.expiresIn || 300) * 1000) / 1000);
+  const sig = createHmac('sha256', config.fileSigningSecret).update(`${uri}|${exp}`).digest('hex');
+  const token = Buffer.from(JSON.stringify({ uri, exp, sig })).toString('base64url');
+  return `/api/files/get?token=${token}`;
+}
+
+export function verifyFileToken(token) {
+  try {
+    const { uri, exp, sig } = JSON.parse(Buffer.from(token, 'base64url').toString());
+    if (exp < Math.floor(Date.now() / 1000)) return null;
+    const expected = createHmac('sha256', config.fileSigningSecret).update(`${uri}|${exp}`).digest('hex');
+    if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    return uri;
+  } catch { return null; }
 }

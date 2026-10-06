@@ -1,68 +1,62 @@
-// E-post-abstraktion — ersätter Base44 SendEmail.
-// Stödjer SMTP (Nodemailer) och MJML-mallar från base44/emails/.
-// På Hostinger: använd SMTP eller Resend/SendGrid via .env.
-import nodemailer from "nodemailer";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createTransport } from 'nodemailer';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import mjml2html from 'mjml';
+import { config } from '../config.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEMPLATES_DIR = join(__dirname, '../../../base44/emails');
 
 let transporter = null;
-
-function getTransporter() {
+function getTransport() {
   if (transporter) return transporter;
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465",
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  if (!config.smtp.host || !config.smtp.user) {
+    throw new Error('E-post inte konfigurerad. Kontakta administratör.');
+  }
+  transporter = createTransport({
+    host: config.smtp.host, port: config.smtp.port, secure: config.smtp.secure,
+    auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
   return transporter;
 }
 
-// Laddar och renderar en MJML/HTML-mall med variabel-ersättning.
-// Mallar ligger i base44/emails/<Name>.html (portabla — flyttas till server/emails/).
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function renderTemplate(templateName, variables = {}) {
-  const templatePath = path.join(__dirname, "../../emails", templateName + ".html");
-  let html = fs.readFileSync(templatePath, "utf-8");
-
-  // Ersätt {{variable}} med värden
-  for (const [key, val] of Object.entries(variables)) {
-    html = html.replace(new RegExp(`{{${key}}}`, "g"), val || "");
-  }
-
-  // Extrahera titel från <mj-title> eller <title>
-  const titleMatch = html.match(/<mj-title>(.*?)<\/mj-title>/) || html.match(/<title>(.*?)<\/title>/);
-  const subject = titleMatch ? titleMatch[1] : "Lydia";
-
-  // För produktion: kompilera MJML till HTML här. Under migrering används raw HTML.
+  const safe = /^[A-Za-z0-9_]+$/.test(templateName) ? templateName : null;
+  if (!safe) throw new Error('Ogiltigt mallnamn');
+  const file = join(TEMPLATES_DIR, `${safe}.html`);
+  let raw;
+  try { raw = readFileSync(file, 'utf8'); } catch { throw new Error(`E-postmall saknas: ${templateName}`); }
+  // Substituera variabler INNAN MJML-kompilering (HTML-escapa värden).
+  const filled = raw.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (m, key) => escapeHtml(variables[key] ?? ''));
+  const { html, errors } = mjml2html(filled, { validationLevel: 'soft' });
+  if (errors && errors.length) console.error('mjml errors:', errors);
+  // Ämne från <mj-title> eller <title>.
+  const titleMatch = raw.match(/<mj-title>([^<]+)<\/mj-title>|<title>([^<]+)<\/title>/);
+  let subject = titleMatch ? (titleMatch[1] || titleMatch[2]) : 'Lydia';
+  subject = subject.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (m, key) => String(variables[key] ?? ''));
   return { html, subject };
 }
 
-export async function sendEmail({ to, template_name, variables, subject, body, attachments }) {
-  try {
-    const transporter = getTransporter();
-    let emailSubject = subject;
-    let emailHtml = body;
-
-    if (template_name) {
-      const rendered = renderTemplate(template_name, variables);
-      emailSubject = emailSubject || rendered.subject;
-      emailHtml = rendered.html;
-    }
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || "noreply@lydiaestetisk.se",
-      to,
-      subject: emailSubject,
-      html: emailHtml,
-      attachments: attachments?.map((a) => ({ filename: a.filename, path: a.file_url })),
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Email send failed:", error.message);
-    return { success: false, error: error.message };
+export async function sendMail({ to, subject, html, text, template_name, variables, from_name, attachments }) {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw new Error('Ogiltig mottagare');
+  let finalHtml = html;
+  let finalSubject = subject;
+  let finalText = text;
+  if (template_name) {
+    const r = renderTemplate(template_name, variables || {});
+    finalHtml = r.html;
+    if (!finalSubject) finalSubject = r.subject;
   }
+  if (!finalSubject) finalSubject = 'Lydia';
+  if (finalSubject && /[\r\n]/.test(finalSubject)) throw new Error('Ogiltigt ämne');
+  const fromName = from_name || config.smtp.fromName;
+  const from = `"${fromName}" <${config.smtp.fromEmail || config.smtp.user}>`;
+  const transport = getTransport();
+  const info = await transport.sendMail({ from, to: to, subject: finalSubject, html: finalHtml, text: finalText, attachments });
+  return { messageId: info.messageId };
 }
