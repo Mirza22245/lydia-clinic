@@ -1,6 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
-import { parseAllowedTreatments } from '../../shared/staffCompetence.ts';
-import { clinicDateOf } from '../../shared/availability.ts';
 
 // Offentlig data för klinikens webbplats och onlinebokning: klinik, behandlingar,
 // aktiv personal (inkl. vilka behandlingar de får utföra) och aktiva kampanjer.
