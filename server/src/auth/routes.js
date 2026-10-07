@@ -24,10 +24,13 @@ async function issueVerifyCode(userId, email) {
   const recent = await pool.query("SELECT 1 FROM auth_codes WHERE user_id = $1 AND kind = 'verify' AND created_date > NOW() - INTERVAL '60 seconds' LIMIT 1", [userId]);
   if (recent.rows.length) return;
   const code = genOtp();
-  await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'15 minutes\')', [userId, hashShort(code + userId), 'verify']);
+  const inserted = await pool.query('INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL \'15 minutes\') RETURNING id', [userId, hashShort(code + userId), 'verify']);
   try {
     await sendMail({ to: email, template_name: 'EmailVerification', variables: { first_name: '', app_name: 'Lydia', otp_code: code } });
-  } catch (e) { console.error('verify mail:', e.message); }
+  } catch (e) {
+    await pool.query('DELETE FROM auth_codes WHERE id = $1', [inserted.rows[0].id]).catch(() => {});
+    throw new Error('Verifieringsmejl kunde inte skickas. Kontrollera e-postkonfigurationen.');
+  }
 }
 function genToken() {
   return randomBytes(32).toString('base64url');
