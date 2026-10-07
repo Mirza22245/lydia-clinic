@@ -25,6 +25,31 @@ try {
     )
     ON CONFLICT (id) DO NOTHING
   `);
+
+  await db.query(`
+    INSERT INTO e_treatment (id, data, clinic_id)
+    VALUES
+      ('demo-consultation', '{"name":"Konsultation","description":"Inledande konsultation","duration":30,"price":0,"category":"Konsultation","treatment_type":"annan","guest_booking_allowed":true,"requires_consent":true,"cancellation_hours":24,"clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('demo-hudvard', '{"name":"Avancerad hudvård","description":"Hudvårdsbehandling","duration":60,"price":1200,"category":"Hudvård","treatment_type":"hud","guest_booking_allowed":true,"requires_consent":true,"cancellation_hours":24,"clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('demo-injektion', '{"name":"Injektionskonsultation","description":"Konsultation inför injektionsbehandling","duration":30,"price":0,"category":"Injektion","treatment_type":"injektion","min_age":18,"guest_booking_allowed":true,"requires_health_declaration":true,"requires_consent":true,"requires_treatment_info":true,"betanketid_hours":48,"cancellation_hours":24,"clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk')
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO e_staff (id, data, clinic_id)
+    VALUES
+      ('demo-staff', '{"name":"Lydia behandlare","title":"Behandlare","role":"behandlare","active":true,"allowed_treatment_ids":"[]","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk')
+    ON CONFLICT (id) DO NOTHING;
+
+    INSERT INTO e_staffschedule (id, data, clinic_id)
+    VALUES
+      ('demo-staff-sun','{"staff_name":"Lydia behandlare","day_of_week":0,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-mon','{"staff_name":"Lydia behandlare","day_of_week":1,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-tue','{"staff_name":"Lydia behandlare","day_of_week":2,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-wed','{"staff_name":"Lydia behandlare","day_of_week":3,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-thu','{"staff_name":"Lydia behandlare","day_of_week":4,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-fri','{"staff_name":"Lydia behandlare","day_of_week":5,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
+      ('demo-staff-sat','{"staff_name":"Lydia behandlare","day_of_week":6,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk')
+    ON CONFLICT (id) DO NOTHING;
+
 } finally {
   await db.end();
 }
