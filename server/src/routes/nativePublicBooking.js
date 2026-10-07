@@ -182,6 +182,10 @@ export async function createPublicBookingNative(body = {}, req) {
 
     const dayStart = new Date(start.getTime() - 24 * 3600000).toISOString();
     const dayEnd = new Date(end.getTime() + 24 * 3600000).toISOString();
+    const beforeMs = Math.max(0, Number(treatment.buffer_before) || 0) * 60000;
+    const afterMs = Math.max(0, Number(treatment.buffer_after) || 0) * 60000;
+    const blockStart = start.getTime() - beforeMs;
+    const blockEnd = end.getTime() + afterMs;
     const timeOffQ = await client.query(
       `SELECT data FROM e_staff_time_off
        WHERE clinic_id = $1 AND data->>'staff_name' = $2
@@ -203,11 +207,6 @@ export async function createPublicBookingNative(body = {}, req) {
       [clinicId, dayStart, dayEnd]
     );
     const activeBookings = bookingsQ.rows.map(r => normalize(r));
-
-    const beforeMs = Math.max(0, Number(treatment.buffer_before) || 0) * 60000;
-    const afterMs = Math.max(0, Number(treatment.buffer_after) || 0) * 60000;
-    const blockStart = start.getTime() - beforeMs;
-    const blockEnd = end.getTime() + afterMs;
 
     if (activeBookings.some(b =>
       b.staff_name === staffName &&
