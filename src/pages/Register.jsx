@@ -11,6 +11,15 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
+
+function dashboardPath(user) {
+  if (!user) return "/login";
+  const role = String(user.role || "").toLowerCase();
+  const staffRole = String(user.staff_role || user.data?.staff_role || "").toLowerCase();
+  if (role === "admin" || role === "administratör" || ["administratör", "behandlare", "reception"].includes(staffRole)) return "/app";
+  return "/portal";
+}
+
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +55,9 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      window.location.href = safeReturnTo();
+      const user = await base44.auth.me();
+      const target = safeReturnTo();
+      window.location.href = target !== "/" ? target : dashboardPath(user);
     } catch (err) {
       setError(err.message || "Invalid verification code");
     } finally {
