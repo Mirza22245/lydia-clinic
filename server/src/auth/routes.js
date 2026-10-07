@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomInt, randomBytes } from 'node:crypto';
 import { safeRouter } from '../lib/safeRouter.js';
 import { pool } from '../db/pool.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -30,12 +30,7 @@ async function issueVerifyCode(userId, email) {
   } catch (e) { console.error('verify mail:', e.message); }
 }
 function genToken() {
-  return randomBytes32().toString('base64url');
-}
-function randomBytes32() {
-  const b = new Uint8Array(32);
-  crypto.getRandomValues(b);
-  return Buffer.from(b);
+  return randomBytes(32).toString('base64url');
 }
 
 authRouter.post('/register', async (req, res) => {
