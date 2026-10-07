@@ -96,4 +96,10 @@ app.use((err, req, res, next) => {
 });
 
 // Schemat skapas av `npm run migrate` (ägar-rollen). Appen kör som lydia_app (endast DML).
-app.listen(config.port, config.host, () => console.log(`Lydia backend på ${config.host}:${config.port}`));
+const server = app.listen(config.port, config.host, () => {
+  console.log(`Lydia backend på ${config.host}:${config.port}`);
+});
+server.on('error', (err) => {
+  console.error('[startup]', err);
+  process.exit(1);
+});
