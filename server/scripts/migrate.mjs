@@ -49,7 +49,7 @@ try {
       ('demo-staff-fri','{"staff_name":"Lydia behandlare","day_of_week":5,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
       ('demo-staff-sat','{"staff_name":"Lydia behandlare","day_of_week":6,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk')
     ON CONFLICT (id) DO NOTHING;
-
+  `);
 } finally {
   await db.end();
 }
