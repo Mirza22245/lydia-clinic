@@ -41,11 +41,15 @@ export default async function(req) {
 
     const clinic_id = customer.clinic_id || '';
 
-    // Hämta behandlingsnamn om bokning är kopplad
+    // En hälsodeklaration får bara kopplas till kundens egen bokning.
+    // Det hindrar att en manipulerad booking_id korskopplar patientdata mellan kunder.
     let treatmentName = '';
     if (booking_id) {
       const booking = await svc.entities.Booking.get(booking_id).catch(() => null);
-      if (booking) treatmentName = booking.treatment_name || '';
+      if (!booking || booking.customer_id !== customer.id || booking.clinic_id !== clinic_id) {
+        return Response.json({ error: 'Bokningen hör inte till ditt patientkonto' }, { status: 403 });
+      }
+      treatmentName = booking.treatment_name || '';
     }
 
     // Strukturerade svar som JSON (lagras i other-fältet)
