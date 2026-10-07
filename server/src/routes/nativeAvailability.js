@@ -80,6 +80,13 @@ export async function getAvailableSlotsNative({ clinic_id, staff_name, date, dur
   if (!staffRow) {
     const e = new Error('Behandlaren finns inte eller är inte aktiv.'); e.status = 400; throw e;
   }
+  if (treatment_id && staffRow.allowed_treatment_ids != null && staffRow.allowed_treatment_ids !== '') {
+    let allowed = null;
+    try { allowed = typeof staffRow.allowed_treatment_ids === 'string' ? JSON.parse(staffRow.allowed_treatment_ids) : staffRow.allowed_treatment_ids; } catch {}
+    if (Array.isArray(allowed) && !allowed.map(String).includes(String(treatment_id))) {
+      const e = new Error('Den valda behandlaren är inte behörig att utföra den här behandlingen.'); e.status = 403; throw e;
+    }
+  }
 
   let durationMin = Number(duration) || 30;
   let bufferBefore = 0, bufferAfter = 0, minLeadHours = 0, maxLeadDays = 0;
