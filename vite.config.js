@@ -26,10 +26,10 @@ export default defineConfig({
   plugins: [portableFunctions(), react()],
   resolve: {
     alias: [
-      { find: /^@\\/functions\\/([A-Za-z0-9_]+)$/, replacement: 'lydia-fn:$1' },
-      { find: /^@\\/api\\/base44Client$/, replacement: path.join(src, 'lib/api.js') },
-      { find: /^@\\/lib\\/app-params$/, replacement: path.join(src, 'lib/app-params.portable.js') },
-      { find: /^@\\//, replacement: src + '/' },
+      { find: /^@\/functions\/([A-Za-z0-9_]+)$/, replacement: 'lydia-fn:$1' },
+      { find: /^@\/api\/base44Client$/, replacement: path.join(src, 'lib/api.js') },
+      { find: /^@\/lib\/app-params$/, replacement: path.join(src, 'lib/app-params.portable.js') },
+      { find: /^@\//, replacement: src + '/' },
     ],
   },
 });
