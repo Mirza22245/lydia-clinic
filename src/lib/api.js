@@ -84,7 +84,8 @@ const integrations = {
 // Samma form som Base44-wrappern: { data, status } (anropare läser res.data).
 const functions = {
   async invoke(name, payload = {}) {
-    const data = await http(`/functions/${encodeURIComponent(name)}`, { method: 'POST', body: payload });
+    const path = name === 'getAvailableSlots' ? '/availability' : `/functions/${encodeURIComponent(name)}`;
+    const data = await http(path, { method: 'POST', body: payload });
     return { data, status: 200 };
   },
 };
