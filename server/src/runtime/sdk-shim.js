@@ -1,4 +1,4 @@
-import { userClient } from '../entities/index.js';
+import { userClient, serviceRole } from '../entities/index.js';
 import { makeStore } from '../entities/store.js';
 import { loadUser } from '../auth/session.js';
 import { pool } from '../db/pool.js';
@@ -28,9 +28,10 @@ export function createClientFromRequest(req) {
   const { user, ip } = getContext(req);
   const u = normalizeUser(user);
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
+  const service = serviceRole();
   const serviceEntities = new Proxy({}, {
     get: (_, name) => {
-      const store = makeStore(String(name), { bypass: true });
+      const store = service.entities[String(name)];
       // Do not wrap the store itself in another Proxy. Some Node/runtime
       // combinations can reject a non-object Proxy target during request
       // handling. A plain object wrapper is sufficient here.
@@ -53,7 +54,7 @@ export function createClientFromRequest(req) {
     },
     asServiceRole: {
       entities: serviceEntities,
-      entity: (name) => makeStore(String(name), { bypass: true }),
+      entity: (name) => service.entities[String(name)],
       integrations: {
         Core: {
           SendEmail: async (args) => { const { sendMail } = await import('../lib/email.js'); return sendMail(args); },
