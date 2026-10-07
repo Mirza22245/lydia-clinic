@@ -8,11 +8,11 @@ const portableFunctions = () => ({
   name: 'lydia-portable-functions',
   enforce: 'pre',
   resolveId(id) {
-    if (id.startsWith('lydia-fn:')) return { id: '\0' + id };
+    if (id.startsWith('lydia-fn:')) return id;
     return null;
   },
   load(id) {
-    const prefix = '\0lydia-fn:';
+    const prefix = 'lydia-fn:';
     if (!id.startsWith(prefix)) return null;
     const name = id.slice(prefix.length);
     return [
