@@ -12,6 +12,8 @@ async function verifySignature(rawBody, sigHeader, secret) {
   const v1Part = parts.find((p) => p.startsWith("v1="));
   if (!tPart || !v1Part) return null;
   const t = tPart.slice(2);
+  const timestamp = Number(t);
+  if (!Number.isFinite(timestamp) || Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) return null;
   const v1 = v1Part.slice(3);
   const signed = `${t}.${rawBody}`;
   const enc = new TextEncoder();
@@ -31,7 +33,7 @@ async function verifySignature(rawBody, sigHeader, secret) {
   for (let i = 0; i < expected.length; i++) {
     diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
   }
-  return diff === 0 ? Number(t) : null;
+  return diff === 0 ? timestamp : null;
 }
 
 export default async function(req) {
@@ -62,6 +64,11 @@ export default async function(req) {
         const booking = await svc.entities.Booking.get(bookingId).catch(() => null);
         const treatmentName = booking?.treatment_name || "";
         const customerId = booking?.customer_id || "";
+        const expectedAmount = Math.round(Number(booking?.price || 0) * 100);
+        if (!expectedAmount || Math.round(Number(pi.amount_received ?? pi.amount ?? 0)) !== expectedAmount) {
+          console.error("Stripe webhook amount mismatch", { bookingId, expectedAmount, received: pi.amount_received ?? pi.amount });
+          return Response.json({ error: "Betalningsbeloppet stämmer inte med bokningen" }, { status: 400 });
+        }
 
         // Undvik dublettregistrering om webhook:en levereras flera gånger.
         const existing = await svc.entities.Payment.filter(
