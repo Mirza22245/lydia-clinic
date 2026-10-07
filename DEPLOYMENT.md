@@ -1,6 +1,6 @@
 # Lydia — Driftsättning på Hostinger (utan Base44)
 
-> **Status:** Koden bygger (Base44-läge och portabelt läge) och alla 31 backend-funktioner kompilerar för Node.
+> **Status:** Koden bygger i permanent Lydia-läge. Frontend och backend kör mot Lydias egen Express/PostgreSQL-stack; Base44 SDK och Vite-plugin ingår inte i produktionen.
 > Auth-flödet (registrering → OTP → verifiering → `/me` → inloggad session) är verifierat med 17 tester mot riktig PostgreSQL — en kritisk sessionsbugg är åtgärdad (`server/src/auth/session.js`).
 > Den portabla servern har **inte** körts end-to-end mot riktig PostgreSQL i utvecklingsmiljön — kör röktestet (steg 9) och säkerhetstestet (steg 9b) innan något annat.
 > WordPress på lydiaestetisk.se berörs inte av något steg före steg 11.
@@ -103,15 +103,11 @@ npm --prefix server run test:security
 Testar klinikisolering (FORCE RLS), gästbokningsskydd, CSRF och auth-sessionens giltighet.
 Måste vara grönt innan steg 10 (datamigrering).
 
-## 10. Flytta data från Base44
+## 10. Data och migrering
 
-1. På Base44-appen: kör funktionen `exportAllData` som app-admin (den exponeras aldrig i den portabla servern). **Ta bort funktionen direkt efter.**
-2. Kör importen med ägar-rollen:
-   ```bash
-   BASE44_FUNCTIONS_URL=https://<app>.base44.app/functions BASE44_ADMIN_TOKEN=<token> \
-   DATABASE_URL=postgresql://lydia:<DB_PASSWORD>@127.0.0.1:5432/lydia npm --prefix server run import
-   ```
-3. Jämför antal poster per entitet (importrapporten) mot Base44. Användarkonton migreras **inte** — personal registrerar sig på nytt och kopplas via sin Staff-post; kunder återställer lösenord via "Glömt lösenord".
+Produktionen kräver inte Base44. PostgreSQL är Lydias primära och enda runtime-databas.
+
+Om äldre Lydia-data redan finns i PostgreSQL används den direkt efter migrering/schema-kontroll. Historiska Base44-exporter får endast användas som en separat engångsmigrering och behövs inte för att starta eller köra systemet.
 
 ## 11. Stripe och go-live (först efter godkänt röktest)
 
