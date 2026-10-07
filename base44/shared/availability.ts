@@ -74,6 +74,12 @@ export function clinicDateOf(ms: number): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: CLINIC_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
 }
 
+function entityStore(svc: any, name: string): any {
+  const store = svc?.entity ? svc.entity(name) : svc?.entities?.[name];
+  if (!store?.filter) throw new Error(`${name}-entiteten är inte tillgänglig i runtime`);
+  return store;
+}
+
 function pageItems<T = any>(page: any): T[] {
   if (Array.isArray(page)) return page;
   if (Array.isArray(page?.items)) return page.items;
@@ -237,7 +243,7 @@ export async function fetchAvailabilityData(
     end: b.end_time ? new Date(b.end_time).getTime() : new Date(b.start_time).getTime() + (b.duration || 30) * 60000,
   });
 
-  const schedPage = await svc.entities.StaffSchedule.filter(
+  const schedPage = await entityStore(svc, 'StaffSchedule').filter(
     { clinic_id, staff_name, day_of_week: weekday },
     { limit: 50 }
   );
@@ -248,7 +254,7 @@ export async function fetchAvailabilityData(
     return true;
   });
 
-  const offPage = await svc.entities.StaffTimeOff.filter(
+  const offPage = await entityStore(svc, 'StaffTimeOff').filter(
     { clinic_id, staff_name, start: { $lte: dayEnd.toISOString() }, end: { $gte: dayStart.toISOString() } },
     { limit: 100 }
   );
@@ -257,7 +263,7 @@ export async function fetchAvailabilityData(
     end: new Date(o.end).getTime(),
   }));
 
-  const bookPage = await svc.entities.Booking.filter(
+  const bookPage = await entityStore(svc, 'Booking').filter(
     {
       clinic_id, staff_name,
       start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -269,7 +275,7 @@ export async function fetchAvailabilityData(
 
   let roomBookings: Interval[] = [];
   if (params.requireRoomId) {
-    const roomPage = await svc.entities.Booking.filter(
+    const roomPage = await entityStore(svc, 'Booking').filter(
       {
         clinic_id, room_id: params.requireRoomId,
         start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -283,7 +289,7 @@ export async function fetchAvailabilityData(
   let resourceBookings: { resource_id: string; interval: Interval }[] = [];
   let resourceQuantities: Record<string, number> = {};
   if (requireResourceIds.length > 0) {
-    const resPage = await svc.entities.Booking.filter(
+    const resPage = await entityStore(svc, 'Booking').filter(
       {
         clinic_id,
         start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -301,7 +307,7 @@ export async function fetchAvailabilityData(
         }
       }
     }
-    const resQtyPage = await svc.entities.Resource.filter(
+    const resQtyPage = await entityStore(svc, 'Resource').filter(
       { clinic_id, id: { $in: requireResourceIds } },
       { limit: 50 }
     );
