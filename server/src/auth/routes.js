@@ -37,17 +37,33 @@ function genToken() {
 }
 
 function signGoogleState() {
-  const payload = Buffer.from(JSON.stringify({ exp: Date.now() + 10 * 60 * 1000 })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    exp: Date.now() + 10 * 60 * 1000,
+    nonce: randomBytes(24).toString('base64url'),
+  })).toString('base64url');
   return `${payload}.${createHmac('sha256', config.jwtSecret).update(payload).digest('base64url')}`;
 }
-function validGoogleState(state) {
+function readCookie(req, name) {
+  const raw = String(req.headers.cookie || '');
+  const entry = raw.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+  return entry ? decodeURIComponent(entry.slice(name.length + 1)) : '';
+}
+function setGoogleStateCookie(res, state) {
+  res.setHeader('Set-Cookie', `lydia_google_state=${encodeURIComponent(state)}; Max-Age=600; Path=/api/auth/google; HttpOnly; SameSite=Lax${config.isProd ? '; Secure' : ''}`);
+}
+function clearGoogleStateCookie(res) {
+  res.setHeader('Set-Cookie', `lydia_google_state=; Max-Age=0; Path=/api/auth/google; HttpOnly; SameSite=Lax${config.isProd ? '; Secure' : ''}`);
+}
+function validGoogleState(state, cookieState) {
   try {
+    if (!cookieState || !timingSafeEqual(Buffer.from(state), Buffer.from(cookieState))) return false;
     const [payload, sig] = String(state).split('.');
     if (!payload || !sig) return false;
     const expected = createHmac('sha256', config.jwtSecret).update(payload).digest('base64url');
     const a = Buffer.from(sig); const b = Buffer.from(expected);
     if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
-    return JSON.parse(Buffer.from(payload, 'base64url').toString()).exp > Date.now();
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    return data.exp > Date.now() && typeof data.nonce === 'string' && data.nonce.length >= 20;
   } catch { return false; }
 }
 
@@ -107,6 +123,7 @@ authRouter.post('/resend-otp', async (req, res) => {
 authRouter.get('/google/start', async (req, res) => {
   if (!config.google.clientId || !config.google.clientSecret) return res.status(503).send('Google-inloggning är inte konfigurerad.');
   const state = signGoogleState();
+  setGoogleStateCookie(res, state);
   const callback = `${config.appBaseUrl}/api/auth/google/callback`;
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: config.google.clientId, redirect_uri: callback, response_type: 'code',
@@ -120,7 +137,11 @@ authRouter.get('/google/callback', async (req, res) => {
     const code = String(req.query.code || '');
     const state = String(req.query.state || '');
     if (!code || !state) return res.status(400).send('Ogiltig Google-inloggning.');
-    if (!validGoogleState(state)) return res.status(400).send('Google-inloggningen har löpt ut. Försök igen.');
+    if (!validGoogleState(state, readCookie(req, 'lydia_google_state'))) {
+      clearGoogleStateCookie(res);
+      return res.status(400).send('Google-inloggningen har löpt ut eller kunde inte verifieras. Försök igen.');
+    }
+    clearGoogleStateCookie(res);
     const callback = `${config.appBaseUrl}/api/auth/google/callback`;
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
