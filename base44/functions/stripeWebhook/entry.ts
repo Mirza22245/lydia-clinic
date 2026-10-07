@@ -73,11 +73,15 @@ export default async function(req) {
           return Response.json({ error: "Betalningsbeloppet stämmer inte med bokningen" }, { status: 400 });
         }
 
-        // Undvik dublettregistrering om webhook:en levereras flera gånger.
-        const existing = await svc.entities.Payment.filter(
-          { booking_id: bookingId, status: "paid" },
+        // Deduplicera på Stripe PaymentIntent-ID först. Webhooks kan levereras
+        // flera gånger eller samtidigt från Stripe.
+        const existingByIntent = await svc.entities.Payment.filter(
+          { stripe_payment_intent_id: pi.id },
           { limit: 1 }
         );
+        const existing = existingByIntent.items?.length
+          ? existingByIntent
+          : await svc.entities.Payment.filter({ booking_id: bookingId, status: "paid" }, { limit: 1 });
         if (!(existing.items || []).length) {
           const year = new Date().getFullYear();
           const countRes = await svc.entities.Payment.count({ clinic_id: clinicId });
@@ -95,6 +99,7 @@ export default async function(req) {
             status: "paid",
             paid_at: new Date().toISOString(),
             receipt_number: `R-${year}-${seq}`,
+            stripe_payment_intent_id: pi.id,
             clinic_id: clinicId,
           });
           // Betalning bekräftar bara bokningen om alla övriga obligatoriska krav (hälsodeklaration,
@@ -120,9 +125,17 @@ export default async function(req) {
     if (event.type === "charge.refunded") {
       const charge = event.data.object;
       const bookingId = charge.metadata?.booking_id;
+      const paymentIntentId = typeof charge.payment_intent === "string"
+        ? charge.payment_intent
+        : charge.payment_intent?.id;
       if (bookingId) {
         await svc.entities.Payment.updateMany(
           { booking_id: bookingId, status: "paid" },
+          { $set: { status: "refunded" } }
+        ).catch(() => {});
+      } else if (paymentIntentId) {
+        await svc.entities.Payment.updateMany(
+          { stripe_payment_intent_id: paymentIntentId, status: "paid" },
           { $set: { status: "refunded" } }
         ).catch(() => {});
       }
