@@ -9,6 +9,15 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
+
+function dashboardPath(user) {
+  if (!user) return "/login";
+  const role = String(user.role || "").toLowerCase();
+  const staffRole = String(user.staff_role || user.data?.staff_role || "").toLowerCase();
+  if (role === "admin" || role === "administratör" || ["administratör", "behandlare", "reception"].includes(staffRole)) return "/app";
+  return "/portal";
+}
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +33,8 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = returnTo;
+      const user = await base44.auth.me();
+      window.location.href = returnTo !== "/" ? returnTo : dashboardPath(user);
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
