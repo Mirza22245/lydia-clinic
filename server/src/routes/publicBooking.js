@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../db/pool.js';
+import { withTx } from '../db/pool.js';
 
 function parseAllowedTreatments(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -53,7 +53,7 @@ async function readRows(table, { clinicId = null, where = [], orderBy = null, li
     ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''}
     ORDER BY ${order}
     LIMIT ${Math.min(Math.max(Number(limit) || 100, 1), 5000)}`;
-  const result = await pool.query(sql, params);
+  const result = await withTx((client) => client.query(sql, params), { bypassRls: true });
   return result.rows.map((row) => ({
     ...(row.data || {}),
     id: row.id,
