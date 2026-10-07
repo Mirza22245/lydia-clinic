@@ -14,6 +14,7 @@ import { functionsRouter } from './runtime/functions.js';
 import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
 import { publicBookingRouter } from './routes/publicBooking.js';
+import { getAvailableSlotsNative } from './routes/nativeAvailability.js';
 import { apiLimiter, authLimiter } from './lib/rateLimit.js';
 import { csrfGuard } from './lib/csrf.js';
 
@@ -56,6 +57,15 @@ app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', googleRouter);
 app.use('/api/public-booking-data', publicBookingRouter);
+app.post('/api/availability', async (req, res) => {
+  try {
+    const data = await getAvailableSlotsNative(req.body || {});
+    res.status(200).json(data);
+  } catch (e) {
+    console.error('[availability]', e);
+    res.status(e?.status || 500).json({ error: e?.message || 'Internt serverfel', slots: [] });
+  }
+});
 app.use('/api/functions', functionsRouter);
 
 // Statisk frontend + SPA-fallback för Hostinger Cloud (enkel Node-app utan nginx).
