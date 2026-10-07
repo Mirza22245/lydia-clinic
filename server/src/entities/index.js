@@ -11,7 +11,9 @@ export function serviceRole() {
 // This avoids relying on a nested JavaScript Proxy when compiled functions
 // access entities dynamically.
 export function serviceEntity(name) {
-  return makeStore(String(name), { bypass: true });
+  const entityName = String(name);
+  if (entityName === 'User') return userStore({ bypass: true });
+  return makeStore(entityName, { bypass: true });
 }
 
 // User-scoped: RLS + behörighetsområden från staffPermissions.
