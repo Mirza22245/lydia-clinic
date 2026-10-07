@@ -27,6 +27,18 @@ try {
   `);
 
   await db.query(`
+    INSERT INTO e_feature_flag (id, data, clinic_id)
+    VALUES
+      ('flag-messages-lydia', '{"key":"messages","label":"Patientmeddelanden","module":"communication","status":"disabled","requires_external":false,"required_secrets":"[]","description":"Meddelanden mellan patient och klinik.","activation_instructions":"Aktivera när meddelandeflödet ska öppnas för patienter.","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('flag-treatment-plans-lydia', '{"key":"treatment_plans","label":"Behandlingsplaner","module":"clinical","status":"disabled","requires_external":false,"required_secrets":"[]","description":"Behandlingsplaner i patientportalen.","activation_instructions":"Aktivera när behandlingsplaner ska visas i patientportalen.","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('flag-sms-lydia', '{"key":"sms","label":"SMS","module":"communication","status":"disabled","requires_external":true,"required_secrets":"[\"SMS_PROVIDER\",\"SMS_API_KEY\",\"SMS_API_SECRET\",\"SMS_SENDER\"]","description":"SMS-bekräftelser, påminnelser och verifiering.","activation_instructions":"Konfigurera SMS-provider och secrets innan aktivering.","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('flag-bankid-lydia', '{"key":"bankid","label":"BankID","module":"integration","status":"disabled","requires_external":true,"required_secrets":"[\"BANKID_MODE\",\"BANKID_API_URL\",\"BANKID_CLIENT_SECRET\",\"BANKID_PFX_B64\",\"BANKID_PFX_PASSPHRASE\"]","description":"BankID-verifiering för patienter och personal.","activation_instructions":"Konfigurera BankID-certifikat och API innan aktivering.","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
+      ('flag-google-calendar-lydia', '{"key":"google_calendar","label":"Google Calendar","module":"integration","status":"disabled","requires_external":true,"required_secrets":"[\"GOOGLE_CLIENT_ID\",\"GOOGLE_CLIENT_SECRET\"]","description":"Kalendersynk för personalens bokningar.","activation_instructions":"Konfigurera Google OAuth innan aktivering.","clinic_id":"lydia-estetisk'),
+      ('flag-stripe-lydia', '{"key":"stripe","label":"Stripe","module":"commerce","status":"disabled","requires_external":true,"required_secrets":"[\"STRIPE_SECRET_KEY\",\"STRIPE_PUBLISHABLE_KEY\",\"STRIPE_WEBHOOK_SECRET\"]","description":"Kortbetalning och betalningsflöden.","activation_instructions":"Konfigurera Stripe-nycklar och webhook innan aktivering.","clinic_id":"lydia-estetisk'})
+    ON CONFLICT (id) DO NOTHING
+  `);
+
+  await db.query(`
     INSERT INTO e_treatment (id, data, clinic_id)
     VALUES
       ('demo-consultation', '{"name":"Konsultation","description":"Inledande konsultation","duration":30,"price":0,"category":"Konsultation","treatment_type":"annan","guest_booking_allowed":true,"requires_consent":true,"cancellation_hours":24,"clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk'),
