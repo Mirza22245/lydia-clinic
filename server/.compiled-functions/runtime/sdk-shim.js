@@ -19,21 +19,17 @@ export function createClientFromRequest(req) {
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
   const serviceEntities = new Proxy({}, {
     get: (_, name) => {
-      const store = makeStore(String(name), { bypass: true });
-      return new Proxy(store, {
-        get(target, prop) {
-          if (prop !== 'filter') return target[prop];
-          return async (...args) => {
-            const result = await target.filter(...args);
-            if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
-            if (result && typeof result === 'object') {
-              if (Array.isArray(result.items)) return result;
-              if (Array.isArray(result.data)) return { ...result, items: result.data };
-            }
-            return { items: [], has_more: false, next_cursor: null };
-          };
-        },
-      });
+      const store = serviceEntity(String(name));
+      const filter = async (...args) => {
+        const result = await store.filter(...args);
+        if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
+        if (result && typeof result === 'object') {
+          if (Array.isArray(result.items)) return result;
+          if (Array.isArray(result.data)) return { ...result, items: result.data };
+        }
+        return { items: [], has_more: false, next_cursor: null };
+      };
+      return { ...store, filter };
     },
   });
   return {
@@ -41,7 +37,7 @@ export function createClientFromRequest(req) {
     auth: { me: async () => u },
     asServiceRole: {
       entities: serviceEntities,
-      entity: (name) => makeStore(String(name), { bypass: true }),
+      entity: (name) => serviceEntity(String(name)),
       integrations: {
         Core: {
           SendEmail: async (args) => { const { sendMail } = await import('../../src/lib/email.js'); return sendMail(args); },
