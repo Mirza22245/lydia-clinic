@@ -5,6 +5,7 @@ import { loadUser } from '../auth/session.js';
 import { bindContext } from './sdk-shim.js';
 import { heavyLimiter, publicLimiter } from '../lib/rateLimit.js';
 import { getPublicBookingData } from '../routes/publicBooking.js';
+import { getAvailableSlotsNative } from '../routes/nativeAvailability.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COMPILED = join(__dirname, '../../.compiled-functions');
@@ -46,6 +47,19 @@ functionsRouter.all('/:name', async (req, res) => {
 
   // getPublicBookingData is served directly by the native backend so it never depends on
   // the generated Base44 function bundle or its runtime shim.
+  if (name === 'getAvailableSlots') {
+    try {
+      let body = req.body;
+      if (Buffer.isBuffer(body)) body = body.length ? JSON.parse(body.toString('utf8')) : {};
+      else if (typeof body === 'string') body = body ? JSON.parse(body) : {};
+      const data = await getAvailableSlotsNative(body || {});
+      return res.status(200).json(data);
+    } catch (e) {
+      console.error('[functions] getAvailableSlots native fel:', e);
+      return res.status(e?.status || 500).json({ error: e?.message || 'Internt serverfel', slots: [] });
+    }
+  }
+
   if (name === 'getPublicBookingData') {
     try {
       let body = req.body;
