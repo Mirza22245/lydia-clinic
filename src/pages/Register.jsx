@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, Chrome } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import { toast } from "@/components/ui/use-toast";
@@ -154,6 +154,10 @@ export default function Register() {
         </div>
       )}
 
+      <Button type="button" variant="outline" className="w-full h-12 font-medium" onClick={() => base44.auth.loginWithProvider("google", safeReturnTo() !== "/" ? safeReturnTo() : "/portal")}>
+        <Chrome className="w-4 h-4 mr-2" /> Fortsätt med Google
+      </Button>
+      <div className="relative my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs"><span className="bg-background px-2 text-muted-foreground">eller registrera med e-post</span></div></div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
