@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createHash, randomInt, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { safeRouter } from '../lib/safeRouter.js';
 import { pool } from '../db/pool.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -32,6 +32,22 @@ async function issueVerifyCode(userId, email) {
 function genToken() {
   return randomBytes(32).toString('base64url');
 }
+
+function signGoogleState() {
+  const payload = Buffer.from(JSON.stringify({ exp: Date.now() + 10 * 60 * 1000 })).toString('base64url');
+  return `${payload}.${createHmac('sha256', config.jwtSecret).update(payload).digest('base64url')}`;
+}
+function validGoogleState(state) {
+  try {
+    const [payload, sig] = String(state).split('.');
+    if (!payload || !sig) return false;
+    const expected = createHmac('sha256', config.jwtSecret).update(payload).digest('base64url');
+    const a = Buffer.from(sig); const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+    return JSON.parse(Buffer.from(payload, 'base64url').toString()).exp > Date.now();
+  } catch { return false; }
+}
+
 
 authRouter.post('/register', async (req, res) => {
   const email = String(req.body?.email || '').toLowerCase().trim();
@@ -87,8 +103,7 @@ authRouter.post('/resend-otp', async (req, res) => {
 
 authRouter.get('/google/start', async (req, res) => {
   if (!config.google.clientId || !config.google.clientSecret) return res.status(503).send('Google-inloggning är inte konfigurerad.');
-  const state = genToken();
-  await pool.query("INSERT INTO auth_codes (user_id, code_hash, kind, expires_at) VALUES (NULL, $1, 'google_state', NOW() + INTERVAL '10 minutes')", [hashShort(state)]);
+  const state = signGoogleState();
   const callback = `${config.appBaseUrl}/api/auth/google/callback`;
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: config.google.clientId, redirect_uri: callback, response_type: 'code',
@@ -102,9 +117,7 @@ authRouter.get('/google/callback', async (req, res) => {
     const code = String(req.query.code || '');
     const state = String(req.query.state || '');
     if (!code || !state) return res.status(400).send('Ogiltig Google-inloggning.');
-    const expected = (await pool.query("SELECT id FROM auth_codes WHERE kind = 'google_state' AND code_hash = $1 AND expires_at > NOW() LIMIT 1", [hashShort(state)])).rows[0];
-    if (!expected) return res.status(400).send('Google-inloggningen har löpt ut. Försök igen.');
-    await pool.query("DELETE FROM auth_codes WHERE kind = 'google_state' AND code_hash = $1", [hashShort(state)]);
+    if (!validGoogleState(state)) return res.status(400).send('Google-inloggningen har löpt ut. Försök igen.');
     const callback = `${config.appBaseUrl}/api/auth/google/callback`;
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
