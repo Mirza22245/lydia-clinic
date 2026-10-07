@@ -28,20 +28,10 @@ export function createClientFromRequest(req) {
   const { user, ip } = getContext(req);
   const u = normalizeUser(user);
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
+  // makeStore/serviceEntity already exposes the canonical Base44-compatible
+  // filter/list/get API. Keep this boundary as a thin dynamic accessor only.
   const serviceEntities = new Proxy({}, {
-    get: (_, name) => {
-      const store = serviceEntity(String(name));
-      const filter = async (...args) => {
-        const result = await store.filter(...args);
-        if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
-        if (result && typeof result === 'object') {
-          if (Array.isArray(result.items)) return result;
-          if (Array.isArray(result.data)) return { ...result, items: result.data };
-        }
-        return { items: [], has_more: false, next_cursor: null };
-      };
-      return { ...store, filter };
-    },
+    get: (_, name) => serviceEntity(String(name)),
   });
   return {
     ...client,
