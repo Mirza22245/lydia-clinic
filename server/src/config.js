@@ -35,13 +35,13 @@ export const config = {
     },
   },
   smtp: {
-    host: process.env.SMTP_HOST || '',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT || 465),
     secure: bool('SMTP_SECURE', true),
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
     fromName: process.env.SMTP_FROM_NAME || 'Lydia',
-    fromEmail: process.env.SMTP_FROM_EMAIL || '',
+    fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'lydiaestetisk@gmail.com',
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
