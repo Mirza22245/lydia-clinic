@@ -14,6 +14,7 @@ import ResetPassword from '@/pages/ResetPassword';
 import Landing from '@/pages/Landing';
 import PublicBooking from '@/pages/PublicBooking';
 import Dashboard from '@/pages/Dashboard';
+import RoleDashboard from '@/pages/RoleDashboard';
 import Customers from '@/pages/Customers';
 import Treatments from '@/pages/Treatments';
 import Bookings from '@/pages/Bookings';
@@ -79,7 +80,7 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/portal" element={<RoleRoute roles={["user"]}><Portal /></RoleRoute>} />
         <Route element={<RoleRoute roles={["admin", "administratör", "behandlare", "reception"]}><AppShell /></RoleRoute>}>
-          <Route path="/app" element={<Dashboard />} />
+          <Route path="/app" element={<RoleDashboard />} />
           <Route path="/app/customers" element={<Customers />} />
           <Route path="/app/customers/:id" element={<CustomerDetail />} />
           <Route path="/app/treatments" element={<Treatments />} />
