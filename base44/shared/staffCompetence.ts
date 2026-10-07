@@ -31,7 +31,16 @@ export async function checkStaffBookable(
 ): Promise<BookableResult> {
   const { clinic_id, staff_name, treatment_id } = params;
   const page = await svc.entities.Staff.filter({ clinic_id, name: staff_name }, { limit: 5 });
-  const staff = (page.items || []).find((s: any) => s.active !== false);
+  // Base44-kompatibiliteten kan returnera antingen en array eller ett
+  // paginerat objekt. Normalisera båda formaten innan vi söker personalen.
+  const items = Array.isArray(page)
+    ? page
+    : Array.isArray(page?.items)
+      ? page.items
+      : Array.isArray(page?.data)
+        ? page.data
+        : [];
+  const staff = items.find((s: any) => s?.active !== false);
   if (!staff) {
     return { ok: false, status: 400, code: 'staff_unavailable', error: 'Behandlaren finns inte eller är inte aktiv.' };
   }
