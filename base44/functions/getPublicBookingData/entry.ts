@@ -19,7 +19,7 @@ function parseFaq(raw: any): { q: string; a: string }[] {
 export default async function(req) {
   try {
     const body = await req.json().catch(() => ({}));
-    const response = await fetch('http://127.0.0.1:3001/api/public-booking-data', {
+    const response = await fetch('http://127.0.0.1:3000/api/public-booking-data', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
