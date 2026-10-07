@@ -52,10 +52,12 @@ const auth = {
   me: () => http('/auth/me'),
   isAuthenticated: async () => { try { await http('/auth/me'); return true; } catch { return false; } },
   loginViaEmailPassword: (email, password) => http('/auth/login', { method: 'POST', body: { email, password } }),
-  loginWithProvider: async () => { throw new Error('Inloggning med extern leverantör är inte aktiverad.'); },
+  loginWithProvider: async (provider, returnTo = '/portal') => { if (provider !== 'google') throw new Error('Okänd inloggningsleverantör.'); window.location.href = `${API}/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`; },
   register: ({ email, password }) => http('/auth/register', { method: 'POST', body: { email, password } }),
   verifyOtp: ({ email, otpCode }) => http('/auth/verify-otp', { method: 'POST', body: { email, otpCode } }),
   resendOtp: (email) => http('/auth/resend-otp', { method: 'POST', body: { email } }),
+  adminInviteStaff: (data) => http('/auth/admin/staff-invite', { method: 'POST', body: data }),
+  acceptStaffInvite: (token, password) => http('/auth/accept-invite', { method: 'POST', body: { token, password } }),
   resetPasswordRequest: (email) => http('/auth/forgot-password', { method: 'POST', body: { email } }),
   resetPassword: ({ resetToken, newPassword }) => http('/auth/reset-password', { method: 'POST', body: { resetToken, newPassword } }),
   // Sessionen är en HttpOnly-cookie som servern sätter; ingen token hanteras i webbläsaren.
