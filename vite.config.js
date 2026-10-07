@@ -8,17 +8,17 @@ const portableFunctions = () => ({
   name: 'lydia-portable-functions',
   enforce: 'pre',
   resolveId(id) {
-    if (id.startsWith('lydia-fn:')) return '\\0' + id;
+    if (id.startsWith('lydia-fn:')) return '\0' + id;
     return null;
   },
   load(id) {
-    if (!id.startsWith('\\0lydia-fn:')) return null;
-    const name = id.slice('\\0lydia-fn:'.length);
+    if (!id.startsWith('\0lydia-fn:')) return null;
+    const name = id.slice('\0lydia-fn:'.length);
     return [
       "import { base44 } from '@/lib/api';",
       `export const ${name} = (payload) => base44.functions.invoke('${name}', payload);`,
       `export default ${name};`,
-    ].join('\\n');
+    ].join('\n');
   },
 });
 
