@@ -163,40 +163,39 @@ export async function getAvailableSlotsNative({
       }
     }
 
-    const [scheduleResult, timeOffResult, bookingResult] = await Promise.all([
-      client.query(
-        `SELECT id, data, clinic_id
-           FROM e_staff_schedule
-          WHERE clinic_id = $1
-            AND data->>'staff_name' = $2
-            AND COALESCE((data->>'day_of_week')::int, -1) = $3
-          ORDER BY COALESCE(data->>'start_time', ''), id
-          LIMIT 100`,
-        [String(clinic_id), String(staff_name), weekday]
-      ),
-      client.query(
-        `SELECT id, data, clinic_id
-           FROM e_staff_time_off
-          WHERE clinic_id = $1
-            AND data->>'staff_name' = $2
-            AND COALESCE(data->>'start', '') <= $3
-            AND COALESCE(data->>'end', '') >= $4
-          ORDER BY data->>'start'
-          LIMIT 500`,
-        [String(clinic_id), String(staff_name), dayEndIso, dayStartIso]
-      ),
-      client.query(
-        `SELECT id, data, clinic_id
-           FROM e_booking
-          WHERE clinic_id = $1
-            AND COALESCE(data->>'start_time', '') <= $3
-            AND COALESCE(data->>'end_time', data->>'start_time', '') >= $2
-            AND COALESCE(data->>'status', '') NOT IN ('cancelled', 'no_show')
-          ORDER BY data->>'start_time'
-          LIMIT 1000`,
-        [String(clinic_id), dayStartIso, dayEndIso]
-      ),
-    ]);
+    // pg-klienter kör en query i taget. Dessa läsningar måste därför vara sekventiella.
+    const scheduleResult = await client.query(
+      `SELECT id, data, clinic_id
+         FROM e_staff_schedule
+        WHERE clinic_id = $1
+          AND data->>'staff_name' = $2
+          AND COALESCE((data->>'day_of_week')::int, -1) = $3
+        ORDER BY COALESCE(data->>'start_time', ''), id
+        LIMIT 100`,
+      [String(clinic_id), String(staff_name), weekday]
+    );
+    const timeOffResult = await client.query(
+      `SELECT id, data, clinic_id
+         FROM e_staff_time_off
+        WHERE clinic_id = $1
+          AND data->>'staff_name' = $2
+          AND COALESCE(data->>'start', '') <= $3
+          AND COALESCE(data->>'end', '') >= $4
+        ORDER BY data->>'start'
+        LIMIT 500`,
+      [String(clinic_id), String(staff_name), dayEndIso, dayStartIso]
+    );
+    const bookingResult = await client.query(
+      `SELECT id, data, clinic_id
+         FROM e_booking
+        WHERE clinic_id = $1
+          AND COALESCE(data->>'start_time', '') <= $3
+          AND COALESCE(data->>'end_time', data->>'start_time', '') >= $2
+          AND COALESCE(data->>'status', '') NOT IN ('cancelled', 'no_show')
+        ORDER BY data->>'start_time'
+        LIMIT 1000`,
+      [String(clinic_id), dayStartIso, dayEndIso]
+    );
 
     const schedules = scheduleResult.rows
       .map(normalizeRow)
