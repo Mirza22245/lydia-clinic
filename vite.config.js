@@ -33,10 +33,3 @@ export default defineConfig({
     ],
   },
 });
-), replacement: 'lydia-fn:$1' },
-      { find: /^@\/api\/base44Client$/, replacement: path.join(src, 'lib/api.js') },
-      { find: /^@\/lib\/app-params$/, replacement: path.join(src, 'lib/app-params.portable.js') },
-      { find: /^@\//, replacement: src + '/' },
-    ],
-  },
-});
