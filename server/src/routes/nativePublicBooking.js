@@ -180,6 +180,19 @@ export async function createPublicBookingNative(body = {}, req) {
       const e = new Error('Tiden ligger utanför behandlarens arbetstid.'); e.status = 409; throw e;
     }
 
+    // Serialisera bokningar som konkurrerar om samma tid/resurser så två samtidiga
+    // requests inte båda hinner se en ledig slot innan någon av dem INSERT:ar.
+    await client.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      [`booking:${clinicId}:${staffName}:${start.toISOString()}`]
+    );
+    if (treatment.room_id) {
+      await client.query(
+        'SELECT pg_advisory_xact_lock(hashtext($1))',
+        [`room:${clinicId}:${treatment.room_id}:${start.toISOString()}`]
+      );
+    }
+
     const dayStart = new Date(start.getTime() - 24 * 3600000).toISOString();
     const dayEnd = new Date(end.getTime() + 24 * 3600000).toISOString();
     const beforeMs = Math.max(0, Number(treatment.buffer_before) || 0) * 60000;
