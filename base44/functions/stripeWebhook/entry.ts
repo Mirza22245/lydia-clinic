@@ -14,7 +14,6 @@ async function verifySignature(rawBody, sigHeader, secret) {
   const t = tPart.slice(2);
   const timestamp = Number(t);
   if (!Number.isFinite(timestamp) || Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) return null;
-  const v1 = v1Part.slice(3);
   const signed = `${t}.${rawBody}`;
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
