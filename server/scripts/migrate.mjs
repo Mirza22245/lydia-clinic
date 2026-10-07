@@ -13,6 +13,18 @@ if (!url) {
 const db = new pg.Pool({ connectionString: url, max: 1 });
 try {
   await ensureSchema(db);
+
+  // Bootstrap the public clinic record so a fresh Hostinger/Supabase deployment
+  // can render the booking page before an admin has seeded clinic data.
+  await db.query(`
+    INSERT INTO e_clinic (id, data, clinic_id)
+    VALUES (
+      'lydia-estetisk',
+      '{"name":"Lydia Estetisk","brand_name":"Lydia Estetisk","clinic_id":"lydia-estetisk","description":"","opening_hours":""}'::jsonb,
+      'lydia-estetisk'
+    )
+    ON CONFLICT (id) DO NOTHING
+  `);
 } finally {
   await db.end();
 }
