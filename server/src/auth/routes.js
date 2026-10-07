@@ -142,6 +142,14 @@ authRouter.post('/admin/staff-invite', async (req, res) => {
   const existing = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
   if (existing && existing.clinic_id && admin.clinic_id && existing.clinic_id !== admin.clinic_id) return fail(res, 403, 'Användaren tillhör en annan klinik.');
   let u = existing;
+  if (u?.email_verified) {
+    if (staffRole) {
+      u = (await pool.query("UPDATE users SET clinic_id=COALESCE($1,clinic_id),staff_role=$2,full_name=COALESCE(NULLIF($3,''),full_name) WHERE id=$4 RETURNING *", [admin.clinic_id || null, staffRole, fullName, u.id])).rows[0];
+    } else {
+      u = (await pool.query("UPDATE users SET staff_role='' WHERE id=$1 RETURNING *", [u.id])).rows[0];
+    }
+    return res.json({ ok: true, invited: false, existing: true });
+  }
   if (!u) {
     const placeholder = await hashPassword(genToken());
     u = (await pool.query("INSERT INTO users (email,password_hash,role,email_verified,token_version,clinic_id,staff_role,full_name) VALUES ($1,$2,'user',false,0,$3,$4,$5) RETURNING *", [email, placeholder, admin.clinic_id || null, staffRole, fullName])).rows[0];
