@@ -26,14 +26,9 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await base44.app.getPublicSettings();
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
+        // Hostinger använder en HttpOnly-sessioncookie, inte Base44:s localStorage-token.
+        // Kontrollera därför alltid den lokala sessionen även när appParams.token saknas.
+        await checkUserAuth();
         setIsLoadingPublicSettings(false);
       } catch (appError) {
         console.error('App state check failed:', appError);
@@ -92,13 +87,9 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthChecked(true);
       
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
+      // 401 betyder normalt bara att besökaren inte är inloggad.
+      // Det ska inte sätta ett globalt authError, eftersom publika sidor (/ och /book)
+      // ska fungera utan inloggning. Skyddade routes sköter själva redirect till /login.
     }
   };
 
