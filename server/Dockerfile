@@ -14,6 +14,6 @@ COPY src/lib/staffPermissions.js ./src/lib/staffPermissions.js
 RUN cd server && node scripts/build-functions.mjs
 
 WORKDIR /app/server
-EXPOSE 3001
+EXPOSE 3000
 ENV NODE_ENV=production
 CMD ["node", "src/index.js"]
