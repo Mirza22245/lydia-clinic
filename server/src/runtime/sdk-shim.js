@@ -29,7 +29,26 @@ export function createClientFromRequest(req) {
   const u = normalizeUser(user);
   const client = u ? userClient(u) : { entities: new Proxy({}, { get: () => { throw Object.assign(new Error('Unauthorized'), { status: 401 }); } }) };
   const serviceEntities = new Proxy({}, {
-    get: (_, name) => makeStore(String(name), { bypass: true }),
+    get: (_, name) => {
+      const store = makeStore(String(name), { bypass: true });
+      // Functions written for the Base44 SDK expect filter() to return a
+      // paginated object. Normalize array/object responses at this single
+      // compatibility boundary so every booking function behaves identically.
+      return new Proxy(store, {
+        get(target, prop) {
+          if (prop !== 'filter') return target[prop];
+          return async (...args) => {
+            const result = await target.filter(...args);
+            if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
+            if (result && typeof result === 'object') {
+              if (Array.isArray(result.items)) return result;
+              if (Array.isArray(result.data)) return { ...result, items: result.data };
+            }
+            return { items: [], has_more: false, next_cursor: null };
+          };
+        },
+      });
+    },
   });
   return {
     ...client,
