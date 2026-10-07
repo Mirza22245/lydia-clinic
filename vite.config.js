@@ -4,30 +4,11 @@ import { defineConfig } from 'vite'
 
 const src = path.resolve(process.cwd(), 'src');
 
-const portableFunctions = () => ({
-  name: 'lydia-portable-functions',
-  enforce: 'pre',
-  resolveId(id) {
-    if (id.startsWith('lydia-fn:')) return id;
-    return null;
-  },
-  load(id) {
-    const prefix = 'lydia-fn:';
-    if (!id.startsWith(prefix)) return null;
-    const name = id.slice(prefix.length);
-    return [
-      "import { base44 } from '@/lib/api';",
-      `export const ${name} = (payload) => base44.functions.invoke('${name}', payload);`,
-      `export default ${name};`,
-    ].join('\n');
-  },
-});
-
 export default defineConfig({
-  plugins: [portableFunctions(), react()],
+  plugins: [react()],
   resolve: {
     alias: [
-      { find: new RegExp('^@/functions/([A-Za-z0-9_]+)$'), replacement: 'lydia-fn:$1' },
+      { find: /^@\/functions\/([A-Za-z0-9_]+)$/, replacement: path.join(src, 'lib/functions.js') },
       { find: /^@\/api\/base44Client$/, replacement: path.join(src, 'lib/api.js') },
       { find: /^@\/lib\/app-params$/, replacement: path.join(src, 'lib/app-params.portable.js') },
       { find: /^@\//, replacement: src + '/' },
