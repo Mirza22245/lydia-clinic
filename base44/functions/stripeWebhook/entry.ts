@@ -9,8 +9,8 @@ import { computeBookingRequirements } from "../../shared/bookingRequirements.ts"
 async function verifySignature(rawBody, sigHeader, secret) {
   const parts = (sigHeader || "").split(",").map((s) => s.trim());
   const tPart = parts.find((p) => p.startsWith("t="));
-  const v1Part = parts.find((p) => p.startsWith("v1="));
-  if (!tPart || !v1Part) return null;
+  const v1Parts = parts.filter((p) => p.startsWith("v1=")).map((p) => p.slice(3)).filter(Boolean);
+  if (!tPart || !v1Parts.length) return null;
   const t = tPart.slice(2);
   const timestamp = Number(t);
   if (!Number.isFinite(timestamp) || Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) return null;
@@ -28,12 +28,16 @@ async function verifySignature(rawBody, sigHeader, secret) {
   const expected = Array.from(new Uint8Array(sigBuf))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-  if (expected.length !== v1.length) return null;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
+  const expectedBytes = new TextEncoder().encode(expected);
+  for (const v1 of v1Parts) {
+    if (v1.length !== expected.length) continue;
+    const candidateBytes = new TextEncoder().encode(v1);
+    if (candidateBytes.length !== expectedBytes.length) continue;
+    let diff = 0;
+    for (let i = 0; i < expectedBytes.length; i++) diff |= expectedBytes[i] ^ candidateBytes[i];
+    if (diff === 0) return timestamp;
   }
-  return diff === 0 ? timestamp : null;
+  return null;
 }
 
 export default async function(req) {
