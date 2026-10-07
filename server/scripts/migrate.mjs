@@ -36,10 +36,10 @@ try {
 
     INSERT INTO e_staff (id, data, clinic_id)
     VALUES
-      ('demo-staff', '{"name":"Lydia behandlare","title":"Behandlare","role":"behandlare","active":true,"allowed_treatment_ids":"[]","clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk')
+      ('demo-staff', '{"name":"Lydia behandlare","title":"Behandlare","role":"behandlare","active":true,"allowed_treatment_ids":["demo-consultation","demo-hudvard","demo-injektion"],"clinic_id":"lydia-estetisk"}'::jsonb, 'lydia-estetisk')
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO e_staffschedule (id, data, clinic_id)
+    INSERT INTO e_staff_schedule (id, data, clinic_id)
     VALUES
       ('demo-staff-sun','{"staff_name":"Lydia behandlare","day_of_week":0,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
       ('demo-staff-mon','{"staff_name":"Lydia behandlare","day_of_week":1,"start_time":"09:00","end_time":"17:00","clinic_id":"lydia-estetisk"}'::jsonb,'lydia-estetisk'),
