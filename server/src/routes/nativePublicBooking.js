@@ -330,7 +330,7 @@ export async function createPublicBookingNative(body = {}, req) {
       payment_token: treatment.requires_payment && Number(treatment.price) > 0 ? paymentToken : undefined,
       email: email,
       clinic_name: clinic.name || clinic.brand_name || 'Lydia',
-      portal_url: `${process.env.PUBLIC_APP_URL || ''}/portal`,
+      portal_url: (() => { const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https'; const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || process.env.PUBLIC_APP_URL || ''; return host ? `${proto}://${host}/portal` : '/portal'; })(),
       customer_name: cust.name || name,
     };
   }, { bypassRls: true });
