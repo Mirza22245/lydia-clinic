@@ -71,7 +71,7 @@ export async function createPublicBookingNative(body = {}, req) {
     const e = new Error('Alla obligatoriska fält måste fyllas i');
     e.status = 400; throw e;
   }
-  if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     const e = new Error('Ogiltig e-postadress'); e.status = 400; throw e;
   }
   if (!Number.isFinite(start.getTime())) {
