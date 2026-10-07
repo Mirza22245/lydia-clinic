@@ -31,23 +31,19 @@ export function createClientFromRequest(req) {
   const serviceEntities = new Proxy({}, {
     get: (_, name) => {
       const store = makeStore(String(name), { bypass: true });
-      // Functions written for the Base44 SDK expect filter() to return a
-      // paginated object. Normalize array/object responses at this single
-      // compatibility boundary so every booking function behaves identically.
-      return new Proxy(store, {
-        get(target, prop) {
-          if (prop !== 'filter') return target[prop];
-          return async (...args) => {
-            const result = await target.filter(...args);
-            if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
-            if (result && typeof result === 'object') {
-              if (Array.isArray(result.items)) return result;
-              if (Array.isArray(result.data)) return { ...result, items: result.data };
-            }
-            return { items: [], has_more: false, next_cursor: null };
-          };
-        },
-      });
+      // Do not wrap the store itself in another Proxy. Some Node/runtime
+      // combinations can reject a non-object Proxy target during request
+      // handling. A plain object wrapper is sufficient here.
+      const filter = async (...args) => {
+        const result = await store.filter(...args);
+        if (Array.isArray(result)) return { items: result, has_more: false, next_cursor: null };
+        if (result && typeof result === 'object') {
+          if (Array.isArray(result.items)) return result;
+          if (Array.isArray(result.data)) return { ...result, items: result.data };
+        }
+        return { items: [], has_more: false, next_cursor: null };
+      };
+      return { ...store, filter };
     },
   });
   return {
