@@ -27,7 +27,8 @@ export default async function(req) {
     let requireRoomId: string | undefined;
     let requireResourceIds: string[] = [];
     if (treatment_id) {
-      const treatment = await svc.entities.Treatment.get(treatment_id).catch(() => null);
+      const treatmentEntity = svc.entity ? svc.entity('Treatment') : svc.entities?.Treatment;
+      const treatment = treatmentEntity?.get ? await treatmentEntity.get(treatment_id).catch(() => null) : null;
       if (treatment && treatment.clinic_id === clinic_id) {
         durationMin = treatment.duration || durationMin;
         bufferBefore = treatment.buffer_before || 0;
