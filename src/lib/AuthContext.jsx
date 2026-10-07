@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
+    // Use the local session-based auth flow on Hostinger.
     base44.auth.redirectToLogin(window.location.href);
   };
 
