@@ -38,6 +38,16 @@ import BookingDetail from '@/pages/BookingDetail';
 import Portal from '@/pages/Portal';
 import AppShell from '@/components/AppShell';
 
+const RoleRoute = ({ roles, children }) => {
+  const { user, isLoadingAuth, authChecked } = useAuth();
+  if (isLoadingAuth || !authChecked) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  const staffRole = user.staff_role || user.data?.staff_role || "";
+  const allowed = roles.includes(user.role) || (staffRole && roles.includes(staffRole));
+  if (!allowed) return <Navigate to={user.role === "user" ? "/portal" : "/"} replace />;
+  return children;
+};
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -67,8 +77,8 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/portal" element={<Portal />} />
-        <Route element={<AppShell />}>
+        <Route path="/portal" element={<RoleRoute roles={["user"]}><Portal /></RoleRoute>} />
+        <Route element={<RoleRoute roles={["admin", "administratör", "behandlare", "reception"]}><AppShell /></RoleRoute>}>
           <Route path="/app" element={<Dashboard />} />
           <Route path="/app/customers" element={<Customers />} />
           <Route path="/app/customers/:id" element={<CustomerDetail />} />
