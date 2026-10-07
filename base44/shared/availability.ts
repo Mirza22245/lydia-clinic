@@ -74,6 +74,13 @@ export function clinicDateOf(ms: number): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: CLINIC_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
 }
 
+function pageItems<T = any>(page: any): T[] {
+  if (Array.isArray(page)) return page;
+  if (Array.isArray(page?.items)) return page.items;
+  if (Array.isArray(page?.data)) return page.data;
+  return [];
+}
+
 function nextDate(date: string): string {
   return new Date(Date.parse(`${date}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
 }
