@@ -102,11 +102,11 @@ export default function Staff() {
       if (editing) {
         await base44.entities.Staff.update(editing.id, data);
         if (form.email) {
-          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "" || "behandlare" });
+          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "" });
         }
       } else {
         if (form.email) {
-          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "behandlare" });
+          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "" });
         }
         await base44.entities.Staff.create(data);
         if (form.email) toast({ title: "Personal tillagd", description: "En aktiveringslänk har skickats till e-posten." });
