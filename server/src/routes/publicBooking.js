@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { withTx } from '../db/pool.js';
+import { publicLimiter } from '../lib/rateLimit.js';
 
 function parseAllowedTreatments(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -144,7 +145,7 @@ export async function getPublicBookingData(body = {}) {
 
 export const publicBookingRouter = Router();
 
-publicBookingRouter.all('/', async (req, res) => {
+publicBookingRouter.all('/', publicLimiter, async (req, res) => {
   try {
     res.json(await getPublicBookingData(req.body || {}));
   } catch (e) {
