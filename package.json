@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node server/scripts/build-functions.mjs && node server/scripts/migrate.mjs",
+    "build": "vite build && node server/scripts/build-functions.mjs",
+    "migrate": "node server/scripts/migrate.mjs",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
