@@ -5,7 +5,7 @@
 import pg from 'pg';
 import { ensureSchema } from '../src/db/schema.js';
 
-const url = process.env.MIGRATE_DATABASE_URL;
+const url = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
 if (!url) {
   console.error('Sätt MIGRATE_DATABASE_URL (ägar-/admin-roll, inte lydia_app).');
   process.exit(1);
