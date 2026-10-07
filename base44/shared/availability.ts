@@ -241,7 +241,7 @@ export async function fetchAvailabilityData(
     { clinic_id, staff_name, day_of_week: weekday },
     { limit: 50 }
   );
-  const schedule = (schedPage.items || []).filter((s: any) => {
+  const schedule = pageItems(schedPage).filter((s: any) => {
     if (!s.start_time || !s.end_time) return false;
     if (s.effective_from && date < s.effective_from) return false;
     if (s.effective_until && date > s.effective_until) return false;
@@ -252,7 +252,7 @@ export async function fetchAvailabilityData(
     { clinic_id, staff_name, start: { $lte: dayEnd.toISOString() }, end: { $gte: dayStart.toISOString() } },
     { limit: 100 }
   );
-  const timeOff = (offPage.items || []).map((o: any) => ({
+  const timeOff = pageItems(offPage).map((o: any) => ({
     start: new Date(o.start).getTime(),
     end: new Date(o.end).getTime(),
   }));
@@ -265,7 +265,7 @@ export async function fetchAvailabilityData(
     },
     { sort: 'start_time', limit: 200 }
   );
-  const staffBookings = (bookPage.items || []).filter(notExcluded).map(toIv);
+  const staffBookings = pageItems(bookPage).filter(notExcluded).map(toIv);
 
   let roomBookings: Interval[] = [];
   if (params.requireRoomId) {
@@ -277,7 +277,7 @@ export async function fetchAvailabilityData(
       },
       { limit: 200 }
     );
-    roomBookings = (roomPage.items || []).filter(notExcluded).map(toIv);
+    roomBookings = pageItems(roomPage).filter(notExcluded).map(toIv);
   }
 
   let resourceBookings: { resource_id: string; interval: Interval }[] = [];
@@ -291,7 +291,7 @@ export async function fetchAvailabilityData(
       },
       { limit: 300 }
     );
-    for (const b of (resPage.items || [])) {
+    for (const b of pageItems(resPage)) {
       if (!notExcluded(b)) continue;
       const ids = parseResourceIds(b.resource_ids);
       const iv = toIv(b);
@@ -305,7 +305,7 @@ export async function fetchAvailabilityData(
       { clinic_id, id: { $in: requireResourceIds } },
       { limit: 50 }
     );
-    for (const r of (resQtyPage.items || [])) {
+    for (const r of pageItems(resQtyPage)) {
       resourceQuantities[r.id] = r.quantity || 1;
     }
   }
