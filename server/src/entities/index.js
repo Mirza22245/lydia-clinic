@@ -7,6 +7,13 @@ export function serviceRole() {
   return { entities: entityProxy({ bypass: true }) };
 }
 
+// Direct service-role accessor for the server runtime compatibility layer.
+// This avoids relying on a nested JavaScript Proxy when compiled functions
+// access entities dynamically.
+export function serviceEntity(name) {
+  return makeStore(String(name), { bypass: true });
+}
+
 // User-scoped: RLS + behörighetsområden från staffPermissions.
 export function userClient(user) {
   const ctx = { user, bypass: isPlatformAdmin(user) };
