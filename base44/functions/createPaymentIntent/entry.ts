@@ -77,7 +77,6 @@ export default async function(req) {
     params.append("metadata[clinic_id]", booking.clinic_id || "");
     params.append("metadata[customer_name]", booking.customer_name || "");
     params.append("metadata[customer_email]", "");
-    params.append("metadata[base44_app_id]", (typeof process !== "undefined" && process.env ? process.env.BASE44_APP_ID : "") || "");
 
     const res = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
