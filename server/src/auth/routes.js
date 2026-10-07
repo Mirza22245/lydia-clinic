@@ -138,7 +138,7 @@ authRouter.post('/admin/staff-invite', async (req, res) => {
   const staffRole = String(req.body?.staff_role || 'behandlare').trim();
   const fullName = String(req.body?.name || '').trim().slice(0, 100);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Ogiltig e-post');
-  if (!['administratör','behandlare','reception'].includes(staffRole)) return fail(res, 400, 'Ogiltig personalroll');
+  if (!['administratör','behandlare','reception',''].includes(staffRole)) return fail(res, 400, 'Ogiltig personalroll');
   const existing = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
   if (existing && existing.clinic_id && admin.clinic_id && existing.clinic_id !== admin.clinic_id) return fail(res, 403, 'Användaren tillhör en annan klinik.');
   let u = existing;
@@ -148,6 +148,7 @@ authRouter.post('/admin/staff-invite', async (req, res) => {
   } else {
     u = (await pool.query("UPDATE users SET clinic_id=COALESCE($1,clinic_id),staff_role=$2,full_name=COALESCE(NULLIF($3,''),full_name) WHERE id=$4 RETURNING *", [admin.clinic_id || null, staffRole, fullName, u.id])).rows[0];
   }
+  if (!staffRole) return res.json({ ok: true, invited: false });
   const invite = genToken();
   await pool.query("INSERT INTO auth_codes (user_id,code_hash,kind,expires_at) VALUES ($1,$2,'staff_invite',NOW()+INTERVAL '48 hours')", [u.id, hashShort(invite)]);
   const actionUrl = `${config.appBaseUrl}/accept-invite?token=${encodeURIComponent(invite)}`;
