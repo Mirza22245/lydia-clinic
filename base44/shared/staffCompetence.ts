@@ -30,7 +30,10 @@ export async function checkStaffBookable(
   params: { clinic_id: string; staff_name: string; treatment_id: string }
 ): Promise<BookableResult> {
   const { clinic_id, staff_name, treatment_id } = params;
-  const page = await svc.entities.Staff.filter({ clinic_id, name: staff_name }, { limit: 5 });
+  // Use the canonical direct entity accessor. This avoids depending on a nested Proxy in deployed Node runtimes.
+  const staffEntity = svc.entity ? svc.entity('Staff') : svc.entities?.Staff;
+  if (!staffEntity?.filter) throw new Error('Staff-entiteten är inte tillgänglig i runtime');
+  const page = await staffEntity.filter({ clinic_id, name: staff_name }, { limit: 5 });
   // Base44-kompatibiliteten kan returnera antingen en array eller ett
   // paginerat objekt. Normalisera båda formaten innan vi söker personalen.
   const items = Array.isArray(page)
