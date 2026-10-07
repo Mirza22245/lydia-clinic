@@ -8,7 +8,6 @@ import { Plus, Loader2, Pencil, Trash2, ShieldCheck, User, Check, Headset } from
 import { getClinicId } from "@/lib/currentUser";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
-import { syncStaffRole } from "@/functions/syncStaffRole";
 import StaffTreatmentPicker from "@/components/staff/StaffTreatmentPicker";
 import { parseAllowed } from "@/lib/staffCompetence";
 import {
@@ -102,16 +101,15 @@ export default function Staff() {
       };
       if (editing) {
         await base44.entities.Staff.update(editing.id, data);
-      } else {
-        await base44.entities.Staff.create(data);
-      }
-      // Synka rollen till användarens profil så RLS styrs på datanivå.
-      if (form.email) {
-        try {
-          await syncStaffRole({ email: form.email, staff_role: form.active ? form.role : "" });
-        } catch (e) {
-          toast({ title: "Rollsynk misslyckades", description: "Användarens data-åtkomst uppdaterades inte.", variant: "destructive" });
+        if (form.email) {
+          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "" || "behandlare" });
         }
+      } else {
+        if (form.email) {
+          await base44.auth.adminInviteStaff({ name: form.name, email: form.email, staff_role: form.active ? form.role : "behandlare" });
+        }
+        await base44.entities.Staff.create(data);
+        if (form.email) toast({ title: "Personal tillagd", description: "En aktiveringslänk har skickats till e-posten." });
       }
       setOpen(false);
       setEditing(null);
