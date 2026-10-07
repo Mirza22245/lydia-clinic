@@ -15,6 +15,7 @@ import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
 import { publicBookingRouter } from './routes/publicBooking.js';
 import { getAvailableSlotsNative } from './routes/nativeAvailability.js';
+import { createPublicBookingNative } from './routes/nativePublicBooking.js';
 import { apiLimiter, authLimiter, publicLimiter } from './lib/rateLimit.js';
 import { csrfGuard } from './lib/csrf.js';
 
@@ -57,6 +58,15 @@ app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', googleRouter);
 app.use('/api/public-booking-data', publicBookingRouter);
+app.post('/api/public-booking', publicLimiter, async (req, res) => {
+  try {
+    const data = await createPublicBookingNative(req.body || {}, req);
+    res.status(200).json(data);
+  } catch (e) {
+    console.error('[public-booking]', e);
+    res.status(e?.status || 500).json({ error: e?.message || 'Internt serverfel' });
+  }
+});
 app.post('/api/availability', publicLimiter, async (req, res) => {
   try {
     const data = await getAvailableSlotsNative(req.body || {});
