@@ -14,7 +14,7 @@ function bool(name, def) {
 
 export const config = {
   port: Number(process.env.PORT || 3001),
-  host: process.env.HOST || '127.0.0.1',
+  host: process.env.HOST || '0.0.0.0',
   nodeEnv: process.env.NODE_ENV || 'development',
   isProd: (process.env.NODE_ENV || '') === 'production',
   databaseUrl: required('DATABASE_URL'),
