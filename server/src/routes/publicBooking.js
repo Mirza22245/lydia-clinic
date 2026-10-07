@@ -81,9 +81,9 @@ export async function getPublicBookingData(body = {}) {
   }
 
   const [treatments, staff, campaigns] = await Promise.all([
-    readStore(treatmentStore, { clinic_id: clinic.id }, { sort: 'name', limit: 200 }),
-    staffStore.filter({ clinic_id: clinic.id }, { sort: 'name', limit: 100 }),
-    readStore(campaignStore, { clinic_id: clinic.id, status: 'active' }, { sort: '-created_date', limit: 20 }),
+    readRows('e_treatment', { clinicId: clinic.id, orderBy: "(data->>'name') ASC", limit: 200 }),
+    readRows('e_staff', { clinicId: clinic.id, where: [{ sql: "(data->>'active')::boolean = $1", values: [true] }], orderBy: "(data->>'name') ASC", limit: 100 }),
+    readRows('e_campaign', { clinicId: clinic.id, where: [{ sql: "data->>'status' = $1", values: ['active'] }], orderBy: 'created_date DESC', limit: 20 }),
   ]);
 
   const today = clinicDateOf(Date.now());
