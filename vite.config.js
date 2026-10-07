@@ -8,12 +8,13 @@ const portableFunctions = () => ({
   name: 'lydia-portable-functions',
   enforce: 'pre',
   resolveId(id) {
-    if (id.startsWith('lydia-fn:')) return '\0' + id;
+    if (id.startsWith('lydia-fn:')) return { id: '\0' + id };
     return null;
   },
   load(id) {
-    if (!id.startsWith('\0lydia-fn:')) return null;
-    const name = id.slice('\0lydia-fn:'.length);
+    const prefix = '\0lydia-fn:';
+    if (!id.startsWith(prefix)) return null;
+    const name = id.slice(prefix.length);
     return [
       "import { base44 } from '@/lib/api';",
       `export const ${name} = (payload) => base44.functions.invoke('${name}', payload);`,
