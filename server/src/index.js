@@ -15,7 +15,7 @@ import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
 import { publicBookingRouter } from './routes/publicBooking.js';
 import { getAvailableSlotsNative } from './routes/nativeAvailability.js';
-import { apiLimiter, authLimiter } from './lib/rateLimit.js';
+import { apiLimiter, authLimiter, publicLimiter } from './lib/rateLimit.js';
 import { csrfGuard } from './lib/csrf.js';
 
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
@@ -57,7 +57,7 @@ app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', googleRouter);
 app.use('/api/public-booking-data', publicBookingRouter);
-app.post('/api/availability', async (req, res) => {
+app.post('/api/availability', publicLimiter, async (req, res) => {
   try {
     const data = await getAvailableSlotsNative(req.body || {});
     res.status(200).json(data);
