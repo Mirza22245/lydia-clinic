@@ -102,24 +102,6 @@ services:
       DATABASE_URL: postgresql://lydia_app:${LYDIA_APP_PASSWORD}@db:5432/lydia
     command: ["node", "scripts/security-test.mjs"]
 
-  # Engångsimport från Base44 (profil "tools"): körs med ägar-rollen, kopierar även privata filer.
-  import-from-base44:
-    profiles: ["tools"]
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - ./server/.env
-    environment:
-      DATABASE_URL: postgresql://lydia:${DB_PASSWORD}@db:5432/lydia
-      BASE44_FUNCTIONS_URL: ${BASE44_FUNCTIONS_URL:-}
-      BASE44_ADMIN_TOKEN: ${BASE44_ADMIN_TOKEN:-}
-    volumes:
-      - ${STORAGE_DIR:-/var/lydia/files}:/var/lydia/files
-    command: ["node", "scripts/import-from-base44.mjs"]
 
 volumes:
   pgdata:
