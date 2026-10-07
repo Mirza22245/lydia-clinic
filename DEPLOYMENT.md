@@ -1,121 +1,136 @@
-# Lydia — Driftsättning på Hostinger (utan Base44)
+# Lydia — driftsättning på Hostinger
 
-> **Status:** Koden bygger i permanent Lydia-läge. Frontend och backend kör mot Lydias egen Express/PostgreSQL-stack; Base44 SDK och Vite-plugin ingår inte i produktionen.
-> Auth-flödet (registrering → OTP → verifiering → `/me` → inloggad session) är verifierat med 17 tester mot riktig PostgreSQL — en kritisk sessionsbugg är åtgärdad (`server/src/auth/session.js`).
-> Den portabla servern har **inte** körts end-to-end mot riktig PostgreSQL i utvecklingsmiljön — kör röktestet (steg 9) och säkerhetstestet (steg 9b) innan något annat.
-> WordPress på lydiaestetisk.se berörs inte av något steg före steg 11.
+> Lydia kör som en fristående Node/Express-app med React/Vite och PostgreSQL. Produktionen använder inte Base44 som runtime.
 
-## Arkitektur
+## Produktionsarkitektur
 
 ```
-lydiaestetisk.se           → WordPress (oförändrad tills steg 11)
-app.lydiaestetisk.se       → host-nginx (TLS) → frontend-container (SPA + /api-proxy) → backend (Node/Express) → PostgreSQL 16
-                              Allt på samma ursprung (/api) — ingen CORS, same-site-cookie.
+app.lydiaestetisk.se
+        │
+        └── Hostingers reverse proxy
+                │
+                └── Node 20 → server/src/index.js
+                         ├── /api/*
+                         └── dist/*
+                              │
+                              └── PostgreSQL
 ```
 
-Compose-tjänster: `db` (Postgres), `backend`, `frontend`, samt engångsjobben `migrate` och `create-admin` (profil `tools`).
-Appen kör som databasrollen `lydia_app` (endast DML, ingen BYPASSRLS) så att **FORCE RLS** gäller.
+Frontend och API använder samma origin. Webbläsaren anropar `/api`, och sessionscookien är HttpOnly.
 
-## 1. Förbered VPS (min. 2 GB RAM)
+## Hostinger
 
-```bash
-curl -fsSL https://get.docker.com | sh && sudo systemctl enable docker
-sudo apt install -y nginx certbot python3-certbot-nginx
-```
+- Framework: **Other**
+- Branch: **main**
+- Node: **20.x**
+- Root: `./`
+- Build command: `npm run build`
+- Entry point: `server/src/index.js`
+- Build output: lämnas tomt
+- Start command: `npm start` / Hostinger använder entry point ovan
+- Port: Hostingers `PORT` används automatiskt; fallback är `3000`
+- Servern binder på `0.0.0.0` för reverse proxy
 
-## 2. DNS (endast ny post)
+## Miljövariabler
 
-`A  app.lydiaestetisk.se → <VPS-IP>`. Rör inte WordPress-posterna.
+Följande måste finnas i Hostinger:
 
-## 3. Hämta koden
+| Variabel | Krävs | Användning |
+|---|---:|---|
+| `DATABASE_URL` | Ja | PostgreSQL |
+| `JWT_SECRET` | Ja | Sessionssignering |
+| `FILE_SIGNING_SECRET` | Ja | Signerade fillänkar |
+| `CRON_SECRET` | Ja | Interna cron-anrop |
+| `APP_BASE_URL` | Rekommenderas | `https://app.lydiaestetisk.se` |
+| `SMTP_HOST` | För e-post | SMTP-server |
+| `SMTP_PORT` | För e-post | Vanligen 465 eller 587 |
+| `SMTP_USER` / `SMTP_PASS` | För e-post | SMTP-inloggning |
+| `SMTP_FROM_EMAIL` | För e-post | Avsändare |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | För Google-login | Google OAuth |
+| `STRIPE_SECRET_KEY` | För betalning | Stripe |
+| `STRIPE_PUBLISHABLE_KEY` | För betalning | Stripe frontend |
+| `STRIPE_WEBHOOK_SECRET` | För betalning | Stripe webhook |
+| `STORAGE_DRIVER` | Vid behov | LOCAL eller S3 |
+| `STORAGE_DIR` / `S3_*` | Vid fil-lagring | Journalfiler |
+| `ENCRYPTION_KEY` | Rekommenderas | Kryptering av sparade tokens |
 
-```bash
-git clone <ditt-github-repo> /opt/lydia && cd /opt/lydia
-```
+Node-processen stoppar med ett tydligt startup-fel om en obligatorisk säkerhetsvariabel saknas.
 
-## 4. Konfigurera hemligheter
+## Databas
 
-```bash
-cp server/.env.example server/.env      # fyll i, se tabellen nedan
-export DB_PASSWORD=<långt-lösenord> LYDIA_APP_PASSWORD=<annat-långt-lösenord>   # eller en .env bredvid docker-compose.yml
-```
+Schema skapas med projektets migrationssystem. PostgreSQL är Lydias enda runtime-databas.
 
-| Variabel | Krävs | Anmärkning |
-|---|---|---|
-| `JWT_SECRET`, `FILE_SIGNING_SECRET`, `CRON_SECRET` | ja | `openssl rand -hex 32` var för sig |
-| `APP_BASE_URL` | ja | `https://app.lydiaestetisk.se` (senare `https://lydiaestetisk.se`) |
-| `SMTP_HOST/PORT/USER/PASS/FROM_EMAIL` | ja | Utan SMTP skickas ingen e-post (bokningsbekräftelse, återställning) |
-| `STORAGE_DRIVER` (`LOCAL`/`S3`) + `STORAGE_DIR` eller `S3_*` | ja | Journalbilder och dokument |
-| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | för betalning | Testnycklar tills ni aktiverar |
-| `SMS_PROVIDER`, `SMS_API_KEY`, `SMS_API_SECRET`, `SMS_SENDER` | för SMS | Lämna tomt = SMS fungerar ej (svarar "inte konfigurerat") |
-| `BANKID_MODE`, `BANKID_API_URL`, `BANKID_CLIENT_SECRET` | för BankID | Lämna tomt = BankID fungerar ej |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | för Google Calendar | Lämna tomt = ej ansluten |
-| `ENCRYPTION_KEY` | rekommenderas | Krypterar sparade tokens |
+Efter migration ska appens databasroll inte ha `BYPASSRLS`; klinikisoleringen bygger på PostgreSQL RLS tillsammans med applikationens behörighetslager.
 
-## 5. Databas
+## Hälsa och deployment
 
-```bash
-docker compose up -d db
-docker compose --profile tools run --rm migrate
-LYDIA_ADMIN_EMAIL=<din-epost> LYDIA_ADMIN_PASSWORD=<lösenord> docker compose --profile tools run --rm create-admin
-```
+Backend har ett databasoberoende health-endpoint:
 
-## 6. Starta
+`GET /api/health`
 
-```bash
-docker compose up -d --build
-```
+Det används för att skilja ett fungerande Node-processlyssnande från databas-/applikationsfel.
 
-## 7. TLS + host-nginx
+Vid en 502/504 ska deploymenten kontrolleras mot dessa tre saker i första hand:
 
-```bash
-sudo cp deploy/nginx/lydia.conf /etc/nginx/conf.d/lydia.conf
-sudo certbot --nginx -d app.lydiaestetisk.se && sudo nginx -t && sudo systemctl reload nginx
-```
+1. Node-processen startar med rätt Node-version.
+2. Hostingers `PORT` används eller fallback `3000`.
+3. Processen lyssnar på `0.0.0.0`, inte endast localhost.
 
-## 8. Schemalagda jobb
+## Funktioner
 
-```bash
-# Påminnelser (24 h / 2 h) var 15:e minut — skickar bara kanaler som är aktiverade
-*/15 * * * * curl -s -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:8080/api/functions/sendDueReminders >/dev/null
-# Backup 03:00 (databas + filer, 14 dagars retention)
-0 3 * * * PG_SUPERUSER_URL=postgresql://lydia:<DB_PASSWORD>@127.0.0.1:5432/lydia /opt/lydia/server/scripts/backup.sh
-```
-Testa återläsning med `server/scripts/restore.sh` på en tom databas **innan** go-live.
+- Kundregistrering + e-postverifiering
+- Inloggning + lösenordsåterställning
+- Google-login
+- Kundportal
+- Personal- och admindashboard
+- Personalinvitation
+- Publik bokning
+- Bokningskalender och tillgänglighet
+- Journal, samtycken och hälsodeklarationer
+- Filer med signerade länkar
+- Betalningar/Stripe
+- Audit-logg
+- Rate limiting och CSRF-skydd
+- Klinikisolering/RLS
 
-## 9. Röktest (ska vara grönt innan data flyttas)
+## Stripe
 
-1. `curl https://app.lydiaestetisk.se/api/health` → `{"ok":true}`
-2. Logga in som admin, öppna Inställningar → fyll i öppettider, FAQ, logotyp.
-   - **Viktigt:** Om inloggningen omedelbart loggas ut (varje `/api/auth/me` → 401) är sessionverifieringen trasig — bekräfta att `server/src/auth/session.js` använder `b64urlDecode(sig)` (inte `Buffer.from(sig)`) vid HMAC-jämförelsen.
-3. Lägg in personalens arbetsscheman (Schema) — annars finns inga bokningsbara tider.
-4. Boka som gäst, registrera konto med samma e-post, fyll i hälsodeklaration + samtycke, bekräfta som personal.
-5. Betala med Stripe-testkort `4242 4242 4242 4242` → kvitto skapas.
-6. Signera journal; kontrollera Revisionslogg.
-7. Isoleringstest: logga in som kund A och försök läsa kund B:s bokning/journal → ska nekas.
+Webhook:
 
-## 9b. Säkerhetstest (autentisering + RLS-isolering)
+`https://app.lydiaestetisk.se/api/functions/stripeWebhook`
 
-```bash
-# Kräver installerade server-beroenden (npm --prefix server install) och en tom PostgreSQL
-npm --prefix server run test:security
-```
-Testar klinikisolering (FORCE RLS), gästbokningsskydd, CSRF och auth-sessionens giltighet.
-Måste vara grönt innan steg 10 (datamigrering).
+Aktivera Stripe först när testbokning, betalningsflöde och webhook är verifierade.
 
-## 10. Data och migrering
+## Cron
 
-Produktionen kräver inte Base44. PostgreSQL är Lydias primära och enda runtime-databas.
+Påminnelsefunktionen använder:
 
-Om äldre Lydia-data redan finns i PostgreSQL används den direkt efter migrering/schema-kontroll. Historiska Base44-exporter får endast användas som en separat engångsmigrering och behövs inte för att starta eller köra systemet.
+`POST /api/functions/sendDueReminders`
 
-## 11. Stripe och go-live (först efter godkänt röktest)
+och autentiseras med `x-cron-secret`. Cron kan köras via Hostingers schemalagda jobb utan att exponera någon administrativ endpoint.
 
-1. Stripe → Webhooks: lägg till `https://app.lydiaestetisk.se/api/functions/stripeWebhook` (events `payment_intent.succeeded`, `charge.refunded`); lägg den nya signeringshemligheten i `STRIPE_WEBHOOK_SECRET`.
-2. Byt till skarpa Stripe-nycklar när ni är redo att ta betalt.
-3. Aktivera moduler **en i taget** under Inställningar → Funktionsflaggor: `sms`, `bankid`, `google_calendar`, `payments` (de är avstängda/testläge och svarar "inte konfigurerat" utan nycklar).
-4. WordPress: ändra endast "Boka tid"-länken till `https://app.lydiaestetisk.se/book` — eller, när ni beslutat flytta hela domänen, använd `deploy/nginx/lydia-disabled.conf.example` som mall.
+## Base44
 
-## Rollback
+Base44-filerna i repot är kvar som migrerings-/kompatibilitetskälla. Produktionsbygget använder:
 
-WordPress är orörd: ta bort "Boka tid"-länkändringen/nginx-blocket så är läget som före flytten. Databasen kan återställas med `server/scripts/restore.sh`.
+- `src/lib/api.js` för frontend-API
+- lokal Express-backend
+- lokal PostgreSQL
+- lokal SDK/secrets-shim för kompilerade funktioner
+
+Ingen Base44-tjänst krävs för att köra Lydia i produktion.
+
+## Go-live
+
+1. Kontrollera `/api/health`.
+2. Kontrollera kundregistrering och OTP.
+3. Kontrollera vanlig login och Google-login.
+4. Kontrollera personalinbjudan.
+5. Kontrollera publik bokning och lediga tider.
+6. Kontrollera kundportal.
+7. Kontrollera journal/samtycken.
+8. Kontrollera Stripe testbetalning och webhook.
+9. Kontrollera att en kund inte kan läsa en annan kunds data.
+10. Aktivera därefter skarpa betalningar och externa integrationer.
+
+WordPress på `lydiaestetisk.se` påverkas inte av app.lydiaestetisk.se.
