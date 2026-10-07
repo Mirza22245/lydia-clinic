@@ -110,7 +110,7 @@ async function fetchAvailabilityData(svc, params) {
     start: new Date(b.start_time).getTime(),
     end: b.end_time ? new Date(b.end_time).getTime() : new Date(b.start_time).getTime() + (b.duration || 30) * 6e4
   });
-  const schedPage = await svc.entities.StaffSchedule.filter(
+  const schedPage = await svc.entity('StaffSchedule').filter(
     { clinic_id, staff_name, day_of_week: weekday },
     { limit: 50 }
   );
@@ -120,7 +120,7 @@ async function fetchAvailabilityData(svc, params) {
     if (s.effective_until && date > s.effective_until) return false;
     return true;
   });
-  const offPage = await svc.entities.StaffTimeOff.filter(
+  const offPage = await svc.entity('StaffTimeOff').filter(
     { clinic_id, staff_name, start: { $lte: dayEnd.toISOString() }, end: { $gte: dayStart.toISOString() } },
     { limit: 100 }
   );
@@ -128,7 +128,7 @@ async function fetchAvailabilityData(svc, params) {
     start: new Date(o.start).getTime(),
     end: new Date(o.end).getTime()
   }));
-  const bookPage = await svc.entities.Booking.filter(
+  const bookPage = await svc.entity('Booking').filter(
     {
       clinic_id,
       staff_name,
@@ -140,7 +140,7 @@ async function fetchAvailabilityData(svc, params) {
   const staffBookings = (bookPage.items || []).filter(notExcluded).map(toIv);
   let roomBookings = [];
   if (params.requireRoomId) {
-    const roomPage = await svc.entities.Booking.filter(
+    const roomPage = await svc.entity('Booking').filter(
       {
         clinic_id,
         room_id: params.requireRoomId,
@@ -154,7 +154,7 @@ async function fetchAvailabilityData(svc, params) {
   let resourceBookings = [];
   let resourceQuantities = {};
   if (requireResourceIds.length > 0) {
-    const resPage = await svc.entities.Booking.filter(
+    const resPage = await svc.entity('Booking').filter(
       {
         clinic_id,
         start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -172,7 +172,7 @@ async function fetchAvailabilityData(svc, params) {
         }
       }
     }
-    const resQtyPage = await svc.entities.Resource.filter(
+    const resQtyPage = await svc.entity('Resource').filter(
       { clinic_id, id: { $in: requireResourceIds } },
       { limit: 50 }
     );
@@ -207,7 +207,7 @@ function canPerformTreatment(staff, treatmentId) {
 }
 async function checkStaffBookable(svc, params) {
   const { clinic_id, staff_name, treatment_id } = params;
-  const page = await svc.entities.Staff.filter({ clinic_id, name: staff_name }, { limit: 5 });
+  const page = await svc.entity('Staff').filter({ clinic_id, name: staff_name }, { limit: 5 });
   const items = Array.isArray(page) ? page : Array.isArray(page?.items) ? page.items : Array.isArray(page?.data) ? page.data : [];
   const staff = items.find((s) => s?.active !== false);
   if (!staff) {
@@ -243,7 +243,7 @@ async function entry_default(req) {
     let requireRoomId;
     let requireResourceIds = [];
     if (treatment_id) {
-      const treatment = await svc.entities.Treatment.get(treatment_id).catch(() => null);
+      const treatment = await svc.entity('Treatment').get(treatment_id).catch(() => null);
       if (treatment && treatment.clinic_id === clinic_id) {
         durationMin = treatment.duration || durationMin;
         bufferBefore = treatment.buffer_before || 0;
