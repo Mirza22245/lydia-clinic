@@ -182,6 +182,18 @@ export async function createPublicBookingNative(body = {}, req) {
 
     const dayStart = new Date(start.getTime() - 24 * 3600000).toISOString();
     const dayEnd = new Date(end.getTime() + 24 * 3600000).toISOString();
+    const timeOffQ = await client.query(
+      `SELECT data FROM e_staff_time_off
+       WHERE clinic_id = $1 AND data->>'staff_name' = $2
+         AND COALESCE(data->>'start','') < $4
+         AND COALESCE(data->>'end','') > $3`,
+      [clinicId, staffName, start.toISOString(), end.toISOString()]
+    );
+    const timeOff = timeOffQ.rows.map(r => normalize(r));
+    if (timeOff.some(o => overlap(blockStart, blockEnd, new Date(o.start).getTime(), new Date(o.end).getTime()))) {
+      const e = new Error('Behandlaren är inte tillgänglig på den tiden.'); e.status = 409; throw e;
+    }
+
     const bookingsQ = await client.query(
       `SELECT id, data FROM e_booking
        WHERE clinic_id = $1
@@ -210,6 +222,29 @@ export async function createPublicBookingNative(body = {}, req) {
       overlap(blockStart, blockEnd, new Date(b.start_time).getTime(), new Date(b.end_time || b.start_time).getTime())
     )) {
       const e = new Error('Rummet är redan bokat på den tiden.'); e.status = 409; throw e;
+    }
+
+    const requiredResourceIds = parseArray(treatment.required_resource_ids);
+    if (requiredResourceIds.length) {
+      const resourceQ = await client.query(
+        `SELECT id, data FROM e_resource
+         WHERE clinic_id = $1 AND id = ANY($2::text[])`,
+        [clinicId, requiredResourceIds]
+      );
+      const quantities = Object.fromEntries(resourceQ.rows.map(r => {
+        const d = normalize(r);
+        return [String(d.id), Math.max(1, Number(d.quantity) || 1)];
+      }));
+      for (const rid of requiredResourceIds) {
+        const capacity = quantities[rid] ?? 1;
+        const concurrent = activeBookings.filter(b => {
+          if (!parseArray(b.resource_ids).includes(rid)) return false;
+          return overlap(blockStart, blockEnd, new Date(b.start_time).getTime(), new Date(b.end_time || b.start_time).getTime());
+        }).length;
+        if (concurrent >= capacity) {
+          const e = new Error('En nödvändig resurs är redan bokad på den tiden.'); e.status = 409; throw e;
+        }
+      }
     }
 
     const customerQ = await client.query(
