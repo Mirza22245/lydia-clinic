@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { makeStore } from '../entities/store.js';
+import { pool } from '../db/pool.js';
 
 function parseAllowedTreatments(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -33,33 +33,46 @@ function parseFaq(raw) {
   }
 }
 
-async function readStore(store, query = {}, opts = {}) {
-  if (typeof store?.filter === 'function') return store.filter(query, opts);
-  if (typeof store?.list === 'function') {
-    const result = await store.list({ ...opts, limit: Math.max(Number(opts.limit) || 1000, 1000) });
-    const items = Array.isArray(result) ? result : (result?.items || []);
-    const matches = items.filter((row) => Object.entries(query).every(([key, value]) => row?.[key] === value));
-    if (opts.sort) {
-      const descending = String(opts.sort).startsWith('-');
-      const key = descending ? String(opts.sort).slice(1) : String(opts.sort);
-      matches.sort((a, b) => String(a?.[key] ?? '').localeCompare(String(b?.[key] ?? ''), 'sv'));
-      if (descending) matches.reverse();
-    }
-    return { items: matches.slice(0, Number(opts.limit) || 1000), has_more: false, next_cursor: null };
+async function readRows(table, { clinicId = null, where = [], orderBy = null, limit = 100 } = {}) {
+  const params = [];
+  const conditions = [];
+  if (clinicId) {
+    params.push(clinicId);
+    conditions.push(`clinic_id = $${params.length}`);
   }
-  throw new Error('Entity store saknar filter/list');
+  for (const condition of where) {
+    conditions.push(condition.sql.replace(/\$(\d+)/g, (_, n) => {
+      const idx = params.length + Number(n);
+      return '$' + idx;
+    }));
+    if (condition.values) params.push(...condition.values);
+  }
+  const order = orderBy || 'created_date DESC';
+  const sql = `SELECT id, data, created_date, updated_date, created_by_id, clinic_id
+    FROM ${table}
+    ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''}
+    ORDER BY ${order}
+    LIMIT ${Math.min(Math.max(Number(limit) || 100, 1), 5000)}`;
+  const result = await pool.query(sql, params);
+  return result.rows.map((row) => ({
+    ...(row.data || {}),
+    id: row.id,
+    created_date: row.created_date,
+    updated_date: row.updated_date,
+    created_by_id: row.created_by_id,
+    clinic_id: row.clinic_id ?? row.data?.clinic_id ?? '',
+  }));
 }
 
 export async function getPublicBookingData(body = {}) {
-  const clinicStore = makeStore('Clinic', { bypass: true });
-  const treatmentStore = makeStore('Treatment', { bypass: true });
-  const staffStore = makeStore('Staff', { bypass: true });
-  const campaignStore = makeStore('Campaign', { bypass: true });
-
-  let clinic = body.clinic_id ? await clinicStore.get(body.clinic_id).catch(() => null) : null;
+  let clinic = null;
+  if (body.clinic_id) {
+    const rows = await readRows('e_clinic', { where: [{ sql: 'id = $1', values: [String(body.clinic_id)] }], limit: 1 });
+    clinic = rows[0] || null;
+  }
   if (!clinic) {
-    const clinics = await readStore(clinicStore, {}, { limit: 1 });
-    clinic = (Array.isArray(clinics) ? clinics : clinics?.items || [])[0];
+    const clinics = await readRows('e_clinic', { orderBy: 'created_date ASC', limit: 1 });
+    clinic = clinics[0] || null;
   }
   if (!clinic) {
     const error = new Error('Ingen klinik hittades');
@@ -74,7 +87,7 @@ export async function getPublicBookingData(body = {}) {
   ]);
 
   const today = clinicDateOf(Date.now());
-  const activeCampaigns = (campaigns.items || [])
+  const activeCampaigns = (campaigns || [])
     .filter((c) => (!c.valid_from || c.valid_from <= today) && (!c.valid_until || c.valid_until >= today))
     .map((c) => ({
       id: c.id,
@@ -99,7 +112,7 @@ export async function getPublicBookingData(body = {}) {
       logo_url: clinic.logo_url || '',
       faq: parseFaq(clinic.faq),
     },
-    treatments: (treatments.items || []).map((t) => ({
+    treatments: (treatments || []).map((t) => ({
       id: t.id,
       name: t.name,
       duration: t.duration,
@@ -119,7 +132,7 @@ export async function getPublicBookingData(body = {}) {
       no_show_fee: t.no_show_fee || 0,
       required_form_ids: t.required_form_ids || '',
     })),
-    staff: (staff.items || []).map((s) => ({
+    staff: (staff || []).map((s) => ({
       id: s.id,
       name: s.name,
       title: s.title,
