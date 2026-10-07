@@ -59,6 +59,7 @@ export default function PublicBooking() {
   const [date, setDate] = useState(todayStr());
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotError, setSlotError] = useState(null);
   const [slot, setSlot] = useState(null);
 
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "", birth_date: "", personnummer: "" });
@@ -89,11 +90,13 @@ export default function PublicBooking() {
     if (!staffName || !dateStr || !t) { setSlots([]); return; }
     setLoadingSlots(true);
     setSlot(null);
+    setSlotError(null);
     try {
       const res = await getAvailableSlots({ clinic_id: init.clinic.id, staff_name: staffName, date: dateStr, duration: t.duration || 30, treatment_id: t.id });
       setSlots(res.data.slots || []);
-    } catch {
+    } catch (e) {
       setSlots([]);
+      setSlotError(e?.response?.data?.error || e?.message || "Kunde inte hämta lediga tider.");
     } finally {
       setLoadingSlots(false);
     }
@@ -188,8 +191,17 @@ export default function PublicBooking() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-2xl px-4 py-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
-          <h1 className="text-xl font-semibold font-heading">Boka tid</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
+              <h1 className="text-xl font-semibold font-heading">Boka tid</h1>
+            </div>
+            <div className="flex shrink-0 gap-2 text-sm">
+              <a href="/login" className="text-muted-foreground hover:text-foreground hover:underline">Logga in</a>
+              <span className="text-border">·</span>
+              <a href="/register" className="text-primary hover:underline">Registrera</a>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -282,6 +294,10 @@ export default function PublicBooking() {
             </div>
             {loadingSlots ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Hämtar tillgängliga tider...</div>
+            ) : slotError ? (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                Kunde inte hämta lediga tider: {slotError}
+              </div>
             ) : slots.length === 0 ? (
               <p className="text-sm text-muted-foreground">Inga lediga tider denna dag. Prova ett annat datum.</p>
             ) : (
