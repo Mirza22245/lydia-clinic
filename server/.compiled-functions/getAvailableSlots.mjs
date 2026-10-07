@@ -208,7 +208,8 @@ function canPerformTreatment(staff, treatmentId) {
 async function checkStaffBookable(svc, params) {
   const { clinic_id, staff_name, treatment_id } = params;
   const page = await svc.entities.Staff.filter({ clinic_id, name: staff_name }, { limit: 5 });
-  const staff = (page.items || []).find((s) => s.active !== false);
+  const items = Array.isArray(page) ? page : Array.isArray(page?.items) ? page.items : Array.isArray(page?.data) ? page.data : [];
+  const staff = items.find((s) => s?.active !== false);
   if (!staff) {
     return { ok: false, status: 400, code: "staff_unavailable", error: "Behandlaren finns inte eller \xE4r inte aktiv." };
   }
