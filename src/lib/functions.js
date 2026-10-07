@@ -1,0 +1,35 @@
+import { base44 } from './api';
+
+const call = (name) => (payload) => base44.functions.invoke(name, payload);
+
+export const revokeConsent = call('revokeConsent');
+export const syncStaffRole = call('syncStaffRole');
+export const getStripeConfig = call('getStripeConfig');
+export const recordAuditEvent = call('recordAuditEvent');
+export const logPatientAccess = call('logPatientAccess');
+export const updateFeatureFlag = call('updateFeatureFlag');
+export const sendPortalMessage = call('sendPortalMessage');
+export const sendReceiptEmail = call('sendReceiptEmail');
+export const getPatientPortalData = call('getPatientPortalData');
+export const refundPayment = call('refundPayment');
+export const sendBookingConfirmation = call('sendBookingConfirmation');
+export const signJournalEntry = call('signJournalEntry');
+export const getPublicBookingData = call('getPublicBookingData');
+export const sendSms = call('sendSms');
+export const verifyBankid = call('verifyBankid');
+export const signPatientConsent = call('signPatientConsent');
+export const exportPatientData = call('exportPatientData');
+export const createPaymentIntent = call('createPaymentIntent');
+export const cancelPatientBooking = call('cancelPatientBooking');
+export const syncGoogleCalendar = call('syncGoogleCalendar');
+export const verifyPhone = call('verifyPhone');
+export const updateBookingStatus = call('updateBookingStatus');
+export const getBookingRequirements = call('getBookingRequirements');
+export const sendDueReminders = call('sendDueReminders');
+export const stripeWebhook = call('stripeWebhook');
+export const getAvailableSlots = call('getAvailableSlots');
+export const rescheduleBooking = call('rescheduleBooking');
+export const checkTreatmentCompliance = call('checkTreatmentCompliance');
+export const saveStaffBooking = call('saveStaffBooking');
+export const createPublicBooking = call('createPublicBooking');
+export const submitHealthDeclarationConsent = call('submitHealthDeclarationConsent');
