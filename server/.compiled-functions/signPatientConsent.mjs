@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/signPatientConsent/entry.ts
+// base44/functions/signPatientConsent/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/audit.ts
+// base44/shared/audit.ts
 async function recordAudit(base44, evt) {
   try {
     const user = await base44.auth.me();
@@ -26,13 +26,13 @@ function getUserClinicIdSafe(user) {
   return v && String(v).trim() ? String(v) : null;
 }
 
-// ../base44/shared/hash.ts
+// base44/shared/hash.ts
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ../base44/functions/signPatientConsent/entry.ts
+// base44/functions/signPatientConsent/entry.ts
 var consentTypeLabels = {
   treatment: "Behandlingssamtycke",
   journal: "Journalsamtycke",
@@ -75,6 +75,15 @@ async function entry_default(req) {
     }
     if (consent.granted) {
       return Response.json({ error: "Samtycket \xE4r redan signerat och l\xE5st" }, { status: 409 });
+    }
+    if (consent.waiting_period_until) {
+      const earliest = new Date(consent.waiting_period_until).getTime();
+      if (Number.isFinite(earliest) && Date.now() < earliest) {
+        return Response.json({
+          error: "Bet\xE4nketiden \xE4r inte slut \xE4nnu.",
+          waiting_period_until: consent.waiting_period_until
+        }, { status: 409 });
+      }
     }
     const grantedAt = (/* @__PURE__ */ new Date()).toISOString();
     const ipAddress = getClientIp(req);

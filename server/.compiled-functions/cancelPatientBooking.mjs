@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/cancelPatientBooking/entry.ts
+// base44/functions/cancelPatientBooking/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/waitingList.ts
+// base44/shared/waitingList.ts
 async function notifyWaitingListOnCancellation(svc, cancelledBooking) {
   if (!cancelledBooking || !cancelledBooking.clinic_id) return 0;
   const clinicId = cancelledBooking.clinic_id;
@@ -61,7 +61,7 @@ async function notifyWaitingListOnCancellation(svc, cancelledBooking) {
   return notified;
 }
 
-// ../base44/functions/cancelPatientBooking/entry.ts
+// base44/functions/cancelPatientBooking/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);

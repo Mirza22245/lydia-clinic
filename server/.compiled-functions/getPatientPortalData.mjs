@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/getPatientPortalData/entry.ts
+// base44/functions/getPatientPortalData/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/portalCustomer.ts
+// base44/shared/portalCustomer.ts
 function normalizeEmail(user) {
   return (user?.email || "").toLowerCase().trim();
 }
@@ -18,14 +18,32 @@ async function findCustomerForUser(svc, user) {
   return (page.items || [])[0] || null;
 }
 
-// ../base44/shared/featureFlags.ts
-async function isFlagActive(svc, clinic_id, key) {
+// base44/shared/featureFlags.ts
+function parseFlagConfig(flag) {
+  try {
+    const value = typeof flag?.config === "string" ? JSON.parse(flag.config || "{}") : flag?.config || {};
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+async function getClinicRule(svc, clinic_id, key) {
   const page = await svc.entities.FeatureFlag.filter({ clinic_id, key }, { limit: 1 });
   const flag = (page.items || [])[0];
-  return !!flag && (flag.status === "enabled" || flag.status === "test");
+  const status = flag?.status === "enabled" || flag?.status === "test" ? flag.status : "disabled";
+  return {
+    status,
+    config: parseFlagConfig(flag),
+    active: status !== "disabled",
+    enforce: status === "enabled"
+  };
+}
+async function isFlagActive(svc, clinic_id, key) {
+  const rule = await getClinicRule(svc, clinic_id, key);
+  return rule.active;
 }
 
-// ../base44/functions/getPatientPortalData/entry.ts
+// base44/functions/getPatientPortalData/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);

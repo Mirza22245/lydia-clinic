@@ -1,9 +1,10 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/updateFeatureFlag/entry.ts
+// base44/functions/updateFeatureFlag/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
+import { secrets } from "./runtime/secrets-shim.js";
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
@@ -19,7 +20,7 @@ function canAccessClinic(user, recordClinicId) {
   return userClinic === rec;
 }
 
-// ../base44/functions/updateFeatureFlag/entry.ts
+// base44/functions/updateFeatureFlag/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -28,7 +29,7 @@ async function entry_default(req) {
     const isAdmin = user.role === "admin" || user.data?.staff_role === "administrat\xF6r";
     if (!isAdmin) return Response.json({ error: "Forbidden" }, { status: 403 });
     const body = await req.json().catch(() => ({}));
-    const { flag_id, status } = body;
+    const { flag_id, status, config } = body;
     if (!flag_id || !status) {
       return Response.json({ error: "flag_id och status kr\xE4vs" }, { status: 400 });
     }
@@ -41,8 +42,25 @@ async function entry_default(req) {
     if (!canAccessClinic(user, flag.clinic_id)) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
+    if (status === "enabled" && flag.requires_external) {
+      let requiredSecrets = [];
+      try {
+        requiredSecrets = JSON.parse(flag.required_secrets || "[]");
+      } catch {
+        requiredSecrets = [];
+      }
+      const missing = requiredSecrets.filter((key) => !secrets.get(key));
+      if (missing.length) {
+        return Response.json({ error: "Kan inte aktivera modulen \xE4nnu. Saknade secrets: " + missing.join(", ") }, { status: 409 });
+      }
+    }
     const prevStatus = flag.status;
-    const updated = await base44.entities.FeatureFlag.update(flag_id, { status });
+    const patch = { status };
+    if (config !== void 0) {
+      if (config === null || typeof config !== "string" && typeof config !== "object") return Response.json({ error: "Ogiltig konfiguration" }, { status: 400 });
+      patch.config = typeof config === "string" ? config : JSON.stringify(config);
+    }
+    const updated = await base44.entities.FeatureFlag.update(flag_id, patch);
     try {
       await svc.entities.AuditLog.create({
         clinic_id: flag.clinic_id || "",

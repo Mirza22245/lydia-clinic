@@ -1,6 +1,6 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/submitHealthDeclarationConsent/entry.ts
+// base44/functions/submitHealthDeclarationConsent/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 async function entry_default(req) {
   try {
@@ -16,6 +16,7 @@ async function entry_default(req) {
       booking_id,
       treatment_type,
       treatment_type_other,
+      treatment_name,
       pregnant_breastfeeding,
       skin_infection,
       blood_thinning,
@@ -43,15 +44,23 @@ async function entry_default(req) {
     let treatmentName = "";
     if (booking_id) {
       const booking = await svc.entities.Booking.get(booking_id).catch(() => null);
-      if (booking) treatmentName = booking.treatment_name || "";
+      if (!booking || booking.customer_id !== customer.id || booking.clinic_id !== clinic_id) {
+        return Response.json({ error: "Bokningen h\xF6r inte till ditt patientkonto" }, { status: 403 });
+      }
+      treatmentName = booking.treatment_name || "";
     }
+    const informationGivenAt = /* @__PURE__ */ new Date();
+    const waitingPeriodUntil = treatment_type === "injektion" ? new Date(informationGivenAt.getTime() + 48 * 60 * 60 * 1e3) : null;
     const structuredAnswers = {
       personnummer,
       phone,
       email,
       treatment_type,
       treatment_type_other: treatment_type_other || "",
-      treatment_name: treatmentName,
+      treatment_name: treatmentName || treatment_name || "",
+      information_given_at: informationGivenAt.toISOString(),
+      waiting_period_until: waitingPeriodUntil?.toISOString() || null,
+      form_version: "aesthetic-1.0",
       pregnant_breastfeeding,
       skin_infection,
       blood_thinning,
@@ -68,6 +77,11 @@ async function entry_default(req) {
       customer_id: customer.id,
       customer_name: customer.name,
       booking_id: booking_id || void 0,
+      treatment_name: treatmentName || treatment_name || void 0,
+      treatment_category: ["filler", "botox", "injektion"].includes(treatment_type) ? treatment_type : treatment_type || "annan",
+      information_given_at: informationGivenAt.toISOString(),
+      waiting_period_until: waitingPeriodUntil?.toISOString(),
+      form_version: "aesthetic-1.0",
       submitted_at: (/* @__PURE__ */ new Date()).toISOString(),
       submitted_by: customer.name,
       status: "submitted",
@@ -81,14 +95,16 @@ async function entry_default(req) {
       clinic_id
     });
     const treatmentTypeLabel = {
-      injektion: "Injektionsbehandling (Botox / Fillers)",
+      filler: "Fillers",
+      botox: "Botox / botulinumtoxin",
+      injektion: "Annan injektionsbehandling",
       hudvard: "Avancerad hudv\xE5rd / CO2-laser / Peeling",
       apparat: "Apparatbehandling (HIFU / Radiofrekvens / Fettreducering)",
       annan: `Annan behandling: ${treatment_type_other || ""}`
     }[treatment_type] || treatment_type;
     const consentText = [
       "Jag intygar att ovanst\xE5ende h\xE4lsouppgifter \xE4r korrekta och fullst\xE4ndiga.",
-      "Jag har l\xE4st och f\xF6rst\xE5tt informationen om behandlingen, dess risker och efterv\xE5rd, och godk\xE4nner genomf\xF6randet.",
+      "Jag har tagit del av informationen inf\xF6r behandlingen och f\xF6rst\xE5r att slutligt behandlingssamtycke l\xE4mnas f\xF6rst efter bet\xE4nketiden.",
       "",
       `Behandlingstyp: ${treatmentTypeLabel}`,
       `Bet\xE4nketid: ${betanketid_acknowledged ? "Bekr\xE4ftad" : "Ej aktuellt"}`,
@@ -106,11 +122,13 @@ async function entry_default(req) {
       type: "treatment",
       version: 1,
       text: consentText,
-      granted: true,
-      granted_at: (/* @__PURE__ */ new Date()).toISOString(),
-      granted_by: customer.name,
-      signed_text: consentText,
-      signature_hash: signatureHash,
+      granted: false,
+      granted_at: void 0,
+      granted_by: void 0,
+      signed_text: void 0,
+      booking_id: booking_id || void 0,
+      waiting_period_until: waitingPeriodUntil?.toISOString(),
+      signature_hash: void 0,
       ip_address: req.headers.get("x-forwarded-for") || "",
       device_info: req.headers.get("user-agent") || "",
       clinic_id

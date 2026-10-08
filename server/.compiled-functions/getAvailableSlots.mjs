@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/getAvailableSlots/entry.ts
+// base44/functions/getAvailableSlots/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/availability.ts
+// base44/shared/availability.ts
 var CLINIC_TZ = "Europe/Stockholm";
 function tzOffsetMs(epoch) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -30,6 +30,17 @@ function zonedToEpoch(date, hhmm) {
   const off2 = tzOffsetMs(t);
   if (off2 !== off1) t = guess - off2;
   return t;
+}
+function entityStore(svc, name) {
+  const store = svc?.entity ? svc.entity(name) : svc?.entities?.[name];
+  if (!store?.filter) throw new Error(`${name}-entiteten \xE4r inte tillg\xE4nglig i runtime`);
+  return store;
+}
+function pageItems(page) {
+  if (Array.isArray(page)) return page;
+  if (Array.isArray(page?.items)) return page.items;
+  if (Array.isArray(page?.data)) return page.data;
+  return [];
 }
 function nextDate(date) {
   return new Date(Date.parse(`${date}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
@@ -110,25 +121,25 @@ async function fetchAvailabilityData(svc, params) {
     start: new Date(b.start_time).getTime(),
     end: b.end_time ? new Date(b.end_time).getTime() : new Date(b.start_time).getTime() + (b.duration || 30) * 6e4
   });
-  const schedPage = await svc.entity('StaffSchedule').filter(
+  const schedPage = await entityStore(svc, "StaffSchedule").filter(
     { clinic_id, staff_name, day_of_week: weekday },
     { limit: 50 }
   );
-  const schedule = (schedPage.items || []).filter((s) => {
+  const schedule = pageItems(schedPage).filter((s) => {
     if (!s.start_time || !s.end_time) return false;
     if (s.effective_from && date < s.effective_from) return false;
     if (s.effective_until && date > s.effective_until) return false;
     return true;
   });
-  const offPage = await svc.entity('StaffTimeOff').filter(
+  const offPage = await entityStore(svc, "StaffTimeOff").filter(
     { clinic_id, staff_name, start: { $lte: dayEnd.toISOString() }, end: { $gte: dayStart.toISOString() } },
     { limit: 100 }
   );
-  const timeOff = (offPage.items || []).map((o) => ({
+  const timeOff = pageItems(offPage).map((o) => ({
     start: new Date(o.start).getTime(),
     end: new Date(o.end).getTime()
   }));
-  const bookPage = await svc.entity('Booking').filter(
+  const bookPage = await entityStore(svc, "Booking").filter(
     {
       clinic_id,
       staff_name,
@@ -137,10 +148,10 @@ async function fetchAvailabilityData(svc, params) {
     },
     { sort: "start_time", limit: 200 }
   );
-  const staffBookings = (bookPage.items || []).filter(notExcluded).map(toIv);
+  const staffBookings = pageItems(bookPage).filter(notExcluded).map(toIv);
   let roomBookings = [];
   if (params.requireRoomId) {
-    const roomPage = await svc.entity('Booking').filter(
+    const roomPage = await entityStore(svc, "Booking").filter(
       {
         clinic_id,
         room_id: params.requireRoomId,
@@ -149,12 +160,12 @@ async function fetchAvailabilityData(svc, params) {
       },
       { limit: 200 }
     );
-    roomBookings = (roomPage.items || []).filter(notExcluded).map(toIv);
+    roomBookings = pageItems(roomPage).filter(notExcluded).map(toIv);
   }
   let resourceBookings = [];
   let resourceQuantities = {};
   if (requireResourceIds.length > 0) {
-    const resPage = await svc.entity('Booking').filter(
+    const resPage = await entityStore(svc, "Booking").filter(
       {
         clinic_id,
         start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -162,7 +173,7 @@ async function fetchAvailabilityData(svc, params) {
       },
       { limit: 300 }
     );
-    for (const b of resPage.items || []) {
+    for (const b of pageItems(resPage)) {
       if (!notExcluded(b)) continue;
       const ids = parseResourceIds(b.resource_ids);
       const iv = toIv(b);
@@ -172,11 +183,11 @@ async function fetchAvailabilityData(svc, params) {
         }
       }
     }
-    const resQtyPage = await svc.entity('Resource').filter(
+    const resQtyPage = await entityStore(svc, "Resource").filter(
       { clinic_id, id: { $in: requireResourceIds } },
       { limit: 50 }
     );
-    for (const r of resQtyPage.items || []) {
+    for (const r of pageItems(resQtyPage)) {
       resourceQuantities[r.id] = r.quantity || 1;
     }
   }
@@ -191,7 +202,7 @@ function parseResourceIds(raw) {
   }
 }
 
-// ../base44/shared/staffCompetence.ts
+// base44/shared/staffCompetence.ts
 function parseAllowedTreatments(raw) {
   if (raw === void 0 || raw === null || raw === "") return null;
   try {
@@ -207,7 +218,9 @@ function canPerformTreatment(staff, treatmentId) {
 }
 async function checkStaffBookable(svc, params) {
   const { clinic_id, staff_name, treatment_id } = params;
-  const page = await svc.entity('Staff').filter({ clinic_id, name: staff_name }, { limit: 5 });
+  const staffEntity = svc.entity ? svc.entity("Staff") : svc.entities?.Staff;
+  if (!staffEntity?.filter) throw new Error("Staff-entiteten \xE4r inte tillg\xE4nglig i runtime");
+  const page = await staffEntity.filter({ clinic_id, name: staff_name }, { limit: 5 });
   const items = Array.isArray(page) ? page : Array.isArray(page?.items) ? page.items : Array.isArray(page?.data) ? page.data : [];
   const staff = items.find((s) => s?.active !== false);
   if (!staff) {
@@ -224,7 +237,7 @@ async function checkStaffBookable(svc, params) {
   return { ok: true, staff };
 }
 
-// ../base44/functions/getAvailableSlots/entry.ts
+// base44/functions/getAvailableSlots/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -243,7 +256,8 @@ async function entry_default(req) {
     let requireRoomId;
     let requireResourceIds = [];
     if (treatment_id) {
-      const treatment = await svc.entity('Treatment').get(treatment_id).catch(() => null);
+      const treatmentEntity = svc.entity ? svc.entity("Treatment") : svc.entities?.Treatment;
+      const treatment = treatmentEntity?.get ? await treatmentEntity.get(treatment_id).catch(() => null) : null;
       if (treatment && treatment.clinic_id === clinic_id) {
         durationMin = treatment.duration || durationMin;
         bufferBefore = treatment.buffer_before || 0;

@@ -1,10 +1,10 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/verifyBankid/entry.ts
+// base44/functions/verifyBankid/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 import { secrets } from "./runtime/secrets-shim.js";
 
-// ../base44/shared/bankid.ts
+// base44/shared/bankid.ts
 function resolveBankIDConfig(secretGetter) {
   const mode = secretGetter("BANKID_MODE") || "disabled";
   if (mode === "disabled") return null;
@@ -73,7 +73,7 @@ async function cancelBankID(config, orderRef) {
   }
 }
 
-// ../base44/shared/audit.ts
+// base44/shared/audit.ts
 async function recordAudit(base44, evt) {
   try {
     const user = await base44.auth.me();
@@ -96,7 +96,7 @@ function getUserClinicIdSafe(user) {
   return v && String(v).trim() ? String(v) : null;
 }
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
@@ -118,7 +118,7 @@ function requireStaff(user) {
   return { ok: true };
 }
 
-// ../base44/functions/verifyBankid/entry.ts
+// base44/functions/verifyBankid/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);

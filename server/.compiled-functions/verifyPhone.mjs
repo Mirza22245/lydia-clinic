@@ -1,10 +1,10 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/verifyPhone/entry.ts
+// base44/functions/verifyPhone/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 import { secrets } from "./runtime/secrets-shim.js";
 
-// ../base44/shared/sms.ts
+// base44/shared/sms.ts
 function resolveSMSConfig(secretGetter) {
   const provider = secretGetter("SMS_PROVIDER");
   if (!provider) return null;
@@ -91,7 +91,7 @@ async function sendViaSmsApi(config, to, message) {
   return { success: true, messageId: data.message_id };
 }
 
-// ../base44/shared/audit.ts
+// base44/shared/audit.ts
 async function recordAudit(base44, evt) {
   try {
     const user = await base44.auth.me();
@@ -114,13 +114,13 @@ function getUserClinicIdSafe(user) {
   return v && String(v).trim() ? String(v) : null;
 }
 
-// ../base44/shared/hash.ts
+// base44/shared/hash.ts
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ../base44/shared/portalCustomer.ts
+// base44/shared/portalCustomer.ts
 function normalizeEmail(user) {
   return (user?.email || "").toLowerCase().trim();
 }
@@ -135,7 +135,7 @@ async function findCustomerForUser(svc, user) {
   return (page.items || [])[0] || null;
 }
 
-// ../base44/functions/verifyPhone/entry.ts
+// base44/functions/verifyPhone/entry.ts
 var CODE_TTL_MS = 10 * 60 * 1e3;
 var MAX_SENDS_PER_HOUR = 3;
 var MAX_ATTEMPTS = 5;

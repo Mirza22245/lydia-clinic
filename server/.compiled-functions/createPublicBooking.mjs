@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/createPublicBooking/entry.ts
+// base44/functions/createPublicBooking/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/availability.ts
+// base44/shared/availability.ts
 var CLINIC_TZ = "Europe/Stockholm";
 function tzOffsetMs(epoch) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -33,6 +33,17 @@ function zonedToEpoch(date, hhmm) {
 }
 function clinicDateOf(ms) {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: CLINIC_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+}
+function entityStore(svc, name) {
+  const store = svc?.entity ? svc.entity(name) : svc?.entities?.[name];
+  if (!store?.filter) throw new Error(`${name}-entiteten \xE4r inte tillg\xE4nglig i runtime`);
+  return store;
+}
+function pageItems(page) {
+  if (Array.isArray(page)) return page;
+  if (Array.isArray(page?.items)) return page.items;
+  if (Array.isArray(page?.data)) return page.data;
+  return [];
 }
 function nextDate(date) {
   return new Date(Date.parse(`${date}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
@@ -98,25 +109,25 @@ async function fetchAvailabilityData(svc, params) {
     start: new Date(b.start_time).getTime(),
     end: b.end_time ? new Date(b.end_time).getTime() : new Date(b.start_time).getTime() + (b.duration || 30) * 6e4
   });
-  const schedPage = await svc.entities.StaffSchedule.filter(
+  const schedPage = await entityStore(svc, "StaffSchedule").filter(
     { clinic_id, staff_name, day_of_week: weekday },
     { limit: 50 }
   );
-  const schedule = (schedPage.items || []).filter((s) => {
+  const schedule = pageItems(schedPage).filter((s) => {
     if (!s.start_time || !s.end_time) return false;
     if (s.effective_from && date < s.effective_from) return false;
     if (s.effective_until && date > s.effective_until) return false;
     return true;
   });
-  const offPage = await svc.entities.StaffTimeOff.filter(
+  const offPage = await entityStore(svc, "StaffTimeOff").filter(
     { clinic_id, staff_name, start: { $lte: dayEnd.toISOString() }, end: { $gte: dayStart.toISOString() } },
     { limit: 100 }
   );
-  const timeOff = (offPage.items || []).map((o) => ({
+  const timeOff = pageItems(offPage).map((o) => ({
     start: new Date(o.start).getTime(),
     end: new Date(o.end).getTime()
   }));
-  const bookPage = await svc.entities.Booking.filter(
+  const bookPage = await entityStore(svc, "Booking").filter(
     {
       clinic_id,
       staff_name,
@@ -125,10 +136,10 @@ async function fetchAvailabilityData(svc, params) {
     },
     { sort: "start_time", limit: 200 }
   );
-  const staffBookings = (bookPage.items || []).filter(notExcluded).map(toIv);
+  const staffBookings = pageItems(bookPage).filter(notExcluded).map(toIv);
   let roomBookings = [];
   if (params.requireRoomId) {
-    const roomPage = await svc.entities.Booking.filter(
+    const roomPage = await entityStore(svc, "Booking").filter(
       {
         clinic_id,
         room_id: params.requireRoomId,
@@ -137,12 +148,12 @@ async function fetchAvailabilityData(svc, params) {
       },
       { limit: 200 }
     );
-    roomBookings = (roomPage.items || []).filter(notExcluded).map(toIv);
+    roomBookings = pageItems(roomPage).filter(notExcluded).map(toIv);
   }
   let resourceBookings = [];
   let resourceQuantities = {};
   if (requireResourceIds.length > 0) {
-    const resPage = await svc.entities.Booking.filter(
+    const resPage = await entityStore(svc, "Booking").filter(
       {
         clinic_id,
         start_time: { $gte: dayStart.toISOString(), $lte: dayEnd.toISOString() },
@@ -150,7 +161,7 @@ async function fetchAvailabilityData(svc, params) {
       },
       { limit: 300 }
     );
-    for (const b of resPage.items || []) {
+    for (const b of pageItems(resPage)) {
       if (!notExcluded(b)) continue;
       const ids = parseResourceIds(b.resource_ids);
       const iv = toIv(b);
@@ -160,11 +171,11 @@ async function fetchAvailabilityData(svc, params) {
         }
       }
     }
-    const resQtyPage = await svc.entities.Resource.filter(
+    const resQtyPage = await entityStore(svc, "Resource").filter(
       { clinic_id, id: { $in: requireResourceIds } },
       { limit: 50 }
     );
-    for (const r of resQtyPage.items || []) {
+    for (const r of pageItems(resQtyPage)) {
       resourceQuantities[r.id] = r.quantity || 1;
     }
   }
@@ -179,7 +190,7 @@ function parseResourceIds(raw) {
   }
 }
 
-// ../base44/shared/staffCompetence.ts
+// base44/shared/staffCompetence.ts
 function parseAllowedTreatments(raw) {
   if (raw === void 0 || raw === null || raw === "") return null;
   try {
@@ -195,8 +206,11 @@ function canPerformTreatment(staff, treatmentId) {
 }
 async function checkStaffBookable(svc, params) {
   const { clinic_id, staff_name, treatment_id } = params;
-  const page = await svc.entities.Staff.filter({ clinic_id, name: staff_name }, { limit: 5 });
-  const staff = (page.items || []).find((s) => s.active !== false);
+  const staffEntity = svc.entity ? svc.entity("Staff") : svc.entities?.Staff;
+  if (!staffEntity?.filter) throw new Error("Staff-entiteten \xE4r inte tillg\xE4nglig i runtime");
+  const page = await staffEntity.filter({ clinic_id, name: staff_name }, { limit: 5 });
+  const items = Array.isArray(page) ? page : Array.isArray(page?.items) ? page.items : Array.isArray(page?.data) ? page.data : [];
+  const staff = items.find((s) => s?.active !== false);
   if (!staff) {
     return { ok: false, status: 400, code: "staff_unavailable", error: "Behandlaren finns inte eller \xE4r inte aktiv." };
   }
@@ -211,13 +225,43 @@ async function checkStaffBookable(svc, params) {
   return { ok: true, staff };
 }
 
-// ../base44/shared/hash.ts
+// base44/shared/hash.ts
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ../base44/functions/createPublicBooking/entry.ts
+// base44/shared/featureFlags.ts
+function parseFlagConfig(flag) {
+  try {
+    const value = typeof flag?.config === "string" ? JSON.parse(flag.config || "{}") : flag?.config || {};
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+async function getClinicRule(svc, clinic_id, key) {
+  const page = await svc.entities.FeatureFlag.filter({ clinic_id, key }, { limit: 1 });
+  const flag = (page.items || [])[0];
+  const status = flag?.status === "enabled" || flag?.status === "test" ? flag.status : "disabled";
+  return {
+    status,
+    config: parseFlagConfig(flag),
+    active: status !== "disabled",
+    enforce: status === "enabled"
+  };
+}
+function configMatches(config, treatment, extra = {}) {
+  const treatmentIds = Array.isArray(config.treatment_ids) ? config.treatment_ids.map(String).filter(Boolean) : [];
+  const treatmentNames = Array.isArray(config.treatment_names) ? config.treatment_names.map((x) => String(x).toLowerCase()).filter(Boolean) : [];
+  const staffNames = Array.isArray(config.staff_names) ? config.staff_names.map((x) => String(x).toLowerCase()).filter(Boolean) : [];
+  const treatmentMatch = !treatmentIds.length && !treatmentNames.length || treatmentIds.includes(String(treatment?.id)) || treatmentNames.includes(String(treatment?.name || "").toLowerCase());
+  const staffName = String(extra.staff_name || "").toLowerCase();
+  const staffMatch = !staffNames.length || staffNames.includes(staffName);
+  return treatmentMatch && staffMatch;
+}
+
+// base44/functions/createPublicBooking/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -266,6 +310,20 @@ async function entry_default(req) {
       const ageAtStart = Math.floor((start.getTime() - new Date(customer.birth_date).getTime()) / (365.25 * 864e5));
       if (ageAtStart < minAge) {
         return Response.json({ error: `Denna behandling kr\xE4ver att du \xE4r minst ${minAge} \xE5r gammal.`, code: "under_age" }, { status: 400 });
+      }
+    }
+    const bookingRule = await getClinicRule(svc, clinic_id, "booking_rules");
+    if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name })) {
+      const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
+      const maxDays = Number(bookingRule.config.max_days || 0);
+      const leadHours = (start.getTime() - Date.now()) / 36e5;
+      const minOk = !minLeadHours || leadHours >= minLeadHours;
+      const maxOk = !maxDays || start.getTime() <= Date.now() + maxDays * 864e5;
+      if (bookingRule.enforce && (!minOk || !maxOk)) {
+        return Response.json({
+          error: !minOk ? `Bokningen m\xE5ste g\xF6ras minst ${minLeadHours} timmar i f\xF6rv\xE4g.` : `Bokningen kan inte g\xF6ras mer \xE4n ${maxDays} dagar fram\xE5t.`,
+          code: "booking_rule"
+        }, { status: 400 });
       }
     }
     const dateStr = clinicDateOf(start.getTime());
@@ -336,7 +394,7 @@ async function entry_default(req) {
       staff_name,
       start_time: start.toISOString(),
       end_time: end.toISOString(),
-      status: "pending",
+      status: treatment.requires_payment && (treatment.price || 0) > 0 ? "pending" : "confirmed",
       price: treatment.price,
       room_id: treatment.room_id || "",
       resource_ids: treatment.required_resource_ids || "[]",
@@ -370,7 +428,10 @@ async function entry_default(req) {
       if (Array.isArray(formIds) && formIds.length > 0) requirements.push(`${formIds.length} formul\xE4r`);
     } catch {
     }
-    try {
+    const communicationRule = await getClinicRule(svc, clinic_id, "communication_rules");
+    const confirmationConfig = communicationRule.active && communicationRule.config?.events?.confirmation ? communicationRule.config.events.confirmation : null;
+    const sendConfirmationEmail = !communicationRule.enforce || !confirmationConfig || confirmationConfig.channel === "email" || confirmationConfig.channel === "both";
+    if (sendConfirmationEmail) try {
       const proto = req.headers.get("x-forwarded-proto") || "https";
       const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
       const baseUrl = host ? `${proto}://${host}` : "";

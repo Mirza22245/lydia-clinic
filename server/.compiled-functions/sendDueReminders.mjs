@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/sendDueReminders/entry.ts
+// base44/functions/sendDueReminders/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
@@ -25,7 +25,7 @@ function requireStaff(user) {
   return { ok: true };
 }
 
-// ../base44/shared/audit.ts
+// base44/shared/audit.ts
 async function recordAudit(base44, evt) {
   try {
     const user = await base44.auth.me();
@@ -48,7 +48,7 @@ function getUserClinicIdSafe(user) {
   return v && String(v).trim() ? String(v) : null;
 }
 
-// ../base44/shared/sms.ts
+// base44/shared/sms.ts
 function resolveSMSConfig(secretGetter) {
   const provider = secretGetter("SMS_PROVIDER");
   if (!provider) return null;
@@ -145,7 +145,7 @@ var SMS_TEMPLATES = {
   follow_up: () => `Lydia: Vi hoppas du \xE4r n\xF6jd med din behandling. Logga in i kundportalen f\xF6r att l\xE4mna feedback.`
 };
 
-// ../base44/functions/sendDueReminders/entry.ts
+// base44/functions/sendDueReminders/entry.ts
 function envGet(n) {
   try {
     if (typeof Deno !== "undefined") return Deno.env.get(n);

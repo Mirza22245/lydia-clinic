@@ -1,6 +1,6 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/getStripeConfig/entry.ts
+// base44/functions/getStripeConfig/entry.ts
 import { secrets } from "./runtime/secrets-shim.js";
 async function entry_default(req) {
   try {

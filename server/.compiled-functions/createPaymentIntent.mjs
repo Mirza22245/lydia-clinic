@@ -1,10 +1,10 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/createPaymentIntent/entry.ts
+// base44/functions/createPaymentIntent/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 import { secrets } from "./runtime/secrets-shim.js";
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
@@ -28,7 +28,7 @@ function canAccessClinic(user, recordClinicId) {
   return userClinic === rec;
 }
 
-// ../base44/shared/portalCustomer.ts
+// base44/shared/portalCustomer.ts
 function normalizeEmail(user) {
   return (user?.email || "").toLowerCase().trim();
 }
@@ -43,13 +43,13 @@ async function findCustomerForUser(svc, user) {
   return (page.items || [])[0] || null;
 }
 
-// ../base44/shared/hash.ts
+// base44/shared/hash.ts
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ../base44/functions/createPaymentIntent/entry.ts
+// base44/functions/createPaymentIntent/entry.ts
 function safeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
   let diff = 0;
@@ -110,8 +110,7 @@ async function entry_default(req) {
     params.append("metadata[booking_id]", booking_id);
     params.append("metadata[clinic_id]", booking.clinic_id || "");
     params.append("metadata[customer_name]", booking.customer_name || "");
-    params.append("metadata[customer_email]", "");
-    params.append("metadata[base44_app_id]", (typeof process !== "undefined" && process.env ? process.env.BASE44_APP_ID : "") || "");
+    params.append("metadata[customer_email]", booking.customer_email || booking.email || "");
     const res = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
       headers: {

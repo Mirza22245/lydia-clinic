@@ -1,9 +1,9 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/sendBookingConfirmation/entry.ts
+// base44/functions/sendBookingConfirmation/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
@@ -32,7 +32,7 @@ function requireStaff(user) {
   return { ok: true };
 }
 
-// ../base44/functions/sendBookingConfirmation/entry.ts
+// base44/functions/sendBookingConfirmation/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);

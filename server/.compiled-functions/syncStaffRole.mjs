@@ -1,15 +1,15 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/syncStaffRole/entry.ts
+// base44/functions/syncStaffRole/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 
-// ../base44/shared/authz.ts
+// base44/shared/authz.ts
 function getUserClinicId(user) {
   const v = user?.clinic_id ?? user?.data?.clinic_id ?? null;
   return v && String(v).trim() ? String(v) : null;
 }
 
-// ../base44/functions/syncStaffRole/entry.ts
+// base44/functions/syncStaffRole/entry.ts
 async function entry_default(req) {
   try {
     const base44 = createClientFromRequest(req);

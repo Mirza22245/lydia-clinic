@@ -1,6 +1,6 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/logPatientAccess/entry.ts
+// base44/functions/logPatientAccess/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 async function entry_default(req) {
   try {

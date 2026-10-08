@@ -1,10 +1,10 @@
 globalThis.Deno ??= { env: { get: (k) => process.env[k] } };
 
-// ../base44/functions/stripeWebhook/entry.ts
+// base44/functions/stripeWebhook/entry.ts
 import { createClientFromRequest } from "./runtime/sdk-shim.js";
 import { secrets } from "./runtime/secrets-shim.js";
 
-// ../base44/shared/receipt.ts
+// base44/shared/receipt.ts
 var methodLabels = {
   card: "Kort",
   swish: "Swish",
@@ -62,134 +62,15 @@ async function sendReceiptForPayment(svc, paymentId) {
   return { sent: true, to: email };
 }
 
-// ../base44/shared/bookingRequirements.ts
-function parseRequiredFormIds(treatment) {
-  try {
-    const ids = JSON.parse(treatment?.required_form_ids || "[]");
-    return Array.isArray(ids) ? ids.filter(Boolean) : [];
-  } catch {
-    return [];
-  }
-}
-async function computeBookingRequirements(svc, booking, treatment) {
-  const requirements = [];
-  if (!treatment) {
-    return { requirements, allCompleted: true, missing: [], enforceableCount: 0 };
-  }
-  const cid = booking?.customer_id || null;
-  const bid = booking?.id || null;
-  if (treatment.requires_health_declaration) {
-    let completed = false;
-    if (cid) {
-      const hd = await svc.entities.HealthDeclaration.filter(
-        { customer_id: cid, status: "submitted" },
-        { limit: 1 }
-      );
-      completed = !!(hd.items && hd.items.length);
-    }
-    requirements.push({ key: "health_declaration", label: "H\xE4lsodeklaration", required: true, completed });
-  }
-  if (treatment.requires_consent) {
-    let completed = false;
-    if (cid) {
-      const c = await svc.entities.Consent.filter(
-        { customer_id: cid, type: "treatment", granted: true },
-        { limit: 50 }
-      );
-      completed = !!(c.items || []).some((x) => !x.revoked_at);
-    }
-    requirements.push({ key: "consent", label: "Samtycke till behandling", required: true, completed });
-  }
-  const formIds = parseRequiredFormIds(treatment);
-  if (formIds.length > 0) {
-    let submittedPage = { items: [] };
-    if (cid) {
-      submittedPage = await svc.entities.FormSubmission.filter(
-        { customer_id: cid, template_id: { $in: formIds }, status: "submitted" },
-        { limit: 200 }
-      );
-    }
-    const submittedIds = new Set((submittedPage.items || []).map((s) => s.template_id));
-    for (const fid of formIds) {
-      let name = fid;
-      try {
-        const t = await svc.entities.FormTemplate.get(fid);
-        if (t && t.name) name = t.name;
-      } catch {
-      }
-      requirements.push({ key: `form:${fid}`, label: `Formul\xE4r: ${name}`, required: true, completed: submittedIds.has(fid) });
-    }
-  }
-  if (treatment.requires_payment) {
-    let completed = false;
-    if (bid) {
-      const p = await svc.entities.Payment.filter(
-        { booking_id: bid, status: "paid" },
-        { limit: 1 }
-      );
-      completed = !!(p.items && p.items.length);
-    }
-    requirements.push({ key: "payment", label: "Betalning", required: true, completed });
-  }
-  if (treatment.treatment_type === "injektion" && cid) {
-    const minAge = Math.max(18, treatment.min_age || 0);
-    if (minAge > 0) {
-      const customer = await svc.entities.Customer.get(cid).catch(() => null);
-      let ageOk = false;
-      if (customer?.birth_date) {
-        const age = Math.floor((Date.now() - new Date(customer.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1e3));
-        ageOk = age >= minAge;
-      }
-      requirements.push({ key: "compliance_age", label: `\xC5lderskontroll (${minAge}+ \xE5r)`, required: true, completed: ageOk });
-    }
-    const cpQuery = bid ? { customer_id: cid, treatment_id: treatment.id, booking_id: bid } : { customer_id: cid, treatment_id: treatment.id };
-    const cp = await svc.entities.TreatmentCompliance.filter(cpQuery, { sort: "-created_date", limit: 1 });
-    const compliance = cp.items?.[0];
-    requirements.push({
-      key: "compliance_info",
-      label: "Behandlingsinformation l\xE4mnad",
-      required: true,
-      completed: !!compliance?.information_given_at
-    });
-    if (treatment.betanketid_hours > 0) {
-      const betanketidPassed = !!(compliance?.betanketid_ends_at && /* @__PURE__ */ new Date() >= new Date(compliance.betanketid_ends_at));
-      requirements.push({
-        key: "compliance_betanketid",
-        label: `Bet\xE4nketid (${treatment.betanketid_hours}h)`,
-        required: true,
-        completed: betanketidPassed
-      });
-    }
-    if (treatment.requires_consent && compliance) {
-      const consentOk = !!(compliance.consent_signed_at && compliance.consent_eligible_at && new Date(compliance.consent_signed_at) >= new Date(compliance.consent_eligible_at));
-      requirements.push({
-        key: "compliance_consent",
-        label: "Samtycke efter bet\xE4nketid",
-        required: true,
-        completed: consentOk
-      });
-    }
-  }
-  if (treatment.requires_treatment_info) {
-    requirements.push({ key: "treatment_info", label: "Behandlingsinformation & risker", required: false, completed: true });
-  }
-  if (treatment.requires_aftercare) {
-    requirements.push({ key: "aftercare", label: "Efterv\xE5rdsinformation", required: false, completed: true });
-  }
-  const enforceable = requirements.filter((r) => r.required);
-  const allCompleted = enforceable.every((r) => r.completed);
-  const missing = enforceable.filter((r) => !r.completed).map((r) => r.label);
-  return { requirements, allCompleted, missing, enforceableCount: enforceable.length };
-}
-
-// ../base44/functions/stripeWebhook/entry.ts
+// base44/functions/stripeWebhook/entry.ts
 async function verifySignature(rawBody, sigHeader, secret) {
   const parts = (sigHeader || "").split(",").map((s) => s.trim());
   const tPart = parts.find((p) => p.startsWith("t="));
-  const v1Part = parts.find((p) => p.startsWith("v1="));
-  if (!tPart || !v1Part) return null;
+  const v1Parts = parts.filter((p) => p.startsWith("v1=")).map((p) => p.slice(3)).filter(Boolean);
+  if (!tPart || !v1Parts.length) return null;
   const t = tPart.slice(2);
-  const v1 = v1Part.slice(3);
+  const timestamp = Number(t);
+  if (!Number.isFinite(timestamp) || Math.abs(Math.floor(Date.now() / 1e3) - timestamp) > 300) return null;
   const signed = `${t}.${rawBody}`;
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -201,12 +82,16 @@ async function verifySignature(rawBody, sigHeader, secret) {
   );
   const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(signed));
   const expected = Array.from(new Uint8Array(sigBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  if (expected.length !== v1.length) return null;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
+  const expectedBytes = new TextEncoder().encode(expected);
+  for (const v1 of v1Parts) {
+    if (v1.length !== expected.length) continue;
+    const candidateBytes = new TextEncoder().encode(v1);
+    if (candidateBytes.length !== expectedBytes.length) continue;
+    let diff = 0;
+    for (let i = 0; i < expectedBytes.length; i++) diff |= expectedBytes[i] ^ candidateBytes[i];
+    if (diff === 0) return timestamp;
   }
-  return diff === 0 ? Number(t) : null;
+  return null;
 }
 async function entry_default(req) {
   try {
@@ -233,10 +118,16 @@ async function entry_default(req) {
         const booking = await svc.entities.Booking.get(bookingId).catch(() => null);
         const treatmentName = booking?.treatment_name || "";
         const customerId = booking?.customer_id || "";
-        const existing = await svc.entities.Payment.filter(
-          { booking_id: bookingId, status: "paid" },
+        const expectedAmount = Math.round(Number(booking?.price || 0) * 100);
+        if (!expectedAmount || Math.round(Number(pi.amount_received ?? pi.amount ?? 0)) !== expectedAmount) {
+          console.error("Stripe webhook amount mismatch", { bookingId, expectedAmount, received: pi.amount_received ?? pi.amount });
+          return Response.json({ error: "Betalningsbeloppet st\xE4mmer inte med bokningen" }, { status: 400 });
+        }
+        const existingByIntent = await svc.entities.Payment.filter(
+          { stripe_payment_intent_id: pi.id },
           { limit: 1 }
         );
+        const existing = existingByIntent.items?.length ? existingByIntent : await svc.entities.Payment.filter({ booking_id: bookingId, status: "paid" }, { limit: 1 });
         if (!(existing.items || []).length) {
           const year = (/* @__PURE__ */ new Date()).getFullYear();
           const countRes = await svc.entities.Payment.count({ clinic_id: clinicId });
@@ -254,16 +145,14 @@ async function entry_default(req) {
             status: "paid",
             paid_at: (/* @__PURE__ */ new Date()).toISOString(),
             receipt_number: `R-${year}-${seq}`,
+            stripe_payment_intent_id: pi.id,
             clinic_id: clinicId
           });
           if (booking) {
-            const patch = { deposit_paid: (booking.deposit_amount || 0) > 0 };
-            if (booking.status === "pending") {
-              const treatment = booking.treatment_id ? await svc.entities.Treatment.get(booking.treatment_id).catch(() => null) : null;
-              const check = await computeBookingRequirements(svc, booking, treatment);
-              if (!treatment || check.enforceableCount === 0 || check.allCompleted) patch.status = "confirmed";
-            }
-            await svc.entities.Booking.update(bookingId, patch);
+            await svc.entities.Booking.update(bookingId, {
+              status: booking.status === "pending" ? "confirmed" : booking.status,
+              deposit_paid: (booking.deposit_amount || 0) > 0
+            });
           }
           await sendReceiptForPayment(svc, created.id).catch((e) => {
             console.error("Receipt email failed:", e.message);
@@ -274,9 +163,16 @@ async function entry_default(req) {
     if (event.type === "charge.refunded") {
       const charge = event.data.object;
       const bookingId = charge.metadata?.booking_id;
+      const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
       if (bookingId) {
         await svc.entities.Payment.updateMany(
           { booking_id: bookingId, status: "paid" },
+          { $set: { status: "refunded" } }
+        ).catch(() => {
+        });
+      } else if (paymentIntentId) {
+        await svc.entities.Payment.updateMany(
+          { stripe_payment_intent_id: paymentIntentId, status: "paid" },
           { $set: { status: "refunded" } }
         ).catch(() => {
         });
