@@ -172,13 +172,26 @@ export async function computeBookingRequirements(svc, booking, treatment) {
           !x.booking_id || x.booking_id === booking.id || String(x.treatment_name || '').toLowerCase() === String(treatment.name || '').toLowerCase()
         );
         const waitingUntil = latest?.waiting_period_until ? new Date(latest.waiting_period_until).getTime() : NaN;
+        let repeatSameTypeWithinSixMonths = false;
+        try {
+          const since = new Date(Date.now() - 183 * 86400000).toISOString();
+          const previous = await svc.entities.ClinicalTreatmentRecord.filter(
+            { clinic_id: clinicId, customer_id: booking.customer_id, treatment_name: treatment.name },
+            { sort: '-record_date', limit: 20 }
+          );
+          repeatSameTypeWithinSixMonths = (previous.items || []).some((x) => {
+            const ts = new Date(x.record_date || 0).getTime();
+            return ts > 0 && new Date(ts).toISOString() >= since;
+          });
+        } catch { /* äldre installationer kan sakna journalposter */ }
         requirements.push({
           key: 'aesthetic_waiting_period',
           label: 'Lagstadgad betänketid är klar',
           required: true,
-          completed: Number.isFinite(waitingUntil) && Date.now() >= waitingUntil,
+          completed: repeatSameTypeWithinSixMonths || (Number.isFinite(waitingUntil) && Date.now() >= waitingUntil),
           mode: 'enabled',
-          waiting_period_until: latest?.waiting_period_until || null,
+          waiting_period_until: repeatSameTypeWithinSixMonths ? null : (latest?.waiting_period_until || null),
+          repeat_treatment_exception: repeatSameTypeWithinSixMonths,
         });
       }
 
