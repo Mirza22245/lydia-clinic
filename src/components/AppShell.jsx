@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, ShieldCheck, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare } from "lucide-react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
