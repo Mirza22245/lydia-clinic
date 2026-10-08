@@ -77,6 +77,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/book" element={<PublicBooking />} />
+      <Route path="/boka" element={<PublicBooking />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
@@ -84,6 +85,7 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/portal" element={<RoleRoute roles={["user"]}><Portal /></RoleRoute>} />
+        <Route path="/kundportal" element={<RoleRoute roles={["user"]}><Portal /></RoleRoute>} />
         <Route element={<RoleRoute roles={["admin", "administratör", "behandlare", "reception"]}><AppShell /></RoleRoute>}>
           <Route path="/app" element={<RoleDashboard />} />
           <Route path="/app/customers" element={<Customers />} />
