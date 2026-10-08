@@ -37,7 +37,7 @@ function rangeFor(period) {
 export default function Reports() {
   const [period, setPeriod] = useState("month");
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);\n  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const range = useMemo(() => rangeFor(period), [period]);
 
@@ -50,21 +50,21 @@ export default function Reports() {
         if (range.start) { bookQ.start_time = { $gte: range.start }; payQ.paid_at = { $gte: range.start }; }
         if (range.end) { bookQ.start_time = { ...(bookQ.start_time || {}), $lt: range.end }; payQ.paid_at = { ...(payQ.paid_at || {}), $lt: range.end }; }
 
-        const [byStatus, byStaff, byCustomer, revByTreatment, completedValue, paymentRows] = await Promise.all([
+        const [byStatus, byStaff, byCustomer, revByTreatment, completedValue] = await Promise.all([
           base44.entities.Booking.aggregate({ query: bookQ, groupBy: "status" }),
           base44.entities.Booking.aggregate({ query: bookQ, groupBy: "staff_name" }),
           base44.entities.Booking.aggregate({ query: bookQ, groupBy: "customer_id" }),
           base44.entities.Payment.aggregate({ query: payQ, groupBy: "treatment_name", sum: "amount", sort: "-sum_amount" }),
-          base44.entities.Booking.aggregate({ query: { ...bookQ, status: "completed" }, sum: "price" }),\n          base44.entities.Payment.filter(payQ, { sort: "-paid_at", limit: 500 }),
+          base44.entities.Booking.aggregate({ query: { ...bookQ, status: "completed" }, sum: "price" }),
         ]);
 
-        setPayments(paymentRows.items || []);\n        const statusMap = {};
+        const statusMap = {};
         (byStatus.rows || []).forEach((r) => { statusMap[r.status] = r.count; });
         const total = (byStatus.rows || []).reduce((a, r) => a + r.count, 0);
         const completed = statusMap.completed || 0;
         const cancelled = statusMap.cancelled || 0;
         const noShow = statusMap.no_show || 0;
-        const revenue = (revByTreatment.rows || []).reduce((a, r) => a + (r.sum_amount || 0), 0);\n        const paidPayments = (paymentRows.items || []).filter(p => p.status === "paid");\n        const refundedPayments = (paymentRows.items || []).filter(p => p.status === "refunded");\n        const vat = paidPayments.reduce((a, p) => a + Number(p.vat || 0), 0);\n        const refunded = refundedPayments.reduce((a, p) => a + Number(p.amount || 0), 0);\n        const byMethod = {};\n        paidPayments.forEach(p => { byMethod[p.method] = (byMethod[p.method] || 0) + Number(p.amount || 0); });
+        const revenue = (revByTreatment.rows || []).reduce((a, r) => a + (r.sum_amount || 0), 0);
         const completedVal = completedValue.rows[0]?.sum_price || 0;
         const outstanding = Math.max(0, completedVal - revenue);
         const newCust = (byCustomer.rows || []).filter((r) => r.count <= 1).length;
@@ -72,7 +72,7 @@ export default function Reports() {
         const utilization = total > 0 ? Math.round((completed / total) * 100) : 0;
 
         setData({
-          statusMap, total, completed, cancelled, noShow, revenue, outstanding, newCust, returning, utilization, vat, refunded, byMethod,
+          statusMap, total, completed, cancelled, noShow, revenue, outstanding, newCust, returning, utilization,
           byStaff: (byStaff.rows || []).filter((r) => r.staff_name).sort((a, b) => b.count - a.count),
           revByTreatment: (revByTreatment.rows || []).filter((r) => r.treatment_name),
         });
@@ -91,7 +91,7 @@ export default function Reports() {
     { icon: UserX, label: "Uteblivna", value: fmtNum(data?.noShow) },
     { icon: Percent, label: "Utnyttjande", value: `${data?.utilization ?? 0}%` },
     { icon: TrendingUp, label: "Intäkt", value: fmtSEK(data?.revenue) },
-    { icon: Wallet, label: "Obetalda", value: fmtSEK(data?.outstanding) },\n    { icon: Wallet, label: "Moms", value: fmtSEK(data?.vat) },\n    { icon: XCircle, label: "Återbetalat", value: fmtSEK(data?.refunded) },
+    { icon: Wallet, label: "Obetalda", value: fmtSEK(data?.outstanding) },
     { icon: Users, label: "Nya / Återkommande", value: `${fmtNum(data?.newCust)} / ${fmtNum(data?.returning)}` },
   ];
 
@@ -182,25 +182,6 @@ export default function Reports() {
             </div>
           </div>
 
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 font-medium">Betalningar per metod</h2>
-              <div className="space-y-3">
-                {Object.entries(data?.byMethod || {}).map(([method, value]) => <div key={method} className="flex items-center justify-between"><span>{({card:"Kort",swish:"Swish",cash:"Kontant",invoice:"Faktura"})[method] || method}</span><span className="font-medium">{fmtSEK(value)}</span></div>)}
-                {Object.keys(data?.byMethod || {}).length === 0 && <p className="text-sm text-muted-foreground">Inga registrerade betalningar.</p>}
-              </div>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 font-medium">Kassasammanfattning</h2>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-muted-foreground">Betalt</p><p className="text-lg font-semibold">{fmtSEK(data?.revenue)}</p></div>
-                <div><p className="text-muted-foreground">Moms</p><p className="text-lg font-semibold">{fmtSEK(data?.vat)}</p></div>
-                <div><p className="text-muted-foreground">Återbetalat</p><p className="text-lg font-semibold">{fmtSEK(data?.refunded)}</p></div>
-                <div><p className="text-muted-foreground">Transaktioner</p><p className="text-lg font-semibold">{fmtNum(payments.length)}</p></div>
-              </div>
-            </div>
-          </div>
           <div className="rounded-xl border border-border bg-card">
             <div className="border-b border-border px-5 py-4"><h2 className="font-medium">Bokningar per behandlare</h2></div>
             <div className="divide-y divide-border">
