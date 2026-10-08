@@ -176,7 +176,8 @@ export async function createPublicBookingNative(body = {}, req) {
     }
 
     const configuredMinAge = ruleEnforced(rules, 'age_verification') && matchesTreatment(ageRule.config, treatment) ? Number(ageRule.config?.minimum_age) || 0 : 0;
-    const minAge = treatment.['injektion', 'filler', 'botox'].includes(treatment_type)
+    const treatmentType = String(treatment.treatment_type || '').toLowerCase();
+    const minAge = ['injektion', 'filler', 'botox'].includes(treatmentType)
       ? Math.max(18, Number(treatment.min_age) || 0, configuredMinAge)
       : Math.max(0, Number(treatment.min_age) || 0, configuredMinAge);
     if (minAge > 0) {
