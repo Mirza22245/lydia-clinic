@@ -116,9 +116,9 @@ export async function createPublicBookingNative(body = {}, req) {
     }
 
     const duration = Math.max(1, Number(treatment.duration) || 30);
-    const clinicMinutes = Number(new Intl.DateTimeFormat('en-US', {
+    const clinicMinutes = new Intl.DateTimeFormat('en-US', {
       timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    }).format(new Date(start))).split(':');
+    }).format(new Date(start)).split(':');
     const slotMinute = Number(clinicMinutes[1]);
     if (!Number.isInteger(slotMinute) || slotMinute % 15 !== 0 || start.getSeconds() !== 0 || start.getMilliseconds() !== 0) {
       const e = new Error('Ogiltig bokningstid. Välj en ledig tid från kalendern.'); e.status = 400; throw e;
