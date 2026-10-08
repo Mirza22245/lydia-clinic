@@ -108,7 +108,14 @@ export default function Portal() {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
   const [reqsByBooking, setReqsByBooking] = useState({});
-  const [showHealthForm, setShowHealthForm] = useState(false);\n  const [reviewBooking, setReviewBooking] = useState(null);\n  const [reviewRating, setReviewRating] = useState(5);\n  const [reviewText, setReviewText] = useState("");\n  const [reviewRecommend, setReviewRecommend] = useState(true);\n  const [reviewSaving, setReviewSaving] = useState(false);\n  const [reviewError, setReviewError] = useState(null);\n  const [reviewSuccess, setReviewSuccess] = useState(null);
+  const [showHealthForm, setShowHealthForm] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewRecommend, setReviewRecommend] = useState(true);
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+  const [reviewSuccess, setReviewSuccess] = useState(null);
 
   useEffect(() => {
     (async () => {
