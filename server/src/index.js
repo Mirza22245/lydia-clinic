@@ -65,7 +65,6 @@ app.use(helmet({
       connectSrc: ["'self'", "https://api.stripe.com"],
       objectSrc: ["'none'"],
       frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
-      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"],
     },
@@ -85,11 +84,26 @@ app.use('/api', csrfGuard);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
+app.get('/api/ready', async (req, res) => {
+  try {
+    const db = await pool.query('SELECT 1 AS ok');
+    if (db.rows[0]?.ok !== 1) throw new Error('Databasen svarade inte');
+    const catalog = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM e_treatment WHERE clinic_id = $1 AND COALESCE((data->>'active')::boolean, true) = true",
+      ['lydia-estetisk']
+    );
+    res.json({ ok: true, database: true, catalog_count: catalog.rows[0]?.count || 0, ts: new Date().toISOString() });
+  } catch (e) {
+    console.error('[ready]', e);
+    res.status(503).json({ ok: false, database: false });
+  }
+});
+
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
-app.use('/api/google', googleRouter);
-app.use('/api/public-booking-data', publicBookingRouter);
+app.use('/api/google', publicLimiter, googleRouter);
+app.use('/api/public-booking-data', publicLimiter, publicBookingRouter);
 app.post('/api/public-booking', publicLimiter, async (req, res) => {
   try {
     const data = await createPublicBookingNative(req.body || {}, req);
