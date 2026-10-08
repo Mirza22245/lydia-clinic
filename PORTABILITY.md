@@ -21,8 +21,8 @@
 
 ## Kvarvarande Base44-koppling i repot (ej i produktion)
 
-- `package.json`: `@base44/sdk`, `@base44/vite-plugin` (används bara i builder-läget).
-- `src/api/base44Client.js`, `src/lib/app-params.js` (ersätts via alias i portabelt bygge).
+- `package.json`: Base44 SDK/plugin (används bara i builder-läget).
+- Aktiv frontend använder `src/lib/api.js` och `src/lib/app-params.portable.js`; de gamla SDK-filerna är borttagna.
 - Katalognamnet `base44/` (funktioner, entiteter, mejlmallar, delad logik) och `npm:@base44/sdk`-importer i funktionerna — omskrivs vid bygget till lokal SDK-shim.
 - Engångsfunktionen `exportAllData` på Base44-sidan (tas bort efter export, finns inte i portabelt bygge).
 
