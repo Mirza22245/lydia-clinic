@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { FileText, CalendarDays, Lock, PenLine, Stethoscope, ChevronDown, Activity, ShieldCheck } from "lucide-react";
+import { FileText, Lock, PenLine, Stethoscope, ChevronDown, Activity, ShieldCheck } from "lucide-react";
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }) : "");
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
