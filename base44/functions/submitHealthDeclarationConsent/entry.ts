@@ -85,7 +85,7 @@ export default async function(req) {
       customer_name: customer.name,
       booking_id: booking_id || undefined,
       treatment_name: treatmentName || treatment_name || undefined,
-      treatment_category: treatment_type === 'injektion' ? 'injektion' : (treatment_type || 'annan'),
+      treatment_category: ['filler', 'botox', 'injektion'].includes(treatment_type) ? treatment_type : (treatment_type || 'annan'),
       information_given_at: informationGivenAt.toISOString(),
       waiting_period_until: waitingPeriodUntil?.toISOString(),
       form_version: 'aesthetic-1.0',
@@ -110,7 +110,9 @@ export default async function(req) {
 
     // 2. Skapa behandlingssamtycke (signerat)
     const treatmentTypeLabel = {
-      injektion: 'Injektionsbehandling (Botox / Fillers)',
+      filler: 'Fillers',
+      botox: 'Botox / botulinumtoxin',
+      injektion: 'Annan injektionsbehandling',
       hudvard: 'Avancerad hudvård / CO2-laser / Peeling',
       apparat: 'Apparatbehandling (HIFU / Radiofrekvens / Fettreducering)',
       annan: `Annan behandling: ${treatment_type_other || ''}`,
@@ -118,7 +120,7 @@ export default async function(req) {
 
     const consentText = [
       'Jag intygar att ovanstående hälsouppgifter är korrekta och fullständiga.',
-      'Jag har läst och förstått informationen om behandlingen, dess risker och eftervård, och godkänner genomförandet.',
+      'Jag har tagit del av informationen inför behandlingen och förstår att slutligt behandlingssamtycke lämnas först efter betänketiden.',
       '',
       `Behandlingstyp: ${treatmentTypeLabel}`,
       `Betänketid: ${betanketid_acknowledged ? 'Bekräftad' : 'Ej aktuellt'}`,
