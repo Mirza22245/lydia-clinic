@@ -11,13 +11,13 @@ const contexts = new WeakMap();
 export function bindContext(req, user, ip) {
   const ctx = { user, ip };
   contexts.set(req, ctx);
-  // De kompilerade funktionerna har sin egen modulinstans av sdk-shim.js.
-  // Dela därför kontexten via globalThis så att createClientFromRequest()
-  // i den kompilerade funktionen ser samma inloggade användare som Express.
-  globalThis.__lydiaFunctionContext = ctx;
+  // Den kompilerade funktionen har en egen modulinstans av sdk-shim.js.
+  // Lägg därför kontexten direkt på samma Fetch Request-objekt. Då fungerar
+  // auth även mellan separata modulinstanser och utan global state/race conditions.
+  req.__lydiaContext = ctx;
 }
 export function getContext(req) {
-  return contexts.get(req) || globalThis.__lydiaFunctionContext || { user: null, ip: null };
+  return contexts.get(req) || req.__lydiaContext || { user: null, ip: null };
 }
 
 function normalizeUser(u) {
