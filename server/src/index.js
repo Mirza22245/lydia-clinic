@@ -5,6 +5,8 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { config } from './config.js';
+import { pool } from './db/pool.js';
+import { seedLuxeCatalog } from './db/luxeCatalog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = resolve(__dirname, '../../dist');
@@ -94,6 +96,14 @@ app.use((err, req, res, next) => {
   if (status >= 500) console.error('[unhandled]', err);
   res.status(status).json({ error: status >= 500 ? 'Internt serverfel' : 'Ogiltig förfrågan' });
 });
+
+// Synka den publicerade Luxe-katalogen idempotent vid deploy/start. Schema/migration körs separat.
+try {
+  const count = await seedLuxeCatalog(pool);
+  console.log(`Luxe-katalog synkad: ${count} behandlingar`);
+} catch (e) {
+  console.error('[catalog-sync]', e.message);
+}
 
 // Schemat skapas av `npm run migrate` (ägar-rollen). Appen kör som lydia_app (endast DML).
 const server = app.listen(config.port, config.host, () => {
