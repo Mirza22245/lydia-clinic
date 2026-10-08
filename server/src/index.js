@@ -97,17 +97,18 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status >= 500 ? 'Internt serverfel' : 'Ogiltig förfrågan' });
 });
 
-// Synka den publicerade Luxe-katalogen idempotent vid deploy/start. Schema/migration körs separat.
-try {
-  const count = await seedLuxeCatalog(pool);
-  console.log(`Luxe-katalog synkad: ${count} behandlingar`);
-} catch (e) {
-  console.error('[catalog-sync]', e.message);
-}
-
 // Schemat skapas av `npm run migrate` (ägar-rollen). Appen kör som lydia_app (endast DML).
+// Starta HTTP-servern först. Katalogsynken får aldrig blockera Hostingers startup.
 const server = app.listen(config.port, config.host, () => {
   console.log(`Lydia backend på ${config.host}:${config.port}`);
+  setImmediate(async () => {
+    try {
+      const count = await seedLuxeCatalog(pool);
+      console.log(`Luxe-katalog synkad: ${count} behandlingar`);
+    } catch (e) {
+      console.error('[catalog-sync]', e.message);
+    }
+  });
 });
 server.on('error', (err) => {
   console.error('[startup]', err);
