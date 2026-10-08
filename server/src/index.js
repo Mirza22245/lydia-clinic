@@ -65,6 +65,7 @@ app.use(helmet({
       connectSrc: ["'self'", "https://api.stripe.com"],
       objectSrc: ["'none'"],
       frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"],
     },
