@@ -30,6 +30,9 @@ entityRouter.post('/:name/filter', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     const { query = {}, opts = {} } = req.body || {};
     const result = await store.filter(query, opts);
     res.json(result);
@@ -42,6 +45,9 @@ entityRouter.get('/:name/:id', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.json(await store.get(req.params.id));
   } catch (e) { handleError(res, e); }
 });
@@ -52,6 +58,9 @@ entityRouter.post('/:name', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.status(201).json(await store.create(req.body || {}));
   } catch (e) { handleError(res, e); }
 });
@@ -62,6 +71,9 @@ entityRouter.patch('/:name/:id', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.json(await store.update(req.params.id, req.body || {}));
   } catch (e) { handleError(res, e); }
 });
@@ -72,6 +84,9 @@ entityRouter.delete('/:name/:id', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.json(await store.delete(req.params.id));
   } catch (e) { handleError(res, e); }
 });
@@ -82,6 +97,9 @@ entityRouter.post('/:name/count', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.json({ count: await store.count((req.body || {}).query || {}) });
   } catch (e) { handleError(res, e); }
 });
@@ -92,6 +110,9 @@ entityRouter.post('/:name/aggregate', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     const entity = getEntity(req.params.name);
     const store = makeStore(entity.name, { user, bypass: isPlatformAdmin(user) });
+    if (!store || typeof store.filter !== 'function' || typeof store.get !== 'function' || typeof store.count !== 'function' || typeof store.aggregate !== 'function') {
+      throw new QueryError(`Entity store kunde inte initieras: ${entity.name}`, 500);
+    }
     res.json(await store.aggregate(req.body || {}));
   } catch (e) { handleError(res, e); }
 });
