@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadUser } from '../auth/session.js';
 import { bindContext } from './sdk-shim.js';
 import { heavyLimiter, publicLimiter } from '../lib/rateLimit.js';
-import { getPublicBookingData } from '../routes/publicBooking.js';
+import { getPublicBookingData, isPublicBookingOpen } from '../routes/publicBooking.js';
 import { getAvailableSlotsNative } from '../routes/nativeAvailability.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,6 +38,16 @@ functionsRouter.use('/:name', (req, res, next) => {
 functionsRouter.all('/:name', async (req, res) => {
   const name = req.params.name;
   if (!/^[a-zA-Z0-9_]+$/.test(name)) return res.status(400).json({ error: 'Ogiltigt funktionsnamn' });
+
+  if (name === 'createPublicBooking') {
+    try {
+      const open = await isPublicBookingOpen(process.env.LYDIA_CLINIC_ID || 'lydia-estetisk');
+      if (!open) return res.status(503).json({ error: 'Onlinebokningen är tillfälligt stängd medan kliniken färdigställs.' });
+    } catch (e) {
+      console.error('[functions] public booking gate:', e);
+      return res.status(503).json({ error: 'Onlinebokningen är tillfälligt stängd.' });
+    }
+  }
 
   let user = null;
   try { user = await loadUser(req); } catch { user = null; }
