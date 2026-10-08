@@ -47,7 +47,8 @@ export default async function(req) {
     if (config !== undefined) {
       if (config === null || (typeof config !== 'string' && typeof config !== 'object')) return Response.json({ error: 'Ogiltig konfiguration' }, { status: 400 });
       patch.config = typeof config === 'string' ? config : JSON.stringify(config);
-    }\n    const updated = await base44.entities.FeatureFlag.update(flag_id, patch);
+    }
+    const updated = await base44.entities.FeatureFlag.update(flag_id, patch);
 
     // Audit-logg
     try {
