@@ -5,6 +5,7 @@ import { getPatientPortalData } from "@/functions/getPatientPortalData";
 import { signPatientConsent } from "@/functions/signPatientConsent";
 import { cancelPatientBooking } from "@/functions/cancelPatientBooking";
 import { getBookingRequirements } from "@/functions/getBookingRequirements";
+import { submitReview } from "@/functions/submitReview";
 import HealthDeclarationConsentForm from "@/components/portal/HealthDeclarationConsentForm";
 import PhoneVerificationCard from "@/components/portal/PhoneVerificationCard";
 import PortalMessages from "@/components/portal/PortalMessages";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Loader2, CalendarDays, FileText, HeartPulse, ClipboardList, LogOut,
-  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake, Receipt, Plus, XCircle, Check,
+  Lock, PenLine, Stethoscope, ChevronDown, Mail, Phone, Cake, Receipt, Plus, XCircle, Check, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +108,7 @@ export default function Portal() {
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelError, setCancelError] = useState(null);
   const [reqsByBooking, setReqsByBooking] = useState({});
-  const [showHealthForm, setShowHealthForm] = useState(false);
+  const [showHealthForm, setShowHealthForm] = useState(false);\n  const [reviewBooking, setReviewBooking] = useState(null);\n  const [reviewRating, setReviewRating] = useState(5);\n  const [reviewText, setReviewText] = useState("");\n  const [reviewRecommend, setReviewRecommend] = useState(true);\n  const [reviewSaving, setReviewSaving] = useState(false);\n  const [reviewError, setReviewError] = useState(null);\n  const [reviewSuccess, setReviewSuccess] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -197,6 +198,28 @@ export default function Portal() {
   const now = new Date();
   const upcoming = bookings.filter((b) => new Date(b.start_time) >= now && !["cancelled", "no_show"].includes(b.status));
   const past = bookings.filter((b) => new Date(b.start_time) < now || ["cancelled", "no_show"].includes(b.status));
+
+  const handleSubmitReview = async () => {
+    if (!reviewBooking) return;
+    setReviewError(null);
+    setReviewSuccess(null);
+    setReviewSaving(true);
+    try {
+      await submitReview({
+        booking_id: reviewBooking.id,
+        rating: reviewRating,
+        text: reviewText,
+        would_recommend: reviewRecommend,
+      });
+      setReviewSuccess("Tack för ditt omdöme! Det är ett verifierat omdöme och väntar på publicering.");
+      setReviewText("");
+      setReviewBooking(null);
+    } catch (e) {
+      setReviewError(e?.response?.data?.error || e?.message || "Kunde inte spara omdömet");
+    } finally {
+      setReviewSaving(false);
+    }
+  };
 
   const refreshPortalData = async () => {
     try {
@@ -313,6 +336,16 @@ export default function Portal() {
                           <StatusBadge status={b.status} />
                         </div>
                         <p className="text-sm text-muted-foreground">{fmtDateTime(b.start_time)}{b.staff_name ? ` · ${b.staff_name}` : ""}{b.price ? ` · ${b.price.toLocaleString("sv-SE")} kr` : ""}</p>
+                        {b.status === "completed" && (
+                          <div className="mt-3">
+                            <Button size="sm" variant="outline" onClick={() => { setReviewBooking(b); setReviewError(null); setReviewSuccess(null); }}>
+                              <Star className="mr-1 h-3.5 w-3.5" /> Omdömen
+                            </Button>
+                            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                              <Check className="h-3 w-3" /> Verifierat besök
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
