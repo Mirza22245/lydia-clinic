@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
 import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 import { sha256 } from '../../shared/hash.ts';
+import { getClinicRule, configMatches } from '../../shared/featureFlags.ts';
 
 // Skapar en offentlig bokning utan inloggning. Validerar behandling, kontrollerar
 // alla schemakonflikter (behandlare, rum, resurser, buffertider, framförhållning),
@@ -63,6 +64,25 @@ export default async function(req) {
       const ageAtStart = Math.floor((start.getTime() - new Date(customer.birth_date).getTime()) / (365.25 * 86400000));
       if (ageAtStart < minAge) {
         return Response.json({ error: `Denna behandling kräver att du är minst ${minAge} år gammal.`, code: 'under_age' }, { status: 400 });
+      }
+    }
+
+    // Centrala klinikregler från Inställningar. AV påverkar inte befintliga
+    // behandlingsregler; TEST visar samma validering utan att blockera.
+    const bookingRule = await getClinicRule(svc, clinic_id, 'booking_rules');
+    if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name })) {
+      const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
+      const maxDays = Number(bookingRule.config.max_days || 0);
+      const leadHours = (start.getTime() - Date.now()) / 3600000;
+      const minOk = !minLeadHours || leadHours >= minLeadHours;
+      const maxOk = !maxDays || start.getTime() <= Date.now() + maxDays * 86400000;
+      if (bookingRule.enforce && (!minOk || !maxOk)) {
+        return Response.json({
+          error: !minOk
+            ? `Bokningen måste göras minst ${minLeadHours} timmar i förväg.`
+            : `Bokningen kan inte göras mer än ${maxDays} dagar framåt.`,
+          code: 'booking_rule',
+        }, { status: 400 });
       }
     }
 
