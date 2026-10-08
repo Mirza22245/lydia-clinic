@@ -27,6 +27,15 @@
       "title": "Version",
       "default": 1
     },
+    "booking_id": {
+      "type": "string",
+      "title": "Boknings-ID"
+    },
+    "waiting_period_until": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kan signeras tidigast"
+    },
     "text": {
       "type": "string",
       "title": "Samtyckestext"
