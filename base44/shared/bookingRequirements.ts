@@ -195,6 +195,25 @@ export async function computeBookingRequirements(svc, booking, treatment) {
         });
       }
 
+      const ordinationRequired = treatment?.requires_ordination === true;
+      if (ordinationRequired) {
+        const records = await svc.entities.ClinicalTreatmentRecord.filter(
+          { clinic_id: clinicId, customer_id: booking.customer_id, booking_id: booking.id }, { limit: 5 }
+        );
+        const hasOrdination = (records.items || []).some((x) => x.ordination_prescriber && x.ordination_date);
+        requirements.push({ key: 'treatment_ordination', label: 'Läkarordination registrerad', required: true, completed: hasOrdination, mode: 'enabled' });
+      }
+
+      const licenseRule = await getClinicRule(svc, clinicId, 'staff_licensing');
+      if (licenseRule.active && configMatches(licenseRule.config, treatment, { staff_name: booking.staff_name })) {
+        const licenses = await svc.entities.StaffLicense.filter(
+          { clinic_id: clinicId, staff_name: booking.staff_name, status: 'active' }, { limit: 20 }
+        );
+        const nowTs = Date.now();
+        const valid = (licenses.items || []).some((x) => !x.valid_until || new Date(x.valid_until).getTime() >= nowTs);
+        requirements.push({ key: 'staff_license', label: 'Giltig personallegitimation/behörighet', required: licenseRule.enforce, completed: valid, mode: licenseRule.status });
+      }
+
       const waitRule = await getClinicRule(svc, clinicId, 'waiting_periods');
       if (waitRule.active && configMatches(waitRule.config, treatment)) {
         const days = Number(waitRule.config.days || 0);
