@@ -9,7 +9,7 @@ export default function UnderConstruction({ clinic }) {
       <header className="border-b border-black/10 bg-white/70">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <span className="font-heading text-xl font-semibold">{name}</span>
-          <Link to="/login" className="inline-flex items-center gap-2 text-sm font-medium text-black/60 hover:text-black"><LockKeyhole className="h-4 w-4" /> Personal</Link>
+          <div className="flex items-center gap-4"><a href="https://lydiaestetisk.se/" className="text-sm font-medium text-black/55 hover:text-black">Klinikens webbplats</a><Link to="/login" className="inline-flex items-center gap-2 text-sm font-medium text-black/60 hover:text-black"><LockKeyhole className="h-4 w-4" /> Personal</Link></div>
         </div>
       </header>
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center px-5 py-16 sm:px-8">
