@@ -28,7 +28,7 @@ const nav = [
   { to: "/app/messages", label: "Meddelanden", icon: MessageSquare, perm: "messages", feature: "messages" },
   { to: "/app/audit", label: "Audit-logg", icon: ShieldCheck, perm: "audit" },
   { to: "/app/compliance", label: "Säkerhet & Compliance", icon: ShieldCheck, perm: "compliance" },
-  { to: "/app/operations", label: "Driftregler 1–12", icon: SlidersHorizontal, perm: "operations" },
+  { to: "/app/operations", label: "Driftregler 1–12", icon: SlidersHorizontal, perm: "operations", feature: "clinic_operations" },
   { to: "/app/settings", label: "Inställningar", icon: Settings, perm: "settings" },
 ];
 
