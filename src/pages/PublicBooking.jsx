@@ -11,6 +11,7 @@ import {
   Sparkles, CalendarDays, User, Check, ArrowLeft, Loader2, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import UnderConstruction from "@/components/UnderConstruction";
 
 const steps = [
   { n: 1, label: "Behandling", icon: Sparkles },
@@ -185,6 +186,7 @@ export default function PublicBooking() {
     return <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center"><p className="text-sm text-muted-foreground">{initError}</p></div>;
   }
   if (!init) return null;
+  if (!init.booking_open) return <UnderConstruction clinic={init.clinic} />;
 
   if (confirmation) {
     return (
