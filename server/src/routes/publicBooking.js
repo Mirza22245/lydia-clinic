@@ -126,7 +126,7 @@ export async function getPublicBookingData(body = {}) {
       requires_aftercare: !!t.requires_aftercare,
       requires_payment: !!t.requires_payment,
       guest_booking_allowed: t.guest_booking_allowed !== false,
-      min_age: t.treatment_type === 'injektion' ? Math.max(18, t.min_age || 0) : t.min_age || 0,
+      min_age: t.['injektion', 'filler', 'botox'].includes(treatment_type) ? Math.max(18, t.min_age || 0) : t.min_age || 0,
       waiting_period_days: t.waiting_period_days || 0,
       betanketid_hours: t.betanketid_hours || 0,
       cancellation_hours: t.cancellation_hours ?? 24,
