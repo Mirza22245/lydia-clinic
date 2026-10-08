@@ -9,10 +9,15 @@ import { getGoogleToken } from '../routes/google.js';
 const contexts = new WeakMap();
 
 export function bindContext(req, user, ip) {
-  contexts.set(req, { user, ip });
+  const ctx = { user, ip };
+  contexts.set(req, ctx);
+  // De kompilerade funktionerna har sin egen modulinstans av sdk-shim.js.
+  // Dela därför kontexten via globalThis så att createClientFromRequest()
+  // i den kompilerade funktionen ser samma inloggade användare som Express.
+  globalThis.__lydiaFunctionContext = ctx;
 }
 export function getContext(req) {
-  return contexts.get(req) || { user: null, ip: null };
+  return contexts.get(req) || globalThis.__lydiaFunctionContext || { user: null, ip: null };
 }
 
 function normalizeUser(u) {
