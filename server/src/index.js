@@ -24,7 +24,8 @@ import { hashPassword } from './auth/password.js';
 
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
 
-\nasync function seedOperationsFeatureFlags() {
+
+async function seedOperationsFeatureFlags() {
   const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
   const flags = [
     ['clinic_operations','Klinikens driftregler','core'],
@@ -177,7 +178,8 @@ app.use((err, req, res, next) => {
 const server = app.listen(config.port, config.host, () => {
   console.log(`Lydia backend på ${config.host}:${config.port}`);
   setImmediate(async () => {
-    try { await bootstrapAdminFromEnv(); } catch (e) { console.error('[admin-bootstrap]', e.message); }\n    try { await seedOperationsFeatureFlags(); } catch (e) { console.error('[feature-flags]', e.message); }
+    try { await bootstrapAdminFromEnv(); } catch (e) { console.error('[admin-bootstrap]', e.message); }
+    try { await seedOperationsFeatureFlags(); } catch (e) { console.error('[feature-flags]', e.message); }
   });
   setImmediate(async () => {
     try {
