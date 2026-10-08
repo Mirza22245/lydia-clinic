@@ -8,7 +8,7 @@ function parseConfig(value) {
 
 export async function getClinicRules(client, clinicId) {
   const result = await client.query(
-    "SELECT id, data, clinic_id FROM e_featureflag WHERE clinic_id = $1 AND data->>'key' = ANY($2::text[])",
+    "SELECT id, data, clinic_id FROM e_feature_flag WHERE clinic_id = $1 AND data->>'key' = ANY($2::text[])",
     [clinicId, DEFAULT_KEYS]
   );
   const rules = {};
