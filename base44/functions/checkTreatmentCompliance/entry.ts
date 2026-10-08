@@ -42,7 +42,7 @@ export default async function(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const isInjection = treatment.treatment_type === 'injektion';
+    const isInjection = ['injektion', 'filler', 'botox'].includes(String(treatment.treatment_type || '').toLowerCase());
     const checks = [];
     const now = new Date();
 
