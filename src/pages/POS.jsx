@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
 import { useToast } from "@/components/ui/use-toast";
 import { logAudit } from "@/lib/audit";
+import { getClinicId } from "@/lib/currentUser";
 
 const methodLabels = { card: "Kort", swish: "Swish", cash: "Kontant", invoice: "Faktura" };
 const methodIcons = { card: CreditCard, swish: Smartphone, cash: Banknote, invoice: FileText };
@@ -23,17 +24,20 @@ export default function POS() {
   const [method, setMethod] = useState("card");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [clinicId, setClinicId] = useState(null);
   const { toast } = useToast();
+
+  useEffect(() => { getClinicId().then(setClinicId).catch(() => setClinicId(null)); }, []);
 
   const load = async () => {
     setLoading(true);
     try {
       const [b, p] = await Promise.all([
         base44.entities.Booking.filter(
-          { status: { $in: ["completed", "checked_in", "in_progress"] } },
+          { clinic_id: clinicId, status: { $in: ["completed", "checked_in", "in_progress"] } },
           { sort: "-start_time", limit: 100 }
         ),
-        base44.entities.Payment.filter({}, { sort: "-paid_at", limit: 200 }),
+        base44.entities.Payment.filter({ clinic_id: clinicId }, { sort: "-paid_at", limit: 200 }),
       ]);
       setBookings(b.items || []);
       setPayments(p.items || []);
@@ -42,7 +46,7 @@ export default function POS() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (clinicId) load(); }, [clinicId]);
 
   const paidBookingIds = useMemo(() => new Set(payments.filter((p) => p.status === "paid").map((p) => p.booking_id).filter(Boolean)), [payments]);
 
@@ -63,10 +67,11 @@ export default function POS() {
     if (!active) return;
     setSaving(true);
     try {
-      const flags = await base44.entities.FeatureFlag.filter({ key: "cash_register", status: "enabled" }, { limit: 10 }).catch(() => ({ items: [] }));
-      if ((flags.items || []).length) {
-        const registers = await base44.entities.CashRegister.filter({ status: "active" }, { limit: 1 }).catch(() => ({ items: [] }));
-        if (!(registers.items || []).length) throw new Error("Kassaregister är aktiverat men inget aktivt kassaregister är konfigurerat i Inställningar.");
+      const flags = await base44.entities.FeatureFlag.filter({ clinic_id: active.clinic_id, key: "cash_register" }, { limit: 1 }).catch(() => ({ items: [] }));
+      const cashFlag = (flags.items || [])[0];
+      if (cashFlag?.status === "enabled") {
+        const registers = await base44.entities.CashRegister.filter({ clinic_id: active.clinic_id, status: "active" }, { limit: 1 }).catch(() => ({ items: [] }));
+        if (!(registers.items || []).length) throw new Error("Kassaregister är PÅ men inget aktivt kassaregister är konfigurerat i Inställningar.");
       }
       const year = new Date().getFullYear();
       const seq = (payments.length + 1).toString().padStart(4, "0");
