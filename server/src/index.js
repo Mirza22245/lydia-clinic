@@ -36,14 +36,17 @@ async function bootstrapAdminFromEnv() {
     [clinicId, JSON.stringify({ name: clinicName, clinic_id: clinicId })]
   );
   const hash = await hashPassword(password);
-  await pool.query(
+  const result = await pool.query(
     `INSERT INTO users (email, password_hash, role, full_name, clinic_id, staff_role, email_verified)
      VALUES ($1, $2, 'admin', $3, $4, 'administratör', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin',
-       full_name = EXCLUDED.full_name, clinic_id = EXCLUDED.clinic_id, staff_role = 'administratör',
-       email_verified = true`,
+     ON CONFLICT (email) DO NOTHING
+     RETURNING id`,
     [email, hash, process.env.LYDIA_ADMIN_NAME || 'Admin', clinicId]
   );
+  if (!result.rowCount) {
+    console.log('[admin-bootstrap] Befintligt adminkonto lämnas orört:', email);
+    return;
+  }
   console.log('[admin-bootstrap] Admin skapad/uppdaterad:', email);
 }
 
