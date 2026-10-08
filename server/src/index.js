@@ -20,8 +20,35 @@ import { getAvailableSlotsNative } from './routes/nativeAvailability.js';
 import { createPublicBookingNative } from './routes/nativePublicBooking.js';
 import { apiLimiter, authLimiter, publicLimiter } from './lib/rateLimit.js';
 import { csrfGuard } from './lib/csrf.js';
+import { hashPassword } from './auth/password.js';
 
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
+
+async function bootstrapAdminFromEnv() {
+  const email = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
+  if (!email || !password) return;
+  if (password.length < 12) throw new Error('LYDIA_ADMIN_BOOTSTRAP_PASSWORD måste vara minst 12 tecken');
+  const existing = await pool.query('SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1', [email]);
+  if (existing.rows[0]) {
+    console.log('[admin-bootstrap] Admin finns redan:', email);
+    return;
+  }
+  const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
+  const clinicName = process.env.LYDIA_CLINIC_NAME || 'Lydia Estetisk';
+  await pool.query(
+    'INSERT INTO e_clinic (id, data, clinic_id) VALUES ($1, $2::jsonb, $1) ON CONFLICT (id) DO NOTHING',
+    [clinicId, JSON.stringify({ name: clinicName, clinic_id: clinicId })]
+  );
+  const hash = await hashPassword(password);
+  await pool.query(
+    `INSERT INTO users (email, password_hash, role, full_name, clinic_id, staff_role, email_verified)
+     VALUES ($1, $2, 'admin', $3, $4, 'administratör', true)`,
+    [email, hash, process.env.LYDIA_ADMIN_NAME || 'Admin', clinicId]
+  );
+  console.log('[admin-bootstrap] Admin skapad:', email);
+}
+
 
 const app = express();
 app.disable('x-powered-by');
@@ -101,6 +128,9 @@ app.use((err, req, res, next) => {
 // Starta HTTP-servern först. Katalogsynken får aldrig blockera Hostingers startup.
 const server = app.listen(config.port, config.host, () => {
   console.log(`Lydia backend på ${config.host}:${config.port}`);
+  setImmediate(async () => {
+    try { await bootstrapAdminFromEnv(); } catch (e) { console.error('[admin-bootstrap]', e.message); }
+  });
   setImmediate(async () => {
     try {
       const count = await seedLuxeCatalog(pool);
