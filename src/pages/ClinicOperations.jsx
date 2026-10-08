@@ -17,7 +17,7 @@ const modules = [
   { key:"incident", label:"7. Avvikelse", entity:"Incident", fields:[["occurred_at","Tidpunkt"],["type","Typ"],["severity","Allvarlighetsgrad"],["customer_id","Kund-ID"],["booking_id","Bokning-ID"],["description","Beskrivning"],["action_taken","Åtgärd"],["follow_up","Uppföljning"],["responsible_person","Ansvarig"]] },
   { key:"hygiene", label:"8. Hygien", entity:"HygieneCheck", fields:[["area","Område"],["check_type","Kontroll"],["frequency","Frekvens"],["last_checked","Senast kontrollerad"],["next_due","Nästa kontroll"],["result","Resultat"],["responsible_person","Ansvarig"],["notes","Anteckningar"]] },
   { key:"inventory", label:"9. Lagerbatch", entity:"InventoryLot", fields:[["product_name","Produkt"],["batch_number","Batch/Lot"],["expires_at","Utgångsdatum"],["quantity","Antal"],["unit","Enhet"],["cost","Kostnad"]] },
-  { key:"attendance", label:"10. Personalliggare", entity:"StaffAttendance", fields:[["staff_id","Personal-ID"],["staff_name","Personal"],["date","Datum"],["clock_in","In"],["clock_out","Ut"],["break_minutes","Rast minuter"]] },
+  { key:"attendance", label:"10. Personalliggare", entity:"StaffAttendance", fields:[["staff_id","Personal-ID"],["staff_name","Personal"],["work_date","Datum"],["clock_in","In"],["clock_out","Ut"],["break_minutes","Rast minuter"]] },
   { key:"communication", label:"11. Kommunikation", entity:"CommunicationRule", fields:[["name","Namn"],["event","Händelse"],["channel","Kanal"],["template","Mall"],["delay_minutes","Fördröjning minuter"]] },
   { key:"booking", label:"12. Bokningsregler", entity:"BookingRule", fields:[["name","Namn"],["treatment_name","Behandling"],["rule_type","Regeltyp"],["value","Värde"],["notes","Anteckningar"]] },
 ];
@@ -28,17 +28,20 @@ export default function ClinicOperations() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [clinicId, setClinicId] = useState(null);
   const mod = useMemo(() => modules.find(x => x.key === active) || modules[0], [active]);
+
+  useEffect(() => { getClinicId().then(setClinicId).catch(() => setClinicId(null)); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await base44.entities[mod.entity].filter({}, { sort:"-created_date", limit:300 });
+      const result = await base44.entities[mod.entity].filter({ clinic_id: clinicId }, { sort:"-created_date", limit:300 });
       setRows(result.items || []);
     } finally { setLoading(false); }
-  }, [mod.entity]);
+  }, [mod.entity, clinicId]);
 
-  useEffect(() => { setForm(null); load(); }, [load]);
+  useEffect(() => { setForm(null); if (clinicId) load(); }, [load, clinicId]);
 
   const openNew = () => {
     const data = {};
