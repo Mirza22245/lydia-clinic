@@ -196,8 +196,8 @@ export default function PublicBooking() {
         </header>
         <main className="mx-auto max-w-2xl px-4 py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
-          <h1 className="text-2xl font-semibold font-heading">Bokning mottagen!</h1>
-          <p className="mt-2 text-muted-foreground">Vi bekräftar din tid så snart kraven nedan är uppfyllda. Du får ett mejl från oss.</p>
+          <h1 className="text-2xl font-semibold font-heading">Bokning bekräftad!</h1>
+          <p className="mt-2 text-muted-foreground">Din tid är nu bokad. Eventuella hälsouppgifter, formulär och betänketider hanteras separat före själva behandlingen.</p>
           <div className="mx-auto mt-6 max-w-sm rounded-xl border border-border bg-card p-5 text-left">
             <p className="font-medium">{confirmation.treatment_name}</p>
             <p className="text-sm text-muted-foreground">{fmtFull(confirmation.start_time)}</p>
@@ -381,8 +381,8 @@ export default function PublicBooking() {
             </div>
             {treatmentRequirements(treatment).length > 0 && (
               <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
-                <p className="font-medium text-amber-900">Krav före behandling</p>
-                <p className="text-amber-700">Följande måste kompletteras i kundportalen innan besöket:</p>
+                <p className="font-medium text-amber-900">Krav före behandlingen</p>
+                <p className="text-amber-700">Följande kan behöva kompletteras före själva behandlingen:</p>
                 <ul className="mt-2 list-disc space-y-0.5 pl-5 text-amber-800">
                   {treatmentRequirements(treatment).map((r) => <li key={r}>{r}</li>)}
                 </ul>
