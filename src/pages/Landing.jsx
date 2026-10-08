@@ -9,6 +9,7 @@ import TreatmentsSection from "@/components/landing/TreatmentsSection";
 import StaffSection from "@/components/landing/StaffSection";
 import FaqSection from "@/components/landing/FaqSection";
 import ContactSection from "@/components/landing/ContactSection";
+import UnderConstruction from "@/components/UnderConstruction";
 
 const BOOKING_URL = "https://app.lydiaestetisk.se";
 
@@ -41,6 +42,8 @@ export default function Landing() {
   }
 
   const { clinic, treatments, staff, campaigns } = data;
+
+  if (!data.booking_open) return <UnderConstruction clinic={clinic} />;
 
   return (
     <div className="min-h-screen bg-[#f8f6f1] text-[#171714]">
