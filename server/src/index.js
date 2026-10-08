@@ -59,11 +59,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://js.stripe.com"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://api.stripe.com"],
       objectSrc: ["'none'"],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"],
     },
