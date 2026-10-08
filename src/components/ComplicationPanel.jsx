@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, Loader2, ShieldAlert } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 
 const typeLabels = { biverkning: "Biverkning", komplikation: "Komplikation", avvikelse: "Avvikelse", infektion: "Infektion", asymmetri: "Asymmetri", allergisk_reaktion: "Allergisk reaktion", vascular_komplikation: "Vaskulär komplikation", annan: "Annan" };
