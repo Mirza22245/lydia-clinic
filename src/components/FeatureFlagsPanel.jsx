@@ -145,7 +145,7 @@ export default function FeatureFlagsPanel() {
 }
 
 function RuleConfig({ flag, onSave, onCancel }) {
-  const known = ['waiting_periods','age_verification','booking_rules','staff_licensing'];
+  const known = ['waiting_periods','age_verification','treatment_information','staff_licensing','radiation_compliance','incident_management','hygiene_checks','inventory_lots','staff_attendance','communication_rules','booking_rules','cash_register'];
   let initial = {};
   try { initial = typeof flag.config === 'string' ? JSON.parse(flag.config || '{}') : (flag.config || {}); } catch { initial = {}; }
   const [json, setJson] = useState(JSON.stringify(initial, null, 2));
@@ -154,7 +154,15 @@ function RuleConfig({ flag, onSave, onCancel }) {
     waiting_periods: { days: 2, treatment_ids: [] },
     age_verification: { minimum_age: 18, treatment_ids: [] },
     booking_rules: { min_lead_hours: 0, max_days: 0, treatment_ids: [] },
-    staff_licensing: { required_license_types: [], treatment_ids: [] },
+    staff_licensing: { required_license_types: [], treatment_ids: [], staff_names: [] },
+    treatment_information: { treatment_ids: [], treatment_names: [] },
+    radiation_compliance: { treatment_ids: [], equipment_id: "" },
+    incident_management: { treatment_ids: [] },
+    hygiene_checks: { treatment_ids: [], areas: [], max_age_hours: 24 },
+    inventory_lots: { treatment_ids: [], product_ids: [] },
+    staff_attendance: { treatment_ids: [], staff_names: [] },
+    communication_rules: { events: { confirmation: { channel: "email" }, rescheduled: { channel: "email" } } },
+    cash_register: { require_active_register: true },
   };
   const usePreset = () => setJson(JSON.stringify(presets[flag.key] || initial, null, 2));
   return <div className="mt-2 rounded-lg border border-border bg-secondary/30 p-3 space-y-2">
