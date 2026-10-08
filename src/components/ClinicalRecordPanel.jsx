@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Loader2, Syringe, Lock, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
 
 // Strukturerad behandlingsjournal för injektionsbehandlingar.
