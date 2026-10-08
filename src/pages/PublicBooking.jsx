@@ -60,6 +60,7 @@ export default function PublicBooking() {
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotError, setSlotError] = useState(null);
+  const [nextAvailable, setNextAvailable] = useState([]);
   const [slot, setSlot] = useState(null);
 
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "", birth_date: "", personnummer: "" });
@@ -86,16 +87,49 @@ export default function PublicBooking() {
     })();
   }, []);
 
-  const loadSlots = async (staffName, dateStr, t) => {
+  const loadSlots = async (staffName, dateStr, t, { suggestNext = true } = {}) => {
     if (!staffName || !dateStr || !t) { setSlots([]); return; }
     setLoadingSlots(true);
     setSlot(null);
     setSlotError(null);
+    setNextAvailable([]);
     try {
-      const res = await getAvailableSlots({ clinic_id: init.clinic.id, staff_name: staffName, date: dateStr, duration: t.duration || 30, treatment_id: t.id });
-      setSlots(res.data.slots || []);
+      const res = await getAvailableSlots({
+        clinic_id: init.clinic.id,
+        staff_name: staffName,
+        date: dateStr,
+        duration: t.duration || 30,
+        treatment_id: t.id,
+      });
+      const found = res.data.slots || [];
+      setSlots(found);
+
+      if (!found.length && suggestNext) {
+        const base = new Date(`${dateStr}T12:00:00`);
+        const candidates = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(base);
+          d.setDate(d.getDate() + i + 1);
+          return d.toLocaleDateString("sv-SE");
+        });
+        const results = await Promise.all(candidates.map(async (d) => {
+          try {
+            const r = await getAvailableSlots({
+              clinic_id: init.clinic.id,
+              staff_name: staffName,
+              date: d,
+              duration: t.duration || 30,
+              treatment_id: t.id,
+            });
+            return { date: d, slots: r.data.slots || [] };
+          } catch {
+            return { date: d, slots: [] };
+          }
+        }));
+        setNextAvailable(results.filter((x) => x.slots.length > 0).slice(0, 3));
+      }
     } catch (e) {
       setSlots([]);
+      setNextAvailable([]);
       setSlotError(e?.response?.data?.error || e?.message || "Kunde inte hämta lediga tider.");
     } finally {
       setLoadingSlots(false);
@@ -299,7 +333,24 @@ export default function PublicBooking() {
                 Kunde inte hämta lediga tider: {slotError}
               </div>
             ) : slots.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Inga lediga tider denna dag. Prova ett annat datum.</p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Inga lediga tider denna dag.</p>
+                {nextAvailable.length > 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-3">
+                    <p className="text-sm font-medium">Nästa lediga dagar</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {nextAvailable.map((item) => (
+                        <Button key={item.date} type="button" variant="outline" size="sm" onClick={() => { setDate(item.date); setSlots(item.slots); setNextAvailable([]); }}>
+                          {new Date(`${item.date}T12:00:00`).toLocaleDateString("sv-SE", { weekday: "short", day: "numeric", month: "short" })}
+                          <span className="ml-1 text-muted-foreground">({item.slots.length} tider)</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Ingen ledig tid hittades de närmaste 7 dagarna. Välj ett annat datum eller kontakta kliniken.</p>
+                )}
+              </div>
             ) : (
               <div className="space-y-4">
                 {slotGroups(slots).map((group) => (
