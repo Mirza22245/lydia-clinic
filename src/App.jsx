@@ -41,6 +41,7 @@ import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
 import Portal from '@/pages/Portal';
 import AppShell from '@/components/AppShell';
+import { LanguageProvider } from '@/lib/i18n';
 
 const RoleRoute = ({ roles, children }) => {
   const { user, isLoadingAuth, authChecked } = useAuth();
