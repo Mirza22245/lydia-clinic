@@ -1,4 +1,5 @@
 import { withTx } from '../db/pool.js';
+import { getClinicRules, ruleEnforced, matchesTreatment } from '../lib/clinicRules.js';
 
 const TZ = 'Europe/Stockholm';
 
@@ -133,6 +134,21 @@ export async function getAvailableSlotsNative({
       throw e;
     }
 
+    const rules = await getClinicRules(client, String(clinic_id));
+    let configuredLeadHours = 0;
+    let configuredMaxDays = 0;
+    let configuredWaitingDays = 0;
+    if (treatment_id) {
+      const bookingRule = rules.booking_rules;
+      const waitingRule = rules.waiting_periods;
+      // Treatment-specific rule config is optional; empty treatment lists mean all treatments.
+      if (ruleEnforced(rules, 'booking_rules')) {
+        configuredLeadHours = Number(bookingRule?.config?.min_lead_hours) || 0;
+        configuredMaxDays = Number(bookingRule?.config?.max_days) || 0;
+      }
+      if (ruleEnforced(rules, 'waiting_periods')) configuredWaitingDays = Number(waitingRule?.config?.days) || 0;
+    }
+
     let durationMin = Number(duration) || 30;
     let bufferBefore = 0;
     let bufferAfter = 0;
@@ -237,8 +253,9 @@ export async function getAvailableSlotsNative({
 
     const slots = [];
     const now = Date.now();
-    const earliest = now + minLeadHours * 3600000;
-    const latest = maxLeadDays > 0 ? now + maxLeadDays * 86400000 : Infinity;
+    const earliest = now + Math.max(minLeadHours, configuredLeadHours, configuredWaitingDays * 24) * 3600000;
+    const latestDays = [maxLeadDays, configuredMaxDays].filter(x => x > 0);
+    const latest = latestDays.length ? now + Math.min(...latestDays) * 86400000 : Infinity;
     const step = 15 * 60000;
     const durationMs = durationMin * 60000;
     const before = bufferBefore * 60000;
