@@ -1,0 +1,15 @@
+{
+  "name": "StaffQualification",
+  "type": "object",
+  "properties": {
+    "staff_id": {"type":"string","title":"Personal-ID"},
+    "staff_name": {"type":"string","title":"Personal"},
+    "qualification_type": {"type":"string","title":"Kompetens"},
+    "issuer": {"type":"string","title":"Utfärdare"},
+    "issue_date": {"type":"string","title":"Utfärdad"},
+    "expiry_date": {"type":"string","title":"Giltig till"},
+    "document_url": {"type":"string","title":"Dokument"},
+    "status": {"type":"string","enum":["active","expired","pending"],"title":"Status"},
+    "notes": {"type":"string","title":"Anteckningar"}
+  }
+}
