@@ -70,8 +70,12 @@ export default function POS() {
       const flags = await base44.entities.FeatureFlag.filter({ clinic_id: active.clinic_id, key: "cash_register" }, { limit: 1 }).catch(() => ({ items: [] }));
       const cashFlag = (flags.items || [])[0];
       if (cashFlag?.status === "enabled") {
+        let cashConfig = {};
+        try { cashConfig = typeof cashFlag.config === "string" ? JSON.parse(cashFlag.config || "{}") : (cashFlag.config || {}); } catch {}
+        if (cashConfig.require_active_register !== false) {
         const registers = await base44.entities.CashRegister.filter({ clinic_id: active.clinic_id, status: "active" }, { limit: 1 }).catch(() => ({ items: [] }));
         if (!(registers.items || []).length) throw new Error("Kassaregister är PÅ men inget aktivt kassaregister är konfigurerat i Inställningar.");
+        }
       }
       const year = new Date().getFullYear();
       const seq = (payments.length + 1).toString().padStart(4, "0");
