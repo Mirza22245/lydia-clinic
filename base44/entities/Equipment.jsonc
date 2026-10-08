@@ -1,0 +1,16 @@
+{
+  "name": "Equipment",
+  "type": "object",
+  "properties": {
+    "name": {"type":"string","title":"Namn"},
+    "category": {"type":"string","title":"Kategori"},
+    "manufacturer": {"type":"string","title":"Tillverkare"},
+    "model": {"type":"string","title":"Modell"},
+    "serial_number": {"type":"string","title":"Serienummer"},
+    "status": {"type":"string","enum":["active","service","retired"],"title":"Status"},
+    "service_date": {"type":"string","title":"Senaste service"},
+    "next_service_date": {"type":"string","title":"Nästa service"},
+    "responsible_person": {"type":"string","title":"Ansvarig"},
+    "notes": {"type":"string","title":"Anteckningar"}
+  }
+}
