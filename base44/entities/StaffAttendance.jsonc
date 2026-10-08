@@ -37,7 +37,7 @@
   },
   "rls": {
     "read": {
-      "data.clinic_id": "{{user.data.clinic_id}}"
+      "data.clinic_id": "{{user.data.clinic_id}"
     },
     "create": {
       "$and": [
