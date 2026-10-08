@@ -16,7 +16,7 @@ export default async function(req) {
     const body = await req.json().catch(() => ({}));
     const {
       name, personnummer, phone, email, booking_id,
-      treatment_type, treatment_type_other,
+      treatment_type, treatment_type_other, treatment_name,
       pregnant_breastfeeding, skin_infection, blood_thinning,
       neuromuscular, previous_reactions, strong_skincare,
       betanketid_acknowledged, risks_acknowledged, photo_consent,
@@ -52,6 +52,9 @@ export default async function(req) {
       treatmentName = booking.treatment_name || '';
     }
 
+    const informationGivenAt = new Date();
+    const waitingPeriodUntil = treatment_type === 'injektion' ? new Date(informationGivenAt.getTime() + 48 * 60 * 60 * 1000) : null;
+
     // Strukturerade svar som JSON (lagras i other-fältet)
     const structuredAnswers = {
       personnummer,
@@ -59,7 +62,10 @@ export default async function(req) {
       email,
       treatment_type,
       treatment_type_other: treatment_type_other || '',
-      treatment_name: treatmentName,
+      treatment_name: treatmentName || treatment_name || '',
+      information_given_at: informationGivenAt.toISOString(),
+      waiting_period_until: waitingPeriodUntil?.toISOString() || null,
+      form_version: 'aesthetic-1.0',
       pregnant_breastfeeding,
       skin_infection,
       blood_thinning,
@@ -78,6 +84,11 @@ export default async function(req) {
       customer_id: customer.id,
       customer_name: customer.name,
       booking_id: booking_id || undefined,
+      treatment_name: treatmentName || treatment_name || undefined,
+      treatment_category: treatment_type === 'injektion' ? 'injektion' : (treatment_type || 'annan'),
+      information_given_at: informationGivenAt.toISOString(),
+      waiting_period_until: waitingPeriodUntil?.toISOString(),
+      form_version: 'aesthetic-1.0',
       submitted_at: new Date().toISOString(),
       submitted_by: customer.name,
       status: 'submitted',
