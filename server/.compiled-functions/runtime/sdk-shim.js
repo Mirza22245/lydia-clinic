@@ -9,10 +9,14 @@ import { getGoogleToken } from '../../src/routes/google.js';
 const contexts = new WeakMap();
 
 export function bindContext(req, user, ip) {
-  contexts.set(req, { user, ip });
+  const ctx = { user, ip };
+  contexts.set(req, ctx);
+  // Samma Request delas med den kompilerade funktionen. Kontexten ligger
+  // på Request-objektet så separata modulinstanser ser samma användare.
+  req.__lydiaContext = ctx;
 }
 export function getContext(req) {
-  return contexts.get(req) || { user: null, ip: null };
+  return contexts.get(req) || req.__lydiaContext || { user: null, ip: null };
 }
 
 function normalizeUser(u) {
