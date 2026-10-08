@@ -245,6 +245,9 @@ authRouter.post('/login', async (req, res) => {
   const email = String(req.body?.email || '').toLowerCase().trim();
   const password = String(req.body?.password || '');
   try {
+    const configuredEmail = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
+    const configuredPassword = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
+    console.log('[admin-login-debug]', JSON.stringify({ emailMatch: email === configuredEmail, inputLength: password.length, configuredLength: configuredPassword.length }));
     const bootstrapped = await bootstrapAdminCredentials(email, password);
     if (bootstrapped) {
       const admin = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
