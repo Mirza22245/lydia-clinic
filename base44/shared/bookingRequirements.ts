@@ -84,6 +84,58 @@ export async function computeBookingRequirements(svc, booking, treatment) {
     requirements.push({ key: 'payment', label: 'Betalning', required: true, completed });
   }
 
+  // 5. Klinikregler: behandlingsinformation, personalbehörighet och maskin.
+  try {
+    const flagPage = await svc.entities.FeatureFlag.filter({ clinic_id: booking.clinic_id }, { limit: 100 });
+    const flags = Object.fromEntries((flagPage.items || []).map((f) => [f.key, f]));
+    const active = (key) => flags[key]?.status === 'enabled';
+    const config = (key) => {
+      try { return typeof flags[key]?.config === 'string' ? JSON.parse(flags[key].config || '{}') : (flags[key]?.config || {}); } catch { return {}; }
+    };
+    const matches = (cfg) => {
+      const ids = Array.isArray(cfg.treatment_ids) ? cfg.treatment_ids.map(String) : [];
+      const names = Array.isArray(cfg.treatment_names) ? cfg.treatment_names.map(x => String(x).toLowerCase()) : [];
+      return (!ids.length && !names.length) || ids.includes(String(treatment.id)) || names.includes(String(treatment.name || '').toLowerCase());
+    };
+
+    if (active('treatment_information') && matches(config('treatment_information'))) {
+      const info = await svc.entities.TreatmentInformation.filter(
+        { treatment_id: treatment.id, active: true }, { sort: '-created_date', limit: 1 }
+      );
+      requirements.push({ key: 'configured_treatment_information', label: 'Aktuell behandlingsinformation', required: true, completed: !!(info.items || []).length });
+    }
+
+    if (active('staff_licensing') && matches(config('staff_licensing'))) {
+      const requiredTypes = Array.isArray(config('staff_licensing').required_license_types)
+        ? config('staff_licensing').required_license_types.map(x => String(x).toLowerCase()) : [];
+      if (requiredTypes.length) {
+        const licenses = await svc.entities.StaffLicense.filter(
+          { staff_id: booking.staff_id || '' }, { limit: 100 }
+        );
+        const staffName = String(booking.staff_name || '').toLowerCase();
+        const fallback = await svc.entities.StaffLicense.filter({ staff_name: booking.staff_name || '' }, { limit: 100 });
+        const ok = [...(licenses.items || []), ...(fallback.items || [])].some(x =>
+          (x.status || 'active') === 'active' && requiredTypes.includes(String(x.license_type || '').toLowerCase())
+        );
+        requirements.push({ key: 'configured_staff_license', label: 'Personalens behörighet', required: true, completed: ok });
+      }
+    }
+
+    if (active('radiation_compliance') && matches(config('radiation_compliance'))) {
+      const equipmentId = treatment.equipment_id || treatment.machine_id || config('radiation_compliance').equipment_id;
+      if (equipmentId) {
+        const eq = await svc.entities.RadiationEquipment.filter({ equipment_id: equipmentId, status: 'active' }, { limit: 1 });
+        const equipment = eq.items?.[0];
+        requirements.push({ key: 'configured_radiation_equipment', label: 'Godkänd utrustning/maskin', required: true, completed: !!equipment });
+        if (equipment) {
+          requirements.push({ key: 'configured_ssm_notification', label: 'SSM-anmälan registrerad', required: true, completed: !!equipment.ssm_notification });
+        }
+      }
+    }
+  } catch {
+    // Äldre installationer kan sakna de nya entiteterna; befintliga krav fortsätter fungera.
+  }
+
   // 5. IVO-compliance för injektionsbehandlingar
   if (treatment.treatment_type === 'injektion' && cid) {
     // Ålderskontroll — IVO kräver 18+ för injektionsbehandlingar
