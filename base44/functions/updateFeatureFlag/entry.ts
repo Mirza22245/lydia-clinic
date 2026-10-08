@@ -16,7 +16,7 @@ export default async function(req) {
     if (!isAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
-    const { flag_id, status } = body;
+    const { flag_id, status, config } = body;
     if (!flag_id || !status) {
       return Response.json({ error: 'flag_id och status krävs' }, { status: 400 });
     }
@@ -43,7 +43,7 @@ export default async function(req) {
     }
 
     const prevStatus = flag.status;
-    const updated = await base44.entities.FeatureFlag.update(flag_id, { status });
+    const patch = { status };\n    if (config !== undefined) {\n      if (config === null || (typeof config !== 'string' && typeof config !== 'object')) return Response.json({ error: 'Ogiltig konfiguration' }, { status: 400 });\n      patch.config = typeof config === 'string' ? config : JSON.stringify(config);\n    }\n    const updated = await base44.entities.FeatureFlag.update(flag_id, patch);
 
     // Audit-logg
     try {
