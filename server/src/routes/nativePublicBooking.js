@@ -2,6 +2,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { withTx } from '../db/pool.js';
 import { loadUser } from '../auth/session.js';
 import { sendMail } from '../lib/email.js';
+import { getClinicRules, ruleEnforced, matchesTreatment } from '../lib/clinicRules.js';
 
 const TZ = 'Europe/Stockholm';
 
@@ -104,6 +105,36 @@ export async function createPublicBookingNative(body = {}, req) {
     const staff = staffQ.rows[0] && normalize(staffQ.rows[0]);
     if (!staff) { const e = new Error('Behandlaren finns inte eller är inte aktiv.'); e.status = 400; throw e; }
 
+    const rules = await getClinicRules(client, clinicId);
+    const waitingRule = rules.waiting_periods;
+    const ageRule = rules.age_verification;
+    const bookingRule = rules.booking_rules;
+    const licenseRule = rules.staff_licensing;
+    const radiationRule = rules.radiation_compliance;
+
+    if (ruleEnforced(rules, 'booking_rules') && matchesTreatment(bookingRule.config, treatment)) {
+      const leadHours = Number(bookingRule.config?.min_lead_hours);
+      const maxDays = Number(bookingRule.config?.max_days);
+      if (Number.isFinite(leadHours) && leadHours > 0 && start.getTime() < Date.now() + leadHours * 3600000) {
+        const e = new Error('Denna behandling kräver längre framförhållning.'); e.status = 409; throw e;
+      }
+      if (Number.isFinite(maxDays) && maxDays > 0 && start.getTime() > Date.now() + maxDays * 86400000) {
+        const e = new Error('Tiden ligger utanför klinikens bokningsperiod.'); e.status = 409; throw e;
+      }
+    }
+
+    if (ruleEnforced(rules, 'staff_licensing') && matchesTreatment(licenseRule.config, treatment)) {
+      const required = Array.isArray(licenseRule.config?.required_license_types) ? licenseRule.config.required_license_types.map(x => String(x).toLowerCase()) : [];
+      if (required.length) {
+        const licenseQ = await client.query(
+          "SELECT data FROM e_staff_license WHERE clinic_id = $1 AND data->>'staff_id' = $2 AND COALESCE(data->>'status','active') = 'active'",
+          [clinicId, String(staff.id)]
+        );
+        const ok = licenseQ.rows.some(row => required.includes(String(row.data?.license_type || '').toLowerCase()));
+        if (!ok) { const e = new Error('Behandlarens behörighet räcker inte för den här behandlingen.'); e.status = 403; throw e; }
+      }
+    }
+
     const allowed = parseAllowed(staff.allowed_treatment_ids);
     if (allowed !== null && !allowed.includes(treatment.id)) {
       const e = new Error('Den valda behandlaren är inte behörig att utföra den här behandlingen.');
@@ -137,14 +168,17 @@ export async function createPublicBookingNative(body = {}, req) {
       const e = new Error('Tiden ligger för långt fram i tiden.'); e.status = 409; throw e;
     }
 
-    if (Number(treatment.waiting_period_days) > 0 && start.getTime() < now + Number(treatment.waiting_period_days) * 86400000) {
-      const e = new Error(`Denna behandling har en väntetid på ${treatment.waiting_period_days} dagar.`);
+    const configuredWaitingDays = ruleEnforced(rules, 'waiting_periods') && matchesTreatment(waitingRule.config, treatment) ? Number(waitingRule.config?.days) || 0 : 0;
+    const waitingDays = Math.max(Number(treatment.waiting_period_days) || 0, configuredWaitingDays);
+    if (waitingDays > 0 && start.getTime() < now + waitingDays * 86400000) {
+      const e = new Error(`Denna behandling har en väntetid på ${waitingDays} dagar.`);
       e.status = 400; throw e;
     }
 
+    const configuredMinAge = ruleEnforced(rules, 'age_verification') && matchesTreatment(ageRule.config, treatment) ? Number(ageRule.config?.minimum_age) || 0 : 0;
     const minAge = treatment.treatment_type === 'injektion'
-      ? Math.max(18, Number(treatment.min_age) || 0)
-      : Math.max(0, Number(treatment.min_age) || 0);
+      ? Math.max(18, Number(treatment.min_age) || 0, configuredMinAge)
+      : Math.max(0, Number(treatment.min_age) || 0, configuredMinAge);
     if (minAge > 0) {
       if (!birthDate || ageAt(start, birthDate) < minAge) {
         const e = new Error(`Denna behandling kräver att du är minst ${minAge} år.`);
