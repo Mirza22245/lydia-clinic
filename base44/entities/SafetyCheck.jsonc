@@ -1,0 +1,14 @@
+{
+  "name": "SafetyCheck",
+  "type": "object",
+  "properties": {
+    "equipment_id": {"type":"string","title":"Utrustning"},
+    "equipment_name": {"type":"string","title":"Utrustningsnamn"},
+    "check_type": {"type":"string","title":"Kontrolltyp"},
+    "check_date": {"type":"string","title":"Kontrolldatum"},
+    "next_check_date": {"type":"string","title":"Nästa kontroll"},
+    "responsible_person": {"type":"string","title":"Ansvarig"},
+    "result": {"type":"string","enum":["ok","action_required","failed"],"title":"Resultat"},
+    "notes": {"type":"string","title":"Anteckningar"}
+  }
+}
