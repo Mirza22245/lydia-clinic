@@ -41,6 +41,7 @@ async function seedOperationsFeatureFlags() {
     ['staff_attendance','Personalliggare','core'],
     ['communication_rules','Kommunikationsregler','communication'],
     ['booking_rules','Bokningsregler','core'],
+    ['public_booking','Publik webb & onlinebokning','core'],
   ];
   for (const [key, label, module] of flags) {
     const exists = await pool.query(
