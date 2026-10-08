@@ -45,7 +45,6 @@ export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
               <ArrowUpRight className="ml-1.5 h-4 w-4" />
             </a>
           </Button>
-          <a href="https://lydiaestetisk.se/" className="hidden text-sm font-medium text-black/55 transition hover:text-black lg:inline-flex">Klinikens webbplats</a>
           <a href="#behandlingar" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 lg:hidden" aria-label="Se behandlingar">
             <Menu className="h-4 w-4" />
           </a>
