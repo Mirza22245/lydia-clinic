@@ -124,7 +124,9 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
-          <AuthenticatedApp />
+          <LanguageProvider>
+            <AuthenticatedApp />
+          </LanguageProvider>
         </Router>
         <Toaster />
       </QueryClientProvider>
