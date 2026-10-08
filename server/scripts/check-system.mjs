@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const fail = (msg) => { console.error('[system-check] FAIL:', msg); process.exitCode = 1; };
@@ -28,6 +29,24 @@ const walk = (dir) => {
 };
 for (const dir of sourceDirs) if (fs.existsSync(path.join(root, dir))) walk(path.join(root, dir));
 for (const name of entityRefs) if (!entityNames.has(name)) fail(`Frontend references missing entity: ${name}`);
+
+const serverSyntaxFiles = [];
+const serverSrc = path.join(root, 'server');
+const scanNodeFiles = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) scanNodeFiles(full);
+    else if (/\.(js|mjs)$/.test(entry.name) && !full.includes(path.sep + '.compiled-functions' + path.sep)) serverSyntaxFiles.push(full);
+  }
+};
+scanNodeFiles(serverSrc);
+for (const file of serverSyntaxFiles) {
+  const check = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+  if (check.status !== 0) {
+    const detail = (check.stderr || check.stdout || '').trim().split('\\n').slice(-8).join('\\n');
+    fail(`Node syntax error in ${path.relative(root, file)}\\n${detail}`);
+  }
+}
 
 const requiredFiles = [
   'server/src/index.js',
