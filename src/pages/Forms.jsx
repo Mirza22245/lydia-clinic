@@ -122,7 +122,9 @@ export default function Forms() {
   };
 
   // ---- Template builder ----
-  const openCreateTpl = () => { setEditingTpl(null); setTplForm(emptyTemplate); setTplOpen(true); };\n  const createAestheticPreset = async (preset) => {
+  const openCreateTpl = () => { setEditingTpl(null); setTplForm(emptyTemplate); setTplOpen(true); };
+
+  const createAestheticPreset = async (preset) => {
     const clinic_id = await getClinicId();
     const exists = templates.some((t) => t.clinic_id === clinic_id && t.name === preset.label && t.status !== "archived");
     if (exists) return;
@@ -242,7 +244,7 @@ export default function Forms() {
           <p className="text-sm text-muted-foreground">Skapa hälsodeklarationer och samtyckesformulär som fylls i inför behandling.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {aestheticPresets.map((preset) => <Button key={preset.key} size="sm" variant="outline" onClick={() => createAestheticPreset(preset)}><ClipboardCheck className="w-4 h-4 mr-1" />preset.label</Button>)}
+          {aestheticPresets.map((preset) => <Button key={preset.key} size="sm" variant="outline" onClick={() => createAestheticPreset(preset)}><ClipboardCheck className="w-4 h-4 mr-1" />{preset.label}</Button>)}
         </div>
         <Button size="sm" onClick={openCreateTpl}><Plus className="w-4 h-4 mr-1" />Ny mall</Button>
       </div>
