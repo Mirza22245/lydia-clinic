@@ -1,15 +1,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Loader2, Eye, Trash2, HeartPulse, ArrowLeft } from "lucide-react";
+import { Plus, Loader2, Eye, Trash2, HeartPulse } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { fmtDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 const emptyForm = {
   customer_id: "",
