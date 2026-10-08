@@ -12,7 +12,7 @@ export const AREA = {
   CashRegister: 'payments', WaitingPeriodRule: 'compliance', AgeVerificationRule: 'compliance',
   TreatmentInformation: 'compliance', StaffLicense: 'compliance', RadiationEquipment: 'compliance',
   Incident: 'compliance', HygieneCheck: 'compliance', InventoryLot: 'products',
-  CommunicationRule: 'messages', BookingRule: 'bookings',
+  CommunicationRule: 'messages', BookingRule: 'bookings', ClinicRuleAudit: 'audit',
   InventoryTransaction: 'products', Campaign: 'marketing', DiscountCode: 'marketing',
   Review: 'reviews', Message: 'messages', AuditLog: 'audit',
   ManagementDocument: 'management', FeatureFlag: 'settings', Clinic: 'settings',
