@@ -1,7 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
 import { secrets } from "base44:runtime";
 import { sendReceiptForPayment } from "../../shared/receipt.ts";
-import { computeBookingRequirements } from "../../shared/bookingRequirements.ts";
 
 // Tar emot Stripe-webhooks. Validerar signaturen med STRIPE_WEBHOOK_SECRET
 // (Web Crypto, asynkron) och uppdaterar bokning + betalning vid lyckad betalning.
@@ -102,16 +101,15 @@ export default async function(req) {
             stripe_payment_intent_id: pi.id,
             clinic_id: clinicId,
           });
-          // Betalning bekräftar bara bokningen om alla övriga obligatoriska krav (hälsodeklaration,
-          // samtycke, formulär) också är uppfyllda — annars förbigås Requirement Engine med ett kort.
+          // Betalning bekräftar själva bokningen automatiskt.
+          // Compliancekrav (hälsodeklaration, samtycke, väntetid, formulär osv.)
+          // ska i stället blockera själva behandlingen, inte tvinga personalen att
+          // manuellt godkänna en redan betald bokning.
           if (booking) {
-            const patch = { deposit_paid: (booking.deposit_amount || 0) > 0 };
-            if (booking.status === "pending") {
-              const treatment = booking.treatment_id ? await svc.entities.Treatment.get(booking.treatment_id).catch(() => null) : null;
-              const check = await computeBookingRequirements(svc, booking, treatment);
-              if (!treatment || check.enforceableCount === 0 || check.allCompleted) patch.status = "confirmed";
-            }
-            await svc.entities.Booking.update(bookingId, patch);
+            await svc.entities.Booking.update(bookingId, {
+              status: booking.status === "pending" ? "confirmed" : booking.status,
+              deposit_paid: (booking.deposit_amount || 0) > 0,
+            });
           }
           // Skicka kvitto automatiskt — fel fångas tyst så att webhook:en
           // aldrig misslyckas på grund av e-postproblem.
