@@ -57,6 +57,16 @@ export default async function(req: any) {
       return Response.json({ error: 'Samtycket är redan signerat och låst' }, { status: 409 });
     }
 
+    if (consent.waiting_period_until) {
+      const earliest = new Date(consent.waiting_period_until).getTime();
+      if (Number.isFinite(earliest) && Date.now() < earliest) {
+        return Response.json({
+          error: 'Betänketiden är inte slut ännu.',
+          waiting_period_until: consent.waiting_period_until,
+        }, { status: 409 });
+      }
+    }
+
     const grantedAt = new Date().toISOString();
     const ipAddress = getClientIp(req);
     const deviceInfo = (req.headers.get('user-agent') || '').slice(0, 300);
