@@ -2,12 +2,10 @@ import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, FileText, Loader2, Trash2, Eye, Upload, Lock } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { logAudit } from "@/lib/audit";
 import { Image } from "@/components/ui/image";
-import { cn } from "@/lib/utils";
 
 const fmtSize = (n) => {
   if (!n) return "";
