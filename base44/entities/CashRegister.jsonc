@@ -1,1 +1,119 @@
-{"name":"CashRegister","type":"object","properties":{"name":{"type":"string","title":"Namn"},"status":{"type":"string","enum":["disabled","test","active"],"title":"Status"},"register_id":{"type":"string","title":"Kassabeteckning"},"control_unit_id":{"type":"string","title":"Kontrollenhet/kontrollsystem"},"manufacturer_declaration":{"type":"string","title":"Tillverkardeklaration"},"receipt_series":{"type":"string","title":"Kvittoserie"},"vat_rates":{"type":"string","title":"Momssatser"},"opening_balance":{"type":"number","title":"Växelkassa"},"notes":{"type":"string","title":"Anteckningar"}}}
+{
+  "name": "CashRegister",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Namn"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "test",
+        "active"
+      ],
+      "title": "Status"
+    },
+    "register_id": {
+      "type": "string",
+      "title": "Kassabeteckning"
+    },
+    "control_unit_id": {
+      "type": "string",
+      "title": "Kontrollenhet/kontrollsystem"
+    },
+    "manufacturer_declaration": {
+      "type": "string",
+      "title": "Tillverkardeklaration"
+    },
+    "receipt_series": {
+      "type": "string",
+      "title": "Kvittoserie"
+    },
+    "vat_rates": {
+      "type": "string",
+      "title": "Momssatser"
+    },
+    "opening_balance": {
+      "type": "number",
+      "title": "Växelkassa"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
