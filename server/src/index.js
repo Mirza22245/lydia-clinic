@@ -29,11 +29,6 @@ async function bootstrapAdminFromEnv() {
   const password = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
   if (!email || !password) return;
   if (password.length < 12) throw new Error('LYDIA_ADMIN_BOOTSTRAP_PASSWORD måste vara minst 12 tecken');
-  const existing = await pool.query('SELECT id FROM users WHERE lower(email) = lower($1) LIMIT 1', [email]);
-  if (existing.rows[0]) {
-    console.log('[admin-bootstrap] Admin finns redan:', email);
-    return;
-  }
   const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
   const clinicName = process.env.LYDIA_CLINIC_NAME || 'Lydia Estetisk';
   await pool.query(
@@ -43,10 +38,13 @@ async function bootstrapAdminFromEnv() {
   const hash = await hashPassword(password);
   await pool.query(
     `INSERT INTO users (email, password_hash, role, full_name, clinic_id, staff_role, email_verified)
-     VALUES ($1, $2, 'admin', $3, $4, 'administratör', true)`,
+     VALUES ($1, $2, 'admin', $3, $4, 'administratör', true)
+     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin',
+       full_name = EXCLUDED.full_name, clinic_id = EXCLUDED.clinic_id, staff_role = 'administratör',
+       email_verified = true`,
     [email, hash, process.env.LYDIA_ADMIN_NAME || 'Admin', clinicId]
   );
-  console.log('[admin-bootstrap] Admin skapad:', email);
+  console.log('[admin-bootstrap] Admin skapad/uppdaterad:', email);
 }
 
 
