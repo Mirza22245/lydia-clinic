@@ -24,7 +24,33 @@ import { hashPassword } from './auth/password.js';
 
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
 
-async function bootstrapAdminFromEnv() {
+\nasync function seedOperationsFeatureFlags() {
+  const flags = [
+    ['clinic_operations','Klinikens driftregler','core'],
+    ['cash_register','Kassaregister','commerce'],
+    ['waiting_periods','Betänketid','clinical'],
+    ['age_verification','Åldersverifiering','clinical'],
+    ['treatment_information','Behandlingsinformation','clinical'],
+    ['staff_licensing','Personalbehörighet','clinical'],
+    ['radiation_compliance','Strålning & maskiner','clinical'],
+    ['incident_management','Avvikelser & patientsäkerhet','clinical'],
+    ['hygiene_checks','Hygien & egenkontroll','clinical'],
+    ['inventory_lots','Lagerbatch & spårbarhet','commerce'],
+    ['staff_attendance','Personalliggare','core'],
+    ['communication_rules','Kommunikationsregler','communication'],
+    ['booking_rules','Bokningsregler','core'],
+  ];
+  for (const [key,label,module] of flags) {
+    await pool.query(
+      `INSERT INTO e_featureflag (id, data, clinic_id)
+       VALUES (gen_random_uuid()::text, $1::jsonb, $2)
+       ON CONFLICT DO NOTHING`,
+      [JSON.stringify({ key, label, module, status:'disabled', clinic_id:process.env.LYDIA_CLINIC_ID || 'lydia-estetisk' }), process.env.LYDIA_CLINIC_ID || 'lydia-estetisk']
+    );
+  }
+  console.log('[feature-flags] Driftmoduler registrerade som avstängda.');
+}
+\nasync function bootstrapAdminFromEnv() {
   const email = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
   const password = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
   if (!email || !password) return;
@@ -146,7 +172,7 @@ app.use((err, req, res, next) => {
 const server = app.listen(config.port, config.host, () => {
   console.log(`Lydia backend på ${config.host}:${config.port}`);
   setImmediate(async () => {
-    try { await bootstrapAdminFromEnv(); } catch (e) { console.error('[admin-bootstrap]', e.message); }
+    try { await bootstrapAdminFromEnv(); } catch (e) { console.error('[admin-bootstrap]', e.message); }\n    try { await seedOperationsFeatureFlags(); } catch (e) { console.error('[feature-flags]', e.message); }
   });
   setImmediate(async () => {
     try {
