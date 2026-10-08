@@ -27,7 +27,13 @@ function ProductsContent() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);\n  const [stockOpen, setStockOpen] = useState(false);\n  const [stockProduct, setStockProduct] = useState(null);\n  const [stockType, setStockType] = useState("purchase");\n  const [stockQty, setStockQty] = useState(1);\n  const [stockNote, setStockNote] = useState("");\n  const [history, setHistory] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [stockOpen, setStockOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState(null);
+  const [stockType, setStockType] = useState("purchase");
+  const [stockQty, setStockQty] = useState(1);
+  const [stockNote, setStockNote] = useState("");
+  const [history, setHistory] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +103,8 @@ function ProductsContent() {
                   {p.category && <p className="text-xs text-muted-foreground">{p.category}</p>}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Lager" onClick={() => openStock(p)}><History className="w-3.5 h-3.5" /></Button>\n                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Lager" onClick={() => openStock(p)}><History className="w-3.5 h-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(p)}><Trash2 className="w-3.5 h-3.5" /></Button>
                 </div>
               </div>
