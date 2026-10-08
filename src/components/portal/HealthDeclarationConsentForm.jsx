@@ -8,7 +8,9 @@ import { submitHealthDeclarationConsent } from "@/functions/submitHealthDeclarat
 import SignaturePad from "@/components/portal/SignaturePad";
 
 const treatmentTypes = [
-  { key: "injektion", label: "Injektionsbehandling (Botox / Fillers)" },
+  { key: "filler", label: "Fillers" },
+  { key: "botox", label: "Botox / botulinumtoxin" },
+  { key: "injektion", label: "Annan injektionsbehandling" },
   { key: "hudvard", label: "Avancerad hudvård / CO2-laser / Peeling" },
   { key: "apparat", label: "Apparatbehandling (HIFU / Radiofrekvens / Fettreducering)" },
   { key: "annan", label: "Annan behandling" },
@@ -93,7 +95,7 @@ export default function HealthDeclarationConsentForm({ customer, bookings = [], 
   const setBool = (f) => (v) => setForm((s) => ({ ...s, [f]: v }));
   const setCheck = (f) => (v) => setForm((s) => ({ ...s, [f]: v }));
 
-  const isInjection = form.treatment_type === "injektion";
+  const isInjection = ["filler", "botox", "injektion"].includes(form.treatment_type);
 
   const validate = () => {
     if (!form.name.trim()) return "Namn saknas";
@@ -135,7 +137,7 @@ export default function HealthDeclarationConsentForm({ customer, bookings = [], 
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 border-b border-border pb-3">
           <PenLine className="w-4 h-4 text-muted-foreground" />
-          <h2 className="font-medium">Hälsodeklaration & Samtycke</h2>
+          <h2 className="font-medium">Inför din behandling</h2>
         </div>
 
       {/* Section 1: Allmän Patientinformation */}
@@ -174,7 +176,8 @@ export default function HealthDeclarationConsentForm({ customer, bookings = [], 
 
       {/* Section 2: Typ av behandling */}
       <div className="pt-2">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">2. Typ av behandling som ska utföras</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">2. Vad ska du behandla?</h3>
+        <p className="mb-3 text-sm text-muted-foreground">Välj den behandling du har bokat. Du får separat information och slutligt samtycke när betänketiden är klar.</p>
         <div className="space-y-2">
           {treatmentTypes.map((t) => (
             <label key={t.key} className={cn("flex items-center gap-2.5 rounded-lg border p-3 cursor-pointer transition-colors", form.treatment_type === t.key ? "border-primary/40 bg-primary/5" : "border-border hover:bg-muted/30")}>
@@ -243,7 +246,7 @@ export default function HealthDeclarationConsentForm({ customer, bookings = [], 
       <div className="pt-2">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">5. Godkännande & Signering</h3>
         <div className="rounded-lg border border-border bg-muted/20 p-3.5 text-sm leading-relaxed">
-          "Jag intygar att ovanstående hälsouppgifter är korrekta och fullständiga. Jag har läst och förstått informationen om behandlingen, dess risker och eftervård, och godkänner genomförandet."
+          "Jag intygar att mina hälsouppgifter är korrekta och att jag har tagit del av den information som kliniken har lämnat inför behandlingen. Jag förstår att detta formulär inte ersätter det slutliga behandlingssamtycket."
         </div>
         <div className="mt-4">
           <SignaturePad onChange={setBool("signature")} label="Signatur (digital signatur på skärm)" />
@@ -264,7 +267,7 @@ export default function HealthDeclarationConsentForm({ customer, bookings = [], 
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={submitting}>Avbryt</Button>
         <Button type="submit" disabled={submitting}>
-          {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Skickar...</> : <><PenLine className="w-4 h-4 mr-2" />Signera & Skicka</>}
+          {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Skickar...</> : <><PenLine className="w-4 h-4 mr-2" />Bekräfta & Skicka</>}
         </Button>
       </div>
       </div>
