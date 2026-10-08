@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare, SlidersHorizontal, ExternalLink } from "lucide-react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -75,7 +75,12 @@ export default function AppShell() {
             );
           })}
         </nav>
-        <div className="border-t border-border p-3">
+        <div className="border-t border-border p-3 space-y-1">
+          <Button asChild variant="ghost" size="sm" className="w-full justify-start">
+            <a href="https://lydiaestetisk.se/" target="_self">
+              <ExternalLink className="w-4 h-4 mr-2" /> Webbplatsen
+            </a>
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="w-full justify-start">
             <LogOut className="w-4 h-4 mr-2" /> Logga ut
           </Button>
@@ -87,6 +92,9 @@ export default function AppShell() {
         <span className="font-semibold font-heading">Lydia</span>
         <div className="ml-auto flex items-center gap-1">
           <LanguageSwitcher compact />
+          <a href="https://lydiaestetisk.se/" aria-label="Webbplatsen" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent">
+            <ExternalLink className="w-4 h-4" />
+          </a>
           {visibleNav.map((item) => {
             const Icon = item.icon;
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
