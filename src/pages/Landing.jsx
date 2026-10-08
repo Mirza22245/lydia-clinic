@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Loader2, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
 import { getPublicBookingData } from "@/functions/getPublicBookingData";
 import SiteHeader from "@/components/landing/SiteHeader";
 import Hero from "@/components/landing/Hero";
