@@ -63,6 +63,11 @@ export default function POS() {
     if (!active) return;
     setSaving(true);
     try {
+      const flags = await base44.entities.FeatureFlag.filter({ key: "cash_register", status: "enabled" }, { limit: 10 }).catch(() => ({ items: [] }));
+      if ((flags.items || []).length) {
+        const registers = await base44.entities.CashRegister.filter({ status: "active" }, { limit: 1 }).catch(() => ({ items: [] }));
+        if (!(registers.items || []).length) throw new Error("Kassaregister är aktiverat men inget aktivt kassaregister är konfigurerat i Inställningar.");
+      }
       const year = new Date().getFullYear();
       const seq = (payments.length + 1).toString().padStart(4, "0");
       const amt = Number(amount) || 0;
