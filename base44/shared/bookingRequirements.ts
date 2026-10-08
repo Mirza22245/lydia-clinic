@@ -160,6 +160,28 @@ export async function computeBookingRequirements(svc, booking, treatment) {
         }
       }
 
+      // Estetiska injektioner: betänketiden räknas från när patientinformationen faktiskt lämnades,
+      // inte från när bokningen skapades. En tidigare behandling av samma typ kan hanteras som undantag
+      // genom klinikens konfiguration; annars krävs ny information och ny väntetid.
+      if (['injektion', 'filler', 'botox'].includes(String(treatment?.treatment_type || '').toLowerCase()) && treatment.requires_health_declaration) {
+        const declarations = await svc.entities.HealthDeclaration.filter(
+          { clinic_id: clinicId, customer_id: booking.customer_id, status: 'submitted' },
+          { sort: '-submitted_at', limit: 20 }
+        );
+        const latest = (declarations.items || []).find((x) =>
+          !x.booking_id || x.booking_id === booking.id || String(x.treatment_name || '').toLowerCase() === String(treatment.name || '').toLowerCase()
+        );
+        const waitingUntil = latest?.waiting_period_until ? new Date(latest.waiting_period_until).getTime() : NaN;
+        requirements.push({
+          key: 'aesthetic_waiting_period',
+          label: 'Lagstadgad betänketid är klar',
+          required: true,
+          completed: Number.isFinite(waitingUntil) && Date.now() >= waitingUntil,
+          mode: 'enabled',
+          waiting_period_until: latest?.waiting_period_until || null,
+        });
+      }
+
       const waitRule = await getClinicRule(svc, clinicId, 'waiting_periods');
       if (waitRule.active && configMatches(waitRule.config, treatment)) {
         const days = Number(waitRule.config.days || 0);
