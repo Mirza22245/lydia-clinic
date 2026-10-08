@@ -15,6 +15,7 @@ import { entityRouter } from './entities/routes.js';
 import { functionsRouter } from './runtime/functions.js';
 import { filesRouter } from './routes/files.js';
 import { googleRouter } from './routes/google.js';
+import { integrationsRouter } from './routes/integrations.js';
 import { publicBookingRouter } from './routes/publicBooking.js';
 import { getAvailableSlotsNative } from './routes/nativeAvailability.js';
 import { createPublicBookingNative } from './routes/nativePublicBooking.js';
@@ -23,7 +24,6 @@ import { csrfGuard } from './lib/csrf.js';
 import { hashPassword } from './auth/password.js';
 
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
-
 
 async function seedOperationsFeatureFlags() {
   const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
@@ -83,10 +83,8 @@ async function bootstrapAdminFromEnv() {
   console.log('[admin-bootstrap] Admin skapad/uppdaterad:', email);
 }
 
-
 const app = express();
 app.disable('x-powered-by');
-// Antal proxy-hopp framför Node (host-nginx + container-nginx = 2). Styr req.ip för rate-limits.
 app.set('trust proxy', Number(process.env.TRUST_PROXY || 1));
 app.use(helmet({
   contentSecurityPolicy: {
@@ -107,8 +105,6 @@ app.use(helmet({
 }));
 app.use(compression());
 
-// Rå body FÖRST för funktioner: Stripe-signaturen kräver exakta bytes och
-// funktionerna läser själva body via Request.json(). Måste ligga före express.json.
 app.use('/api/functions', express.raw({ type: '*/*', limit: '2mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -136,6 +132,7 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/entities', apiLimiter, entityRouter);
 app.use('/api/files', apiLimiter, filesRouter);
 app.use('/api/google', publicLimiter, googleRouter);
+app.use('/api/integrations', apiLimiter, integrationsRouter);
 app.use('/api/public-booking-data', publicLimiter, publicBookingRouter);
 app.post('/api/public-booking', publicLimiter, async (req, res) => {
   try {
@@ -157,8 +154,6 @@ app.post('/api/availability', publicLimiter, async (req, res) => {
 });
 app.use('/api/functions', functionsRouter);
 
-// Statisk frontend + SPA-fallback för Hostinger Cloud (enkel Node-app utan nginx).
-// API-rutter (/api/*) hanteras ovan; allt annat som inte är en fil → index.html.
 if (existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
   app.use((req, res, next) => {
@@ -174,8 +169,6 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status >= 500 ? 'Internt serverfel' : 'Ogiltig förfrågan' });
 });
 
-// Schemat skapas av `npm run migrate` (ägar-rollen). Appen kör som lydia_app (endast DML).
-// Starta HTTP-servern först. Katalogsynken får aldrig blockera Hostingers startup.
 const server = app.listen(config.port, config.host, () => {
   console.log(`Lydia backend på ${config.host}:${config.port}`);
   setImmediate(async () => {
