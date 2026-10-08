@@ -1,0 +1,1 @@
+{"name":"ClinicRuleAudit","type":"object","properties":{"rule_key":{"type":"string","title":"Regel"},"action":{"type":"string","title":"Åtgärd"},"entity_type":{"type":"string","title":"Entitet"},"entity_id":{"type":"string","title":"Entitet-ID"},"message":{"type":"string","title":"Meddelande"},"metadata":{"type":"string","title":"Metadata"}}}
