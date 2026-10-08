@@ -40,7 +40,10 @@ function entityApi(name) {
     create: (data) => http(base, { method: 'POST', body: data }),
     update: (id, data) => http(`${base}/${encodeURIComponent(id)}`, { method: 'PATCH', body: data }),
     delete: (id) => http(`${base}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    count: async (query = {}) => (await http(`${base}/count`, { method: 'POST', body: { query } })).count,
+    count: async (query = {}) => {
+      const result = await http(`${base}/count`, { method: 'POST', body: { query } });
+      return Number(result?.count ?? result?.data?.count ?? 0) || 0;
+    },
     aggregate: (opts) => http(`${base}/aggregate`, { method: 'POST', body: opts }),
     subscribe: () => () => {},
   };
