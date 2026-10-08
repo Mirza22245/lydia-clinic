@@ -159,7 +159,7 @@ export default async function(req) {
       staff_name,
       start_time: start.toISOString(),
       end_time: end.toISOString(),
-      status: 'pending',
+      status: treatment.requires_payment && (treatment.price || 0) > 0 ? 'pending' : 'confirmed',
       price: treatment.price,
       room_id: treatment.room_id || '',
       resource_ids: treatment.required_resource_ids || '[]',
