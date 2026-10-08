@@ -11,7 +11,7 @@ import FeatureFlagsPanel from "@/components/FeatureFlagsPanel";
 import IntegrationsPanel from "@/components/IntegrationsPanel";
 import PublicSiteCard from "@/components/settings/PublicSiteCard";
 
-const empty = { name: "", org_number: "", email: "", phone: "", address: "", industry: "" };
+const empty = { name: "", org_number: "", email: "", phone: "", address: "", industry: "", verksamhetschef: "", ivo_registration: "", patient_insurance: "", ssm_notification: "", compliance_contact: "" };
 
 export default function Settings() {
   const [clinic, setClinic] = useState(null);
@@ -50,6 +50,11 @@ export default function Settings() {
         phone: form.phone || undefined,
         address: form.address || undefined,
         industry: form.industry || undefined,
+        verksamhetschef: form.verksamhetschef || undefined,
+        ivo_registration: form.ivo_registration || undefined,
+        patient_insurance: form.patient_insurance || undefined,
+        ssm_notification: form.ssm_notification || undefined,
+        compliance_contact: form.compliance_contact || undefined,
       };
       const updated = await base44.entities.Clinic.update(clinic.id, data);
       setClinic(updated);
@@ -100,6 +105,20 @@ export default function Settings() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {field("org_number", "Organisationsnummer", { placeholder: "556xxx-xxxx" })}
             {field("industry", "Bransch", { placeholder: "t.ex. Estetisk klinik" })}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <div className="border-b border-border pb-3">
+            <h2 className="font-medium">Vårdgivare & tillsyn</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Registrera klinikens egna uppgifter för IVO, patientförsäkring och Strålsäkerhetsmyndigheten.</p>
+          </div>
+          {field("verksamhetschef", "Verksamhetschef")}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {field("ivo_registration", "IVO vårdgivarregister / registreringsuppgift")}
+            {field("patient_insurance", "Patientförsäkring")}
+            {field("ssm_notification", "SSM anmälan / referens")}
+            {field("compliance_contact", "Compliance-ansvarig")}
           </div>
         </div>
 
