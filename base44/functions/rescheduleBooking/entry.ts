@@ -131,8 +131,13 @@ export default async function(req) {
       });
     } catch { /* swallow */ }
 
+    // Kommunikationsregel: TEST påverkar inte befintlig e-post, PÅ kan styra kanal/event.
+    const communicationRule = await getClinicRule(svc, booking.clinic_id, 'communication_rules');
+    const rescheduledConfig = communicationRule.active && communicationRule.config?.events?.rescheduled
+      ? communicationRule.config.events.rescheduled : null;
+    const sendRescheduledEmail = !communicationRule.enforce || !rescheduledConfig || rescheduledConfig.channel === 'email' || rescheduledConfig.channel === 'both';
     // Skicka bekräftelse (får inte blockera)
-    try {
+    if (sendRescheduledEmail) try {
       if (booking.customer_id) {
         const customer = await svc.entities.Customer.get(booking.customer_id).catch(() => null);
         if (customer?.email) {
