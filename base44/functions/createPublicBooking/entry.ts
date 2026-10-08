@@ -199,7 +199,11 @@ export default async function(req) {
     } catch { /* ignore */ }
 
     // Bekräftelse via e-post — får inte blockera bokningen om det misslyckas.
-    try {
+    const communicationRule = await getClinicRule(svc, clinic_id, 'communication_rules');
+    const confirmationConfig = communicationRule.active && communicationRule.config?.events?.confirmation
+      ? communicationRule.config.events.confirmation : null;
+    const sendConfirmationEmail = !communicationRule.enforce || !confirmationConfig || confirmationConfig.channel === 'email' || confirmationConfig.channel === 'both';
+    if (sendConfirmationEmail) try {
       const proto = req.headers.get('x-forwarded-proto') || 'https';
       const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
       const baseUrl = host ? `${proto}://${host}` : '';
