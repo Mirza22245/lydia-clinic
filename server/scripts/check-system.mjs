@@ -42,7 +42,12 @@ for (const file of requiredFiles) if (!fs.existsSync(path.join(root, file))) fai
 
 const index = read('server/src/index.js');
 if (!index.includes("config.host") || !index.includes('app.listen')) fail('Server does not use configured host/port');
+if (!index.includes("app.get('/api/ready'")) fail('Readiness endpoint is missing');
+if (!index.includes("app.use('/api/google', publicLimiter")) fail('Google OAuth route is not rate-limited');
+if (!index.includes("app.use('/api/public-booking-data', publicLimiter")) fail('Public booking data route is not rate-limited');
 if (!index.includes('https://js.stripe.com') || !index.includes('https://api.stripe.com')) fail('Stripe CSP is incomplete');
+const frameSrcCount = (index.match(/frameSrc:/g) || []).length;
+if (frameSrcCount !== 1) fail(`Expected exactly one frameSrc CSP directive, found ${frameSrcCount}`);
 
 const catalog = read('server/src/db/luxeCatalog.js');
 const catalogRows = (catalog.match(/\['/g) || []).length;
