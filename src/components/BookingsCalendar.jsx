@@ -2,11 +2,11 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay,
-  addDays, addWeeks, addMonths, eachDayOfInterval, format, isSameDay, isSameMonth, isToday,
+  addDays, addWeeks, addMonths, eachDayOfInterval, format, isSameMonth, isToday,
 } from "date-fns";
 import { sv } from "date-fns/locale";
 
