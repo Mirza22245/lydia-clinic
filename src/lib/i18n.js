@@ -108,7 +108,7 @@ export function LanguageProvider({ children }) {
     t: (value) => translateValue(String(value), language),
   }), [language, setLanguage]);
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return React.createElement(LanguageContext.Provider, { value }, children);
 }
 
 export function useLanguage() {
