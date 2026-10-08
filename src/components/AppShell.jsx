@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Sparkles, FileText, ShieldCheck, ClipboardList, HeartPulse, UserCog, Receipt, Settings, LogOut, Calculator, BarChart3, CalendarClock, ClipboardCheck, Package, Gift, Megaphone, Star, MessageSquare, SlidersHorizontal } from "lucide-react";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ const nav = [
   { to: "/app/messages", label: "Meddelanden", icon: MessageSquare, perm: "messages", feature: "messages" },
   { to: "/app/audit", label: "Audit-logg", icon: ShieldCheck, perm: "audit" },
   { to: "/app/compliance", label: "Säkerhet & Compliance", icon: ShieldCheck, perm: "compliance" },
+  { to: "/app/operations", label: "Driftregler 1–12", icon: SlidersHorizontal, perm: "operations" },
   { to: "/app/settings", label: "Inställningar", icon: Settings, perm: "settings" },
 ];
 
