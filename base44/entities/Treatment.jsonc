@@ -31,6 +31,8 @@
       "type": "string",
       "enum": [
         "injektion",
+        "filler",
+        "botox",
         "kirurgi",
         "laser",
         "hud",
