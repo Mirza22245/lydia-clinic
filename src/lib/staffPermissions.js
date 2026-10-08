@@ -20,6 +20,7 @@ export const PERMISSION_AREAS = [
   { key: "reviews", label: "Recensioner" },
   { key: "messages", label: "Meddelanden" },
   { key: "audit", label: "Audit-logg" },
+  { key: "compliance", label: "Säkerhet & Compliance" },
   { key: "settings", label: "Inställningar" },
 ];
 
@@ -44,6 +45,7 @@ export const ROLE_PERMISSIONS = {
     reviews: true,
     messages: true,
     audit: true,
+    compliance: true,
     settings: true,
   },
   behandlare: {
@@ -65,6 +67,7 @@ export const ROLE_PERMISSIONS = {
     reviews: false,
     messages: true,
     audit: false,
+    compliance: false,
     settings: false,
   },
   reception: {
