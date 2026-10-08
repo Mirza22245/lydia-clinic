@@ -29,6 +29,7 @@ export const sendDueReminders = call('sendDueReminders');
 export const stripeWebhook = call('stripeWebhook');
 export const getAvailableSlots = call('getAvailableSlots');
 export const rescheduleBooking = call('rescheduleBooking');
+export const submitReview = call('submitReview');
 export const checkTreatmentCompliance = call('checkTreatmentCompliance');
 export const saveStaffBooking = call('saveStaffBooking');
 export const createPublicBooking = call('createPublicBooking');
