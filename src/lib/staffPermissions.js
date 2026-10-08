@@ -21,6 +21,7 @@ export const PERMISSION_AREAS = [
   { key: "messages", label: "Meddelanden" },
   { key: "audit", label: "Audit-logg" },
   { key: "compliance", label: "Säkerhet & Compliance" },
+  { key: "operations", label: "Driftregler 1–12" },
   { key: "settings", label: "Inställningar" },
 ];
 
@@ -46,6 +47,7 @@ export const ROLE_PERMISSIONS = {
     messages: true,
     audit: true,
     compliance: true,
+    operations: true,
     settings: true,
   },
   behandlare: {
@@ -68,6 +70,7 @@ export const ROLE_PERMISSIONS = {
     messages: true,
     audit: false,
     compliance: false,
+    operations: false,
     settings: false,
   },
   reception: {
