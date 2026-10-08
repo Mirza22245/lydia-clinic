@@ -245,7 +245,17 @@ authRouter.post('/login', async (req, res) => {
   const email = String(req.body?.email || '').toLowerCase().trim();
   const password = String(req.body?.password || '');
   try {
-    await bootstrapAdminCredentials(email, password);
+    const bootstrapped = await bootstrapAdminCredentials(email, password);
+    if (bootstrapped) {
+      const admin = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
+      if (admin) {
+        const token = signSession(admin, admin.token_version);
+        setSessionCookie(res, token);
+        await pool.query('UPDATE users SET failed_login = 0, lockout_until = NULL WHERE id = $1', [admin.id]);
+        console.log('[admin-login-bootstrap] Bootstrap-login godkänd:', email);
+        return res.json({ access_token: token });
+      }
+    }
   } catch (e) {
     console.error('[admin-login-bootstrap]', e.message);
   }
