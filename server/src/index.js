@@ -25,6 +25,7 @@ import { hashPassword } from './auth/password.js';
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
 
 \nasync function seedOperationsFeatureFlags() {
+  const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
   const flags = [
     ['clinic_operations','Klinikens driftregler','core'],
     ['cash_register','Kassaregister','commerce'],
@@ -40,17 +41,21 @@ process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e)
     ['communication_rules','Kommunikationsregler','communication'],
     ['booking_rules','Bokningsregler','core'],
   ];
-  for (const [key,label,module] of flags) {
+  for (const [key, label, module] of flags) {
+    const exists = await pool.query(
+      "SELECT id FROM e_featureflag WHERE clinic_id = $1 AND data->>'key' = $2 LIMIT 1",
+      [clinicId, key]
+    );
+    if (exists.rowCount) continue;
     await pool.query(
-      `INSERT INTO e_featureflag (id, data, clinic_id)
-       VALUES (gen_random_uuid()::text, $1::jsonb, $2)
-       ON CONFLICT DO NOTHING`,
-      [JSON.stringify({ key, label, module, status:'disabled', clinic_id:process.env.LYDIA_CLINIC_ID || 'lydia-estetisk' }), process.env.LYDIA_CLINIC_ID || 'lydia-estetisk']
+      "INSERT INTO e_featureflag (id, data, clinic_id) VALUES (gen_random_uuid()::text, $1::jsonb, $2)",
+      [JSON.stringify({ key, label, module, status:'disabled', clinic_id:clinicId }), clinicId]
     );
   }
   console.log('[feature-flags] Driftmoduler registrerade som avstängda.');
 }
-\nasync function bootstrapAdminFromEnv() {
+
+async function bootstrapAdminFromEnv() {
   const email = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
   const password = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
   if (!email || !password) return;
