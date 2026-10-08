@@ -84,104 +84,118 @@ export async function computeBookingRequirements(svc, booking, treatment) {
     requirements.push({ key: 'payment', label: 'Betalning', required: true, completed });
   }
 
-  // 5. Klinikregler: behandlingsinformation, personalbehörighet och maskin.
+  // 5. Klinikregler: behandlingsinformation, personalbehörighet, maskin,
+  // ålder och väntetid. TEST utvärderar men blockerar inte; PÅ blockerar.
   try {
-    const flagPage = await svc.entities.FeatureFlag.filter({ clinic_id: booking.clinic_id }, { limit: 100 });
-    const flags = Object.fromEntries((flagPage.items || []).map((f) => [f.key, f]));
-    const active = (key) => flags[key]?.status === 'enabled';
-    const config = (key) => {
-      try { return typeof flags[key]?.config === 'string' ? JSON.parse(flags[key].config || '{}') : (flags[key]?.config || {}); } catch { return {}; }
-    };
-    const matches = (cfg) => {
-      const ids = Array.isArray(cfg.treatment_ids) ? cfg.treatment_ids.map(String) : [];
-      const names = Array.isArray(cfg.treatment_names) ? cfg.treatment_names.map(x => String(x).toLowerCase()) : [];
-      return (!ids.length && !names.length) || ids.includes(String(treatment.id)) || names.includes(String(treatment.name || '').toLowerCase());
-    };
-
-    if (active('treatment_information') && matches(config('treatment_information'))) {
-      const info = await svc.entities.TreatmentInformation.filter(
-        { treatment_id: treatment.id, active: true }, { sort: '-created_date', limit: 1 }
-      );
-      requirements.push({ key: 'configured_treatment_information', label: 'Aktuell behandlingsinformation', required: true, completed: !!(info.items || []).length });
-    }
-
-    if (active('staff_licensing') && matches(config('staff_licensing'))) {
-      const requiredTypes = Array.isArray(config('staff_licensing').required_license_types)
-        ? config('staff_licensing').required_license_types.map(x => String(x).toLowerCase()) : [];
-      if (requiredTypes.length) {
-        const licenses = await svc.entities.StaffLicense.filter(
-          { staff_id: booking.staff_id || '' }, { limit: 100 }
+    const clinicId = booking?.clinic_id;
+    if (clinicId) {
+      const infoRule = await getClinicRule(svc, clinicId, 'treatment_information');
+      if (infoRule.active && configMatches(infoRule.config, treatment)) {
+        const info = await svc.entities.TreatmentInformation.filter(
+          { treatment_id: treatment.id, active: true }, { sort: '-created_date', limit: 1 }
         );
-        const staffName = String(booking.staff_name || '').toLowerCase();
-        const fallback = await svc.entities.StaffLicense.filter({ staff_name: booking.staff_name || '' }, { limit: 100 });
-        const ok = [...(licenses.items || []), ...(fallback.items || [])].some(x =>
-          (x.status || 'active') === 'active' && requiredTypes.includes(String(x.license_type || '').toLowerCase())
-        );
-        requirements.push({ key: 'configured_staff_license', label: 'Personalens behörighet', required: true, completed: ok });
+        requirements.push({
+          key: 'configured_treatment_information',
+          label: 'Aktuell behandlingsinformation',
+          required: infoRule.enforce,
+          completed: !!(info.items || []).length,
+          mode: infoRule.status,
+        });
       }
-    }
 
-    if (active('radiation_compliance') && matches(config('radiation_compliance'))) {
-      const equipmentId = treatment.equipment_id || treatment.machine_id || config('radiation_compliance').equipment_id;
-      if (equipmentId) {
-        const eq = await svc.entities.RadiationEquipment.filter({ equipment_id: equipmentId, status: 'active' }, { limit: 1 });
-        const equipment = eq.items?.[0];
-        requirements.push({ key: 'configured_radiation_equipment', label: 'Godkänd utrustning/maskin', required: true, completed: !!equipment });
-        if (equipment) {
-          requirements.push({ key: 'configured_ssm_notification', label: 'SSM-anmälan registrerad', required: true, completed: !!equipment.ssm_notification });
+      const licenseRule = await getClinicRule(svc, clinicId, 'staff_licensing');
+      if (licenseRule.active && configMatches(licenseRule.config, treatment, { staff_name: booking.staff_name })) {
+        const requiredTypes = Array.isArray(licenseRule.config.required_license_types)
+          ? licenseRule.config.required_license_types.map(x => String(x).toLowerCase()).filter(Boolean) : [];
+        if (requiredTypes.length) {
+          const licenses = await svc.entities.StaffLicense.filter({ staff_id: booking.staff_id || '' }, { limit: 100 });
+          const fallback = await svc.entities.StaffLicense.filter({ staff_name: booking.staff_name || '' }, { limit: 100 });
+          const ok = [...(licenses.items || []), ...(fallback.items || [])].some(x =>
+            (x.status || 'active') === 'active' &&
+            (!x.valid_until || new Date(x.valid_until) >= new Date()) &&
+            requiredTypes.includes(String(x.license_type || '').toLowerCase())
+          );
+          requirements.push({
+            key: 'configured_staff_license',
+            label: 'Personalens behörighet',
+            required: licenseRule.enforce,
+            completed: ok,
+            mode: licenseRule.status,
+          });
         }
+      }
+
+      const radiationRule = await getClinicRule(svc, clinicId, 'radiation_compliance');
+      if (radiationRule.active && configMatches(radiationRule.config, treatment)) {
+        const equipmentId = treatment.equipment_id || treatment.machine_id || radiationRule.config.equipment_id;
+        if (equipmentId) {
+          const eq = await svc.entities.RadiationEquipment.filter({ equipment_id: equipmentId, status: 'active' }, { limit: 1 });
+          const equipment = eq.items?.[0];
+          const notificationOk = !!equipment?.ssm_notification;
+          requirements.push({
+            key: 'configured_radiation_equipment',
+            label: 'Godkänd utrustning/maskin',
+            required: radiationRule.enforce,
+            completed: !!equipment && notificationOk,
+            mode: radiationRule.status,
+          });
+        }
+      }
+
+      const ageRule = await getClinicRule(svc, clinicId, 'age_verification');
+      if (ageRule.active && configMatches(ageRule.config, treatment) && cid) {
+        const minimumAge = Number(ageRule.config.minimum_age || 0);
+        if (minimumAge > 0) {
+          const customer = await svc.entities.Customer.get(cid).catch(() => null);
+          const age = customer?.birth_date
+            ? Math.floor((Date.now() - new Date(customer.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : -1;
+          requirements.push({
+            key: 'configured_age_verification',
+            label: `Åldersverifiering (${minimumAge}+ år)`,
+            required: ageRule.enforce,
+            completed: age >= minimumAge,
+            mode: ageRule.status,
+          });
+        }
+      }
+
+      const waitRule = await getClinicRule(svc, clinicId, 'waiting_periods');
+      if (waitRule.active && configMatches(waitRule.config, treatment)) {
+        const days = Number(waitRule.config.days || 0);
+        if (days > 0) {
+          const earliest = new Date(Date.now() + days * 86400000);
+          const scheduled = booking?.start_time ? new Date(booking.start_time) : null;
+          const completed = !!scheduled && scheduled.getTime() >= earliest.getTime();
+          requirements.push({
+            key: 'configured_waiting_period',
+            label: `Betänketid/väntetid (${days} dagar)`,
+            required: waitRule.enforce,
+            completed,
+            mode: waitRule.status,
+          });
+        }
+      }
+
+      const bookingRule = await getClinicRule(svc, clinicId, 'booking_rules');
+      if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name: booking.staff_name })) {
+        const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
+        const maxDays = Number(bookingRule.config.max_days || 0);
+        const scheduled = booking?.start_time ? new Date(booking.start_time) : null;
+        const leadHours = scheduled ? (scheduled.getTime() - Date.now()) / 3600000 : -1;
+        const minOk = !minLeadHours || leadHours >= minLeadHours;
+        const maxOk = !maxDays || (scheduled && scheduled.getTime() <= Date.now() + maxDays * 86400000);
+        requirements.push({
+          key: 'configured_booking_rule',
+          label: 'Konfigurerade bokningsregler',
+          required: bookingRule.enforce,
+          completed: minOk && maxOk,
+          mode: bookingRule.status,
+        });
       }
     }
   } catch {
-    // Äldre installationer kan sakna de nya entiteterna; befintliga krav fortsätter fungera.
-  }
-
-  // 5. IVO-compliance för injektionsbehandlingar
-  if (treatment.treatment_type === 'injektion' && cid) {
-    // Ålderskontroll — IVO kräver 18+ för injektionsbehandlingar
-    const minAge = Math.max(18, treatment.min_age || 0);
-    if (minAge > 0) {
-      const customer = await svc.entities.Customer.get(cid).catch(() => null);
-      let ageOk = false;
-      if (customer?.birth_date) {
-        const age = Math.floor((Date.now() - new Date(customer.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-        ageOk = age >= minAge;
-      }
-      requirements.push({ key: 'compliance_age', label: `Ålderskontroll (${minAge}+ år)`, required: true, completed: ageOk });
-    }
-
-    // Compliance-post (information, betänketid, samtycke)
-    const cpQuery = bid ? { customer_id: cid, treatment_id: treatment.id, booking_id: bid } : { customer_id: cid, treatment_id: treatment.id };
-    const cp = await svc.entities.TreatmentCompliance.filter(cpQuery, { sort: '-created_date', limit: 1 });
-    const compliance = cp.items?.[0];
-
-    requirements.push({
-      key: 'compliance_info',
-      label: 'Behandlingsinformation lämnad',
-      required: true,
-      completed: !!compliance?.information_given_at,
-    });
-
-    if (treatment.betanketid_hours > 0) {
-      const betanketidPassed = !!(compliance?.betanketid_ends_at && new Date() >= new Date(compliance.betanketid_ends_at));
-      requirements.push({
-        key: 'compliance_betanketid',
-        label: `Betänketid (${treatment.betanketid_hours}h)`,
-        required: true,
-        completed: betanketidPassed,
-      });
-    }
-
-    if (treatment.requires_consent && compliance) {
-      const consentOk = !!(compliance.consent_signed_at && compliance.consent_eligible_at &&
-        new Date(compliance.consent_signed_at) >= new Date(compliance.consent_eligible_at));
-      requirements.push({
-        key: 'compliance_consent',
-        label: 'Samtycke efter betänketid',
-        required: true,
-        completed: consentOk,
-      });
-    }
+    // Nya klinikregler får aldrig slå ut äldre bokningsflöden vid schema-/dataavvikelser.
   }
 
   // Informella (visas men blockerar inte)
