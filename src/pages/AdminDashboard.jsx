@@ -21,13 +21,22 @@ export default function AdminDashboard() {
       try {
         const now = new Date();
         const today = now.toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
+        const safeCount = async (entity, query = {}) => {
+          try {
+            const value = await entity.count(query);
+            return Number(value) || 0;
+          } catch (e) {
+            console.error("[dashboard-count]", e);
+            return 0;
+          }
+        };
         const [customers, bookings, completed, revenue, todayPage, pending] = await Promise.all([
-          base44.entities.Customer.count(),
-          base44.entities.Booking.count(),
-          base44.entities.Booking.count({ status: "completed" }),
-          base44.entities.Booking.aggregate({ query: { status: "completed" }, sum: "price" }),
-          base44.entities.Booking.filter({}, { sort: "start_time", limit: 100 }),
-          base44.entities.Booking.count({ status: "pending" }),
+          safeCount(base44.entities.Customer),
+          safeCount(base44.entities.Booking),
+          safeCount(base44.entities.Booking, { status: "completed" }),
+          base44.entities.Booking.aggregate({ query: { status: "completed" }, sum: "price" }).catch(() => ({ rows: [] })),
+          base44.entities.Booking.filter({}, { sort: "start_time", limit: 100 }).catch(() => ({ items: [] })),
+          safeCount(base44.entities.Booking, { status: "pending" }),
         ]);
         const todayItems = (todayPage.items || []).filter((b) =>
           b.start_time && new Date(b.start_time).toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" }) === today &&
