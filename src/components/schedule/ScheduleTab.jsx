@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, ChevronLeft, ChevronRight, CalendarDays, Save } from "lucide-react";
 import { getClinicId } from "@/lib/currentUser";
 import { cn } from "@/lib/utils";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, format, isSameMonth, isToday } from "date-fns";
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, format, isSameMonth, isToday, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 
 const days = [
@@ -177,7 +177,7 @@ export default function ScheduleTab() {
       {view === "week" && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="border-b border-border px-4 py-3">
-            <p className="font-medium">Återkommande veckoschema</p>
+            <div className="flex items-center gap-2"><p className="font-medium">Återkommande veckoschema</p><span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">Vecka {getISOWeek(new Date())}</span></div>
             <p className="text-sm text-muted-foreground">Ställ in personalens arbetstid en gång. Tiderna återkommer varje vecka.</p>
           </div>
           <div className="grid gap-px bg-border md:grid-cols-7">
@@ -208,6 +208,7 @@ export default function ScheduleTab() {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-2">
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">Vecka {getISOWeek(month)}</span>
               <Button size="icon" variant="ghost" onClick={() => setMonth((d) => addMonths(d, -1))}><ChevronLeft className="h-4 w-4" /></Button>
               <Button size="sm" variant="outline" onClick={() => setMonth(new Date())}>Idag</Button>
               <Button size="icon" variant="ghost" onClick={() => setMonth((d) => addMonths(d, 1))}><ChevronRight className="h-4 w-4" /></Button>
