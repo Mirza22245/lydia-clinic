@@ -174,7 +174,7 @@ export default function CareHistoryTimeline({ bookings = [], journals = [], cons
     if (filter === "all" || filter === "consent") {
       signedConsents.forEach((c) => items.push({ kind: "consent", date: c.granted_at, item: c }));
     }
-    return items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return items.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }, [filter, treatments, journals, signedConsents]);
 
   // Gruppera per månad för överblick.
