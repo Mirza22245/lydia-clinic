@@ -8,7 +8,6 @@ import TodayBookings from "@/components/dashboard/TodayBookings";
 import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings";
 import TodoSummary from "@/components/dashboard/TodoSummary";
 import UnsignedJournals from "@/components/dashboard/UnsignedJournals";
-import { cn } from "@/lib/utils";
 
 const statusLabels = {
   draft: "Utkast", pending: "Väntar", confirmed: "Bekräftad", checked_in: "Incheckad",
