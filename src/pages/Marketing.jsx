@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Loader2, Pencil, Trash2, Megaphone, Ticket } from "lucide-react";
+import { Plus, Loader2, Trash2, Megaphone, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
 import FeatureGate from "@/components/FeatureGate";
