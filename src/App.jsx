@@ -35,6 +35,7 @@ import Marketing from '@/pages/Marketing';
 import Reviews from '@/pages/Reviews';
 import Messages from '@/pages/Messages';
 import Settings from '@/pages/Settings';
+import Compliance from '@/pages/Compliance';
 import CustomerDetail from '@/pages/CustomerDetail';
 import BookingDetail from '@/pages/BookingDetail';
 import Portal from '@/pages/Portal';
@@ -104,6 +105,7 @@ const AuthenticatedApp = () => {
           <Route path="/app/reviews" element={<Reviews />} />
           <Route path="/app/messages" element={<Messages />} />
           <Route path="/app/settings" element={<Settings />} />
+          <Route path="/app/compliance" element={<Compliance />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
