@@ -1,1 +1,115 @@
-{"name":"StaffLicense","type":"object","properties":{"staff_id":{"type":"string","title":"Personal-ID"},"staff_name":{"type":"string","title":"Personal"},"license_type":{"type":"string","title":"Legitimation/behörighet"},"license_number":{"type":"string","title":"Legitimationsnummer"},"valid_until":{"type":"string","title":"Giltig till"},"specialist_competence":{"type":"string","title":"Specialistkompetens"},"status":{"type":"string","enum":["active","expired","pending"],"title":"Status"},"notes":{"type":"string","title":"Anteckningar"}}}
+{
+  "name": "StaffLicense",
+  "type": "object",
+  "properties": {
+    "staff_id": {
+      "type": "string",
+      "title": "Personal-ID"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "Personal"
+    },
+    "license_type": {
+      "type": "string",
+      "title": "Legitimation/behörighet"
+    },
+    "license_number": {
+      "type": "string",
+      "title": "Legitimationsnummer"
+    },
+    "valid_until": {
+      "type": "string",
+      "title": "Giltig till"
+    },
+    "specialist_competence": {
+      "type": "string",
+      "title": "Specialistkompetens"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "pending"
+      ],
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
