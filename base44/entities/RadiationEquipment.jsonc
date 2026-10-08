@@ -1,1 +1,136 @@
-{"name":"RadiationEquipment","type":"object","properties":{"equipment_id":{"type":"string","title":"Utrustning-ID"},"equipment_name":{"type":"string","title":"Utrustning"},"radiation_type":{"type":"string","enum":["laser","ipl","rf","emf","hifu","ultrasound","other"],"title":"Teknik"},"manufacturer":{"type":"string","title":"Tillverkare"},"model":{"type":"string","title":"Modell"},"serial_number":{"type":"string","title":"Serienummer"},"ssm_notification":{"type":"string","title":"SSM-anmälan"},"last_service":{"type":"string","title":"Senaste service"},"next_service":{"type":"string","title":"Nästa service"},"status":{"type":"string","enum":["active","service","retired"],"title":"Status"},"notes":{"type":"string","title":"Anteckningar"}}}
+{
+  "name": "RadiationEquipment",
+  "type": "object",
+  "properties": {
+    "equipment_id": {
+      "type": "string",
+      "title": "Utrustning-ID"
+    },
+    "equipment_name": {
+      "type": "string",
+      "title": "Utrustning"
+    },
+    "radiation_type": {
+      "type": "string",
+      "enum": [
+        "laser",
+        "ipl",
+        "rf",
+        "emf",
+        "hifu",
+        "ultrasound",
+        "other"
+      ],
+      "title": "Teknik"
+    },
+    "manufacturer": {
+      "type": "string",
+      "title": "Tillverkare"
+    },
+    "model": {
+      "type": "string",
+      "title": "Modell"
+    },
+    "serial_number": {
+      "type": "string",
+      "title": "Serienummer"
+    },
+    "ssm_notification": {
+      "type": "string",
+      "title": "SSM-anmälan"
+    },
+    "last_service": {
+      "type": "string",
+      "title": "Senaste service"
+    },
+    "next_service": {
+      "type": "string",
+      "title": "Nästa service"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "service",
+        "retired"
+      ],
+      "title": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Anteckningar"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
