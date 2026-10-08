@@ -25,7 +25,7 @@ const PUBLIC_FUNCS = new Set([
 // sakna egen behörighetskontroll.
 const PATIENT_FUNCS = new Set([
   'getPatientPortalData', 'cancelPatientBooking', 'signPatientConsent', 'submitHealthDeclarationConsent',
-  'sendPortalMessage', 'verifyPhone', 'getBookingRequirements', 'rescheduleBooking',
+  'sendPortalMessage', 'verifyPhone', 'getBookingRequirements', 'rescheduleBooking', 'submitReview',
 ]);
 const HEAVY_FUNCS = new Set(['createPublicBooking', 'sendSms', 'verifyBankid', 'exportPatientData', 'verifyPhone', 'sendPortalMessage']);
 
