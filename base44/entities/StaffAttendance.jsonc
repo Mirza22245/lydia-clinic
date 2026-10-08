@@ -2,12 +2,105 @@
   "name": "StaffAttendance",
   "type": "object",
   "properties": {
-    "staff_id": {"type":"string","title":"Personal-ID"},
-    "staff_name": {"type":"string","title":"Personal"},
-    "work_date": {"type":"string","title":"Datum"},
-    "clock_in": {"type":"string","title":"In"},
-    "clock_out": {"type":"string","title":"Ut"},
-    "break_minutes": {"type":"number","title":"Rast minuter"},
-    "note": {"type":"string","title":"Anteckning"}
+    "staff_id": {
+      "type": "string",
+      "title": "Personal-ID"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "Personal"
+    },
+    "work_date": {
+      "type": "string",
+      "title": "Datum"
+    },
+    "clock_in": {
+      "type": "string",
+      "title": "In"
+    },
+    "clock_out": {
+      "type": "string",
+      "title": "Ut"
+    },
+    "break_minutes": {
+      "type": "number",
+      "title": "Rast minuter"
+    },
+    "note": {
+      "type": "string",
+      "title": "Anteckning"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 }
