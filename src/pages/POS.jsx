@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Receipt, Loader2, CreditCard, Banknote, Smartphone, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { sendReceiptEmail } from "@/functions/sendReceiptEmail";
 import { useToast } from "@/components/ui/use-toast";
 import { logAudit } from "@/lib/audit";
