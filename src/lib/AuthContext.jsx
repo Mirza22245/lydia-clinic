@@ -74,9 +74,11 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      // Now check if the user is authenticated
       setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
+      const currentUser = await Promise.race([
+        base44.auth.me(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 8000)),
+      ]);
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
@@ -87,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthChecked(true);
       
-      // 401 betyder normalt bara att besökaren inte är inloggad.
+      // 401/timeout betyder normalt bara att besökaren inte är inloggad.
       // Det ska inte sätta ett globalt authError, eftersom publika sidor (/ och /book)
       // ska fungera utan inloggning. Skyddade routes sköter själva redirect till /login.
     }
