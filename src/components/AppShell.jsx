@@ -53,7 +53,8 @@ export default function AppShell() {
       <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-border bg-card md:flex md:flex-col">
         <div className="flex h-16 items-center gap-2 border-b border-border px-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">L</div>
-          <span className="font-semibold tracking-tight font-heading">Lydia</span>\n          <LanguageSwitcher compact />
+          <span className="font-semibold tracking-tight font-heading">Lydia</span>
+          <LanguageSwitcher compact />
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {visibleNav.map((item) => {
@@ -84,7 +85,8 @@ export default function AppShell() {
       <div className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card px-4">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-semibold">L</div>
         <span className="font-semibold font-heading">Lydia</span>
-        <div className="ml-auto flex items-center gap-1">\n          <LanguageSwitcher compact />
+        <div className="ml-auto flex items-center gap-1">
+          <LanguageSwitcher compact />
           {visibleNav.map((item) => {
             const Icon = item.icon;
             const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
