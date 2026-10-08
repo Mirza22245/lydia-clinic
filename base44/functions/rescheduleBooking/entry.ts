@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { fetchAvailabilityData, isSlotFree, parseResourceIds, clinicDateOf } from '../../shared/availability.ts';
 import { canAccessClinic } from '../../shared/authz.ts';
 import { checkStaffBookable } from '../../shared/staffCompetence.ts';
+import { getClinicRule, configMatches } from '../../shared/featureFlags.ts';
 
 // Låter en patient eller personal omboka en bokning till en ny tid.
 // Bevarar befintliga formulär, samtycken och betalningar. Den nya tiden valideras
@@ -54,6 +55,19 @@ export default async function(req) {
     }
     if (newStart.getTime() < Date.now()) {
       return Response.json({ error: 'Kan inte boka tid i det förflutna' }, { status: 400 });
+    }
+
+    const bookingRule = await getClinicRule(svc, booking.clinic_id, 'booking_rules');
+    if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name: booking.staff_name })) {
+      const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
+      const maxDays = Number(bookingRule.config.max_days || 0);
+      const leadHours = (newStart.getTime() - Date.now()) / 3600000;
+      if (bookingRule.enforce && minLeadHours && leadHours < minLeadHours) {
+        return Response.json({ error: `Den nya tiden måste ligga minst ${minLeadHours} timmar framåt.`, code: 'booking_rule' }, { status: 409 });
+      }
+      if (bookingRule.enforce && maxDays && newStart.getTime() > Date.now() + maxDays * 86400000) {
+        return Response.json({ error: `Den nya tiden kan inte ligga mer än ${maxDays} dagar framåt.`, code: 'booking_rule' }, { status: 409 });
+      }
     }
 
     const durationMin = treatment?.duration || 30;
