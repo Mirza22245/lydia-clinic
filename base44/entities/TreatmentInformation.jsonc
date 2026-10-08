@@ -1,1 +1,106 @@
-{"name":"TreatmentInformation","type":"object","properties":{"treatment_id":{"type":"string","title":"Behandling-ID"},"treatment_name":{"type":"string","title":"Behandling"},"title":{"type":"string","title":"Titel"},"version":{"type":"string","title":"Version"},"content":{"type":"string","title":"Information"},"active":{"type":"boolean","title":"Aktiv"},"published_at":{"type":"string","title":"Publicerad"}}}
+{
+  "name": "TreatmentInformation",
+  "type": "object",
+  "properties": {
+    "treatment_id": {
+      "type": "string",
+      "title": "Behandling-ID"
+    },
+    "treatment_name": {
+      "type": "string",
+      "title": "Behandling"
+    },
+    "title": {
+      "type": "string",
+      "title": "Titel"
+    },
+    "version": {
+      "type": "string",
+      "title": "Version"
+    },
+    "content": {
+      "type": "string",
+      "title": "Information"
+    },
+    "active": {
+      "type": "boolean",
+      "title": "Aktiv"
+    },
+    "published_at": {
+      "type": "string",
+      "title": "Publicerad"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
