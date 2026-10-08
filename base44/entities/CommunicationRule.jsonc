@@ -1,0 +1,1 @@
+{"name":"CommunicationRule","type":"object","properties":{"name":{"type":"string","title":"Namn"},"event":{"type":"string","title":"Händelse"},"channel":{"type":"string","enum":["email","sms","both"],"title":"Kanal"},"template":{"type":"string","title":"Mall"},"delay_minutes":{"type":"number","title":"Fördröjning minuter"},"enabled":{"type":"boolean","title":"Aktiv"}}}
