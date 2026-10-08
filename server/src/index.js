@@ -44,12 +44,12 @@ async function seedOperationsFeatureFlags() {
   ];
   for (const [key, label, module] of flags) {
     const exists = await pool.query(
-      "SELECT id FROM e_featureflag WHERE clinic_id = $1 AND data->>'key' = $2 LIMIT 1",
+      "SELECT id FROM e_feature_flag WHERE clinic_id = $1 AND data->>'key' = $2 LIMIT 1",
       [clinicId, key]
     );
     if (exists.rowCount) continue;
     await pool.query(
-      "INSERT INTO e_featureflag (id, data, clinic_id) VALUES (gen_random_uuid()::text, $1::jsonb, $2)",
+      "INSERT INTO e_feature_flag (id, data, clinic_id) VALUES (gen_random_uuid()::text, $1::jsonb, $2)",
       [JSON.stringify({ key, label, module, status:'disabled', clinic_id:clinicId }), clinicId]
     );
   }
