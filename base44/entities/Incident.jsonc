@@ -1,1 +1,130 @@
-{"name":"Incident","type":"object","properties":{"occurred_at":{"type":"string","title":"Tidpunkt"},"type":{"type":"string","title":"Typ"},"severity":{"type":"string","enum":["low","medium","high","serious"],"title":"Allvarlighetsgrad"},"customer_id":{"type":"string","title":"Kund-ID"},"booking_id":{"type":"string","title":"Bokning-ID"},"description":{"type":"string","title":"Beskrivning"},"action_taken":{"type":"string","title":"Åtgärd"},"follow_up":{"type":"string","title":"Uppföljning"},"status":{"type":"string","enum":["open","investigating","resolved","reported"],"title":"Status"},"responsible_person":{"type":"string","title":"Ansvarig"}}}
+{
+  "name": "Incident",
+  "type": "object",
+  "properties": {
+    "occurred_at": {
+      "type": "string",
+      "title": "Tidpunkt"
+    },
+    "type": {
+      "type": "string",
+      "title": "Typ"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "serious"
+      ],
+      "title": "Allvarlighetsgrad"
+    },
+    "customer_id": {
+      "type": "string",
+      "title": "Kund-ID"
+    },
+    "booking_id": {
+      "type": "string",
+      "title": "Bokning-ID"
+    },
+    "description": {
+      "type": "string",
+      "title": "Beskrivning"
+    },
+    "action_taken": {
+      "type": "string",
+      "title": "Åtgärd"
+    },
+    "follow_up": {
+      "type": "string",
+      "title": "Uppföljning"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "investigating",
+        "resolved",
+        "reported"
+      ],
+      "title": "Status"
+    },
+    "responsible_person": {
+      "type": "string",
+      "title": "Ansvarig"
+    },
+    "clinic_id": {
+      "type": "string",
+      "title": "Klinik-ID"
+    }
+  },
+  "rls": {
+    "read": {
+      "data.clinic_id": "{{user.data.clinic_id}}"
+    },
+    "create": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.clinic_id": "{{user.data.clinic_id}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "data.staff_role": "administratör"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
