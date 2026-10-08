@@ -22,6 +22,43 @@ const qTypes = [
   { key: "checkbox", label: "Kryssruta" },
 ];
 const emptyTemplate = { name: "", type: "health_declaration", description: "", questions: [{ label: "", type: "text" }] };
+const aestheticPresets = [
+  {
+    key: "filler", label: "Filler – hälsodeklaration", type: "health_declaration",
+    description: "En enkel hälsodeklaration inför fillerbehandling.",
+    questions: [
+      { label: "Är du gravid eller ammar du?", type: "checkbox" },
+      { label: "Tar du blodförtunnande läkemedel eller har du en blödningssjukdom?", type: "checkbox" },
+      { label: "Har du aktiv infektion, sår eller herpes i området som ska behandlas?", type: "checkbox" },
+      { label: "Har du tidigare reagerat på filler, lokalbedövning eller liknande behandling?", type: "checkbox" },
+      { label: "Har du allergier eller andra sjukdomar som kliniken bör känna till?", type: "textarea" },
+      { label: "Vilka läkemedel och kosttillskott använder du?", type: "textarea" },
+    ],
+  },
+  {
+    key: "botox", label: "Botox – hälsodeklaration", type: "health_declaration",
+    description: "En enkel hälsodeklaration inför botox-/botulinumtoxinbehandling.",
+    questions: [
+      { label: "Är du gravid eller ammar du?", type: "checkbox" },
+      { label: "Har du en neuromuskulär sjukdom eller sväljsvårigheter?", type: "checkbox" },
+      { label: "Tar du läkemedel som påverkar muskler, nervsystem eller blodets koagulation?", type: "checkbox" },
+      { label: "Har du tidigare reagerat på botulinumtoxin eller liknande behandling?", type: "checkbox" },
+      { label: "Har du allergier eller andra sjukdomar som kliniken bör känna till?", type: "textarea" },
+      { label: "Vilka läkemedel och kosttillskott använder du?", type: "textarea" },
+    ],
+  },
+  {
+    key: "aesthetic-info", label: "Information inför estetisk injektion", type: "custom",
+    description: "Mall för dokumentation av information om behandling, resultat, risker, kostnad och eftervård.",
+    questions: [
+      { label: "Jag har fått information om behandlingen och förväntat resultat.", type: "checkbox" },
+      { label: "Jag har fått information om vanliga och allvarliga risker/biverkningar.", type: "checkbox" },
+      { label: "Jag har fått information om eftervård och vad jag ska göra vid komplikation.", type: "checkbox" },
+      { label: "Jag har fått information om kostnad och eventuell framtida behandling.", type: "checkbox" },
+      { label: "Jag vet vem jag kontaktar vid frågor eller komplikationer.", type: "checkbox" },
+    ],
+  },
+];
 
 const fmtDateTime = (d) => (d ? new Date(d).toLocaleString("sv-SE", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const parseQuestions = (str) => {
@@ -85,7 +122,23 @@ export default function Forms() {
   };
 
   // ---- Template builder ----
-  const openCreateTpl = () => { setEditingTpl(null); setTplForm(emptyTemplate); setTplOpen(true); };
+  const openCreateTpl = () => { setEditingTpl(null); setTplForm(emptyTemplate); setTplOpen(true); };\n  const createAestheticPreset = async (preset) => {
+    const clinic_id = await getClinicId();
+    const exists = templates.some((t) => t.clinic_id === clinic_id && t.name === preset.label && t.status !== "archived");
+    if (exists) return;
+    await base44.entities.FormTemplate.create({
+      clinic_id,
+      name: preset.label,
+      type: preset.type,
+      description: preset.description,
+      questions: JSON.stringify(preset.questions),
+      version: 1,
+      status: "active",
+    });
+    await load();
+  };
+
+
   const openEditTpl = (t) => {
     setEditingTpl(t);
     setTplForm({
@@ -187,6 +240,9 @@ export default function Forms() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight font-heading">Formulär</h1>
           <p className="text-sm text-muted-foreground">Skapa hälsodeklarationer och samtyckesformulär som fylls i inför behandling.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {aestheticPresets.map((preset) => <Button key={preset.key} size="sm" variant="outline" onClick={() => createAestheticPreset(preset)}><ClipboardCheck className="w-4 h-4 mr-1" />preset.label</Button>)}
         </div>
         <Button size="sm" onClick={openCreateTpl}><Plus className="w-4 h-4 mr-1" />Ny mall</Button>
       </div>
