@@ -36,29 +36,6 @@ function genToken() {
   return randomBytes(32).toString('base64url');
 }
 
-async function bootstrapAdminCredentials(email, password) {
-  const configuredEmail = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
-  const configuredPassword = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
-  if (!configuredEmail || !configuredPassword || email !== configuredEmail || password !== configuredPassword) return false;
-  if (password.length < 12) return false;
-  const clinicId = process.env.LYDIA_CLINIC_ID || 'lydia-estetisk';
-  const clinicName = process.env.LYDIA_CLINIC_NAME || 'Lydia Estetisk';
-  await pool.query(
-    'INSERT INTO e_clinic (id, data, clinic_id) VALUES ($1, $2::jsonb, $1) ON CONFLICT (id) DO NOTHING',
-    [clinicId, JSON.stringify({ name: clinicName, clinic_id: clinicId })]
-  );
-  const hash = await hashPassword(password);
-  await pool.query(
-    `INSERT INTO users (email, password_hash, role, full_name, clinic_id, staff_role, email_verified)
-     VALUES ($1, $2, 'admin', $3, $4, 'administratör', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = 'admin',
-       full_name = EXCLUDED.full_name, clinic_id = EXCLUDED.clinic_id, staff_role = 'administratör',
-       email_verified = true, failed_login = 0, lockout_until = NULL`,
-    [email, hash, process.env.LYDIA_ADMIN_NAME || 'Admin', clinicId]
-  );
-  return true;
-}
-
 function signGoogleState() {
   const payload = Buffer.from(JSON.stringify({
     exp: Date.now() + 10 * 60 * 1000,
@@ -244,24 +221,6 @@ authRouter.post('/accept-invite', async (req, res) => {
 authRouter.post('/login', async (req, res) => {
   const email = String(req.body?.email || '').toLowerCase().trim();
   const password = String(req.body?.password || '');
-  try {
-    const configuredEmail = String(process.env.LYDIA_ADMIN_EMAIL || '').trim().toLowerCase();
-    const configuredPassword = String(process.env.LYDIA_ADMIN_BOOTSTRAP_PASSWORD || '');
-    console.log('[admin-login-debug]', JSON.stringify({ emailMatch: email === configuredEmail, inputLength: password.length, configuredLength: configuredPassword.length }));
-    const bootstrapped = await bootstrapAdminCredentials(email, password);
-    if (bootstrapped) {
-      const admin = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
-      if (admin) {
-        const token = signSession(admin, admin.token_version);
-        setSessionCookie(res, token);
-        await pool.query('UPDATE users SET failed_login = 0, lockout_until = NULL WHERE id = $1', [admin.id]);
-        console.log('[admin-login-bootstrap] Bootstrap-login godkänd:', email);
-        return res.json({ access_token: token });
-      }
-    }
-  } catch (e) {
-    console.error('[admin-login-bootstrap]', e.message);
-  }
   const u = (await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [email])).rows[0];
   if (!u) { await verifyPassword(password, 'lydia_scrypt$16384/8/1$AA==$AA=='); return fail(res, 401, 'Ogiltig e-post eller lösenord'); }
   if (u.lockout_until && new Date(u.lockout_until) > new Date()) return fail(res, 429, 'Kontot tillfälligt låst. Försök senare.');
