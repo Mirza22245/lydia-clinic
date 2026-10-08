@@ -113,7 +113,7 @@ export async function getPublicBookingData(body = {}) {
       logo_url: clinic.logo_url || '',
       faq: parseFaq(clinic.faq),
     },
-    treatments: (treatments || []).map((t) => ({
+    treatments: (treatments || []).filter((t) => t.active !== false).map((t) => ({
       id: t.id,
       name: t.name,
       duration: t.duration,
