@@ -65,6 +65,11 @@ async function readRows(table, { clinicId = null, where = [], orderBy = null, li
   }));
 }
 
+export async function isPublicBookingOpen(clinicId) {
+  const rows = await readRows('e_feature_flag', { clinicId, where: [{ sql: "data->>'key' = $1", values: ['public_booking'] }], limit: 1 });
+  return rows[0]?.status === 'enabled';
+}
+
 export async function getPublicBookingData(body = {}) {
   let clinic = null;
   if (body.clinic_id) {
@@ -81,10 +86,11 @@ export async function getPublicBookingData(body = {}) {
     throw error;
   }
 
-  const [treatments, staff, campaigns] = await Promise.all([
+  const [treatments, staff, campaigns, bookingOpen] = await Promise.all([
     readRows('e_treatment', { clinicId: clinic.id, orderBy: "(data->>'name') ASC", limit: 200 }),
     readRows('e_staff', { clinicId: clinic.id, where: [{ sql: "(data->>'active')::boolean = $1", values: [true] }], orderBy: "(data->>'name') ASC", limit: 100 }),
     readRows('e_campaign', { clinicId: clinic.id, where: [{ sql: "data->>'status' = $1", values: ['active'] }], orderBy: 'created_date DESC', limit: 20 }),
+    isPublicBookingOpen(clinic.id),
   ]);
 
   const today = clinicDateOf(Date.now());
@@ -140,6 +146,7 @@ export async function getPublicBookingData(body = {}) {
       allowed_treatment_ids: parseAllowedTreatments(s.allowed_treatment_ids),
     })),
     campaigns: activeCampaigns,
+    booking_open: bookingOpen,
   };
 }
 
