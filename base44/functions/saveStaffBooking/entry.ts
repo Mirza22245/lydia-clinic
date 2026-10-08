@@ -4,6 +4,7 @@ import { computeBookingRequirements, ADVANCING_STATUSES } from '../../shared/boo
 import { checkStaffBookable } from '../../shared/staffCompetence.ts';
 import { requireStaff, getUserClinicId, canAccessClinic } from '../../shared/authz.ts';
 import { recordAudit } from '../../shared/audit.ts';
+import { getClinicRule, configMatches } from '../../shared/featureFlags.ts';
 
 // Skapar eller ändrar en bokning från personalvyn. ALL bokningsvalidering sker här,
 // server-side, så att personal inte kan kringgå reglerna via formuläret:
@@ -47,6 +48,19 @@ export default async function(req) {
     if (isNaN(start.getTime())) return Response.json({ error: 'Ogiltig starttid' }, { status: 400 });
     const durationMin = treatment.duration || 30;
     const end = new Date(start.getTime() + durationMin * 60000);
+
+    const bookingRule = await getClinicRule(svc, clinic_id, 'booking_rules');
+    if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name })) {
+      const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
+      const maxDays = Number(bookingRule.config.max_days || 0);
+      const leadHours = (start.getTime() - Date.now()) / 3600000;
+      if (bookingRule.enforce && minLeadHours && leadHours < minLeadHours) {
+        return Response.json({ error: `Bokningen måste göras minst ${minLeadHours} timmar i förväg.`, code: 'booking_rule' }, { status: 409 });
+      }
+      if (bookingRule.enforce && maxDays && start.getTime() > Date.now() + maxDays * 86400000) {
+        return Response.json({ error: `Bokningen kan inte göras mer än ${maxDays} dagar framåt.`, code: 'booking_rule' }, { status: 409 });
+      }
+    }
 
     const scheduleChanged = !existing
       || existing.treatment_id !== treatment_id
