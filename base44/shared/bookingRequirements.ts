@@ -177,6 +177,80 @@ export async function computeBookingRequirements(svc, booking, treatment) {
         }
       }
 
+      const incidentRule = await getClinicRule(svc, clinicId, 'incident_management');
+      if (incidentRule.active && configMatches(incidentRule.config, treatment)) {
+        const open = await svc.entities.Incident.filter(
+          { clinic_id: clinicId, booking_id: booking.id, status: { $in: ['open', 'investigating'] } }, { limit: 20 }
+        );
+        const hasOpen = (open.items || []).length > 0;
+        requirements.push({
+          key: 'configured_incident_check',
+          label: 'Öppna avvikelser måste hanteras',
+          required: incidentRule.enforce,
+          completed: !hasOpen,
+          mode: incidentRule.status,
+        });
+      }
+
+      const hygieneRule = await getClinicRule(svc, clinicId, 'hygiene_checks');
+      if (hygieneRule.active && configMatches(hygieneRule.config, treatment)) {
+        const areas = Array.isArray(hygieneRule.config.areas) ? hygieneRule.config.areas.map(String).filter(Boolean) : [];
+        const maxAgeHours = Number(hygieneRule.config.max_age_hours || 24);
+        const query: any = { clinic_id: clinicId, result: 'ok' };
+        if (areas.length === 1) query.area = areas[0];
+        const checks = await svc.entities.HygieneCheck.filter(query, { sort: '-last_checked', limit: 100 });
+        const now = Date.now();
+        const valid = (checks.items || []).some((x) => {
+          if (areas.length > 1 && !areas.includes(String(x.area || ''))) return false;
+          const ts = new Date(x.last_checked || x.created_date || 0).getTime();
+          return ts > 0 && now - ts <= maxAgeHours * 3600000;
+        });
+        requirements.push({
+          key: 'configured_hygiene_check',
+          label: 'Aktuell hygienkontroll',
+          required: hygieneRule.enforce,
+          completed: valid,
+          mode: hygieneRule.status,
+        });
+      }
+
+      const inventoryRule = await getClinicRule(svc, clinicId, 'inventory_lots');
+      if (inventoryRule.active && configMatches(inventoryRule.config, treatment)) {
+        const productIds = Array.isArray(inventoryRule.config.product_ids) ? inventoryRule.config.product_ids.map(String).filter(Boolean) : [];
+        if (productIds.length) {
+          const lots = await svc.entities.InventoryLot.filter(
+            { clinic_id: clinicId, product_id: { $in: productIds }, status: 'available' }, { limit: 200 }
+          );
+          const today = Date.now();
+          const available = (lots.items || []).some((x) =>
+            Number(x.quantity || 0) > 0 && (!x.expires_at || new Date(x.expires_at).getTime() >= today)
+          );
+          requirements.push({
+            key: 'configured_inventory_lot',
+            label: 'Spårbar lagerbatch tillgänglig',
+            required: inventoryRule.enforce,
+            completed: available,
+            mode: inventoryRule.status,
+          });
+        }
+      }
+
+      const attendanceRule = await getClinicRule(svc, clinicId, 'staff_attendance');
+      if (attendanceRule.active && configMatches(attendanceRule.config, treatment, { staff_name: booking.staff_name })) {
+        const workDate = new Date(booking.start_time || Date.now()).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+        const attendance = await svc.entities.StaffAttendance.filter(
+          { clinic_id: clinicId, staff_name: booking.staff_name, work_date: workDate }, { limit: 20 }
+        );
+        const clockedIn = (attendance.items || []).some((x) => !!x.clock_in && !x.clock_out);
+        requirements.push({
+          key: 'configured_staff_attendance',
+          label: 'Personalliggare: personal incheckad',
+          required: attendanceRule.enforce,
+          completed: clockedIn,
+          mode: attendanceRule.status,
+        });
+      }
+
       const bookingRule = await getClinicRule(svc, clinicId, 'booking_rules');
       if (bookingRule.active && configMatches(bookingRule.config, treatment, { staff_name: booking.staff_name })) {
         const minLeadHours = Number(bookingRule.config.min_lead_hours || 0);
