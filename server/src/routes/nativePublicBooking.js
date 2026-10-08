@@ -68,6 +68,16 @@ export async function createPublicBookingNative(body = {}, req) {
   const birthDate = String(customer.birth_date || '').trim();
   const personnummer = String(customer.personnummer || '').trim().slice(0, 30);
 
+  const bookingGate = await withTx(
+    (client) => client.query("SELECT 1 FROM e_feature_flag WHERE clinic_id = $1 AND data->>'key' = 'public_booking' AND data->>'status' = 'enabled' LIMIT 1", [clinicId]),
+    { bypassRls: true }
+  );
+  if (!bookingGate.rows.length) {
+    const e = new Error('Onlinebokningen är tillfälligt stängd medan kliniken färdigställs.');
+    e.status = 503;
+    throw e;
+  }
+
   if (!clinicId || !treatmentId || !staffName || !body.start_time || !name || !email) {
     const e = new Error('Alla obligatoriska fält måste fyllas i');
     e.status = 400; throw e;
