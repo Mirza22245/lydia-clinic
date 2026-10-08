@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Loader2, Pencil, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, Pencil, Trash2, Package, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClinicId } from "@/lib/currentUser";
 import FeatureGate from "@/components/FeatureGate";
@@ -27,7 +27,7 @@ function ProductsContent() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);\n  const [stockOpen, setStockOpen] = useState(false);\n  const [stockProduct, setStockProduct] = useState(null);\n  const [stockType, setStockType] = useState("purchase");\n  const [stockQty, setStockQty] = useState(1);\n  const [stockNote, setStockNote] = useState("");\n  const [history, setHistory] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +97,7 @@ function ProductsContent() {
                   {p.category && <p className="text-xs text-muted-foreground">{p.category}</p>}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Lager" onClick={() => openStock(p)}><History className="w-3.5 h-3.5" /></Button>\n                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(p)}><Trash2 className="w-3.5 h-3.5" /></Button>
                 </div>
               </div>
@@ -135,6 +135,26 @@ function ProductsContent() {
             <div className="space-y-1.5"><Label className="text-xs">Leverantör</Label><Input value={form.supplier} onChange={set("supplier")} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Beskrivning</Label><Textarea value={form.description} onChange={set("description")} rows={2} /></div>
             <div className="flex justify-end gap-2 pt-2"><Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>Avbryt</Button><Button type="submit" disabled={saving || !form.name.trim()}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}{editing ? "Spara" : "Skapa"}</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={stockOpen} onOpenChange={setStockOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>Lagerhändelse {stockProduct ? stockProduct.name : ""}</DialogTitle></DialogHeader>
+          <form onSubmit={saveStock} className="space-y-4">
+            <div className="grid grid-cols-3 gap-2">
+              <Button type="button" variant={stockType === "purchase" ? "default" : "outline"} onClick={() => setStockType("purchase")}><ArrowDownToLine className="w-4 h-4 mr-1" />Inköp</Button>
+              <Button type="button" variant={stockType === "consumption" ? "default" : "outline"} onClick={() => setStockType("consumption")}><ArrowUpFromLine className="w-4 h-4 mr-1" />Förbrukning</Button>
+              <Button type="button" variant={stockType === "waste" ? "default" : "outline"} onClick={() => setStockType("waste")}><Trash2 className="w-4 h-4 mr-1" />Kassation</Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Antal</Label><Input type="number" min="0" step="0.01" value={stockQty} onChange={e => setStockQty(Number(e.target.value))} required /></div>
+              <div className="rounded-lg bg-secondary/60 p-3 text-sm"><span className="text-muted-foreground">Nuvarande saldo</span><div className="font-semibold">{stockProduct?.stock_quantity || 0} {unitLabels[stockProduct?.unit] || "st"}</div></div>
+            </div>
+            <div className="space-y-1.5"><Label>Anteckning</Label><Input value={stockNote} onChange={e => setStockNote(e.target.value)} placeholder="t.ex. leverans, svinn eller behandling" /></div>
+            {history.length > 0 && <div><Label className="text-xs">Senaste händelser</Label><div className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">{history.map(h => <div key={h.id} className="flex justify-between border-b border-border py-1"><span>{h.type} · {h.note || "—"}</span><span className="font-medium">{h.quantity > 0 ? "+" : ""}{h.quantity}</span></div>)}</div></div>}
+            <div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setStockOpen(false)}>Avbryt</Button><Button type="submit" disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Registrera</Button></div>
           </form>
         </DialogContent>
       </Dialog>
