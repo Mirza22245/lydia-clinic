@@ -7,6 +7,12 @@ import { config } from '../config.js';
 import { audit } from '../lib/audit.js';
 
 export const googleRouter = safeRouter(Router());
+const GOOGLE_SCOPES = [
+  'openid', 'email', 'profile',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
+];
 
 // OAuth-state signeras (HMAC) och går ut efter 10 min. Utan signatur kunde vem som helst skicka
 // en callback med ett godtyckligt användar-id och koppla sitt Google-konto till en annan användare.
@@ -68,25 +74,30 @@ googleRouter.get('/connect', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   if (!config.google.clientId) return res.status(503).json({ error: 'Google Calendar inte konfigurerad' });
-  const redirect = `${config.appBaseUrl}/api/google/callback`;
+  if (!config.google.clientSecret) return res.status(503).json({ error: 'Google OAuth är inte konfigurerad på servern' });
+  const redirect = `${config.appBaseUrl.replace(/\\/$/, '')}/api/google/callback`;
   const state = signState({ uid: user.id, ret: safeReturn(req.query.return) });
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({ client_id: config.google.clientId, redirect_uri: redirect, response_type: 'code', scope: 'https://www.googleapis.com/auth/calendar.events', access_type: 'offline', prompt: 'consent', state })}`;
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({ client_id: config.google.clientId, redirect_uri: redirect, response_type: 'code', scope: GOOGLE_SCOPES.join(' '), access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state })}`;
   res.redirect(url);
 });
 
 googleRouter.get('/callback', async (req, res) => {
+  if (req.query.error) return res.status(400).send('Google-anslutningen avbröts eller nekades. Försök igen från Lydia.');
   const code = req.query.code;
-  const state = readState(req.query.state) || {};
-  if (!code || !state.uid) return res.status(400).send('Ogiltig callback');
-  const body = new URLSearchParams({ client_id: config.google.clientId, client_secret: config.google.clientSecret, code, grant_type: 'authorization_code', redirect_uri: `${config.appBaseUrl}/api/google/callback` });
+  const state = readState(req.query.state);
+  if (typeof code !== 'string' || !state?.uid) return res.status(400).send('Ogiltig eller utgången Google-callback. Försök ansluta igen.');
+  if (!config.google.clientId || !config.google.clientSecret) return res.status(503).send('Google OAuth är inte konfigurerad.');
+  const redirect = `${config.appBaseUrl.replace(/\\/$/, '')}/api/google/callback`;
+  const body = new URLSearchParams({ client_id: config.google.clientId, client_secret: config.google.clientSecret, code, grant_type: 'authorization_code', redirect_uri: redirect });
   const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
   const tok = await r.json();
-  if (!tok.access_token) return res.status(400).send('Google token misslyckades');
+  if (!r.ok || !tok.access_token) return res.status(400).send('Google kunde inte utfärda en token. Kontrollera redirect URI i Google Cloud Console.');
   const exp = new Date(Date.now() + (tok.expires_in || 3600) * 1000);
   await pool.query(
     `INSERT INTO integration_tokens (user_id, provider, access_token_enc, refresh_token_enc, expires_at) VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (user_id, provider) DO UPDATE SET access_token_enc = $3, refresh_token_enc = $4, expires_at = $5`,
-    [state.uid, 'google', encrypt(tok.access_token), encrypt(tok.refresh_token || ''), exp]
+     ON CONFLICT (user_id, provider) DO UPDATE SET access_token_enc = EXCLUDED.access_token_enc,
+       refresh_token_enc = COALESCE(NULLIF(EXCLUDED.refresh_token_enc, ''), integration_tokens.refresh_token_enc), expires_at = EXCLUDED.expires_at`,
+    [state.uid, 'google', encrypt(tok.access_token), tok.refresh_token ? encrypt(tok.refresh_token) : '', exp]
   );
   try { await audit({ event_type: 'google_calendar_connect', entity_type: 'User', entity_id: state.uid, description: 'Google Calendar ansluten' }, { id: state.uid }); } catch {}
   res.redirect(state.ret || '/app/settings');
