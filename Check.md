@@ -46,7 +46,10 @@ Use PASS only with recorded evidence; FAIL for a confirmed issue; NOT TESTED whe
 | Date | Environment | Check | Status | Evidence / issue | Owner |
 |---|---|---|---|---|---|
 | 2026-10-09 | Project sandbox | npm run build | PASS | Vite production build and 32 backend functions compiled in sandbox. | Engineering |
-| 2026-10-09 | Production | Full security review | NOT TESTED | No complete security assessment performed as part of writing these documents. | Assign owner |
+| 2026-10-09 | Project sandbox | npm run lint + npm run typecheck + npm run check:system | PASS | All three commands passed after CSP and document-language changes. | Engineering |
+| 2026-10-09 | Project sandbox | Content Security Policy | FIXED IN CODE | Google Maps iframe, Google Fonts, Unsplash hero image and Wix-hosted images were blocked by the prior CSP; explicit origins added. Must verify response headers in deployed environment. | Engineering |
+| 2026-10-09 | Project sandbox | npm audit --omit=dev | FAIL / TRIAGE REQUIRED | 46 production dependency advisories: 38 high, 5 moderate, 3 low, 0 critical. Several fixes require major upgrades or have no automatic fix; no blind dependency upgrades applied. | Engineering |
+| 2026-10-09 | Production | AuthZ, tenant isolation, file access, payment webhook, backup restore, full penetration test | NOT TESTED | Cannot be marked PASS without authenticated staging/production tests and recorded evidence. | Assign owner |
 
 ## Release gate
 A successful build does not prove the application is secure. Resolve critical/high findings, verify authorization and sensitive-file protections, test booking/payment safely and obtain accountable reviewer sign-off before release.
