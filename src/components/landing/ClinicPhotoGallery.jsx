@@ -1,10 +1,10 @@
 import React from "react";
 
 const fallbackPhotos = [
-  { url: "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?auto=format&fit=crop&w=1000&q=85", alt: "Lugn och elegant behandlingsmiljö" },
+  { url: "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=1000&q=85", alt: "Lugn och elegant behandlingsmiljö" },
   { url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=900&q=85", alt: "Hudvård och ansiktsbehandling" },
-  { url: "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=900&q=85", alt: "Professionella hudvårdsprodukter" },
-  { url: "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=900&q=85", alt: "Avkopplande skönhetsupplevelse" },
+  { url: "https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?auto=format&fit=crop&w=900&q=85", alt: "Professionella hudvårdsprodukter" },
+  { url: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=900&q=85", alt: "Avkopplande skönhetsupplevelse" },
 ];
 
 export default function ClinicPhotoGallery({ clinic, compact = false }) {
@@ -24,7 +24,7 @@ export default function ClinicPhotoGallery({ clinic, compact = false }) {
           <p className="max-w-sm text-sm leading-5 text-black/50">Upptäck miljön och känslan innan ditt besök.</p>
         </div>
       )}
-      <div className={compact ? "grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3" : "grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"}>
+      <div className={compact ? "grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" : "grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"}>
         {items.slice(0, compact ? 4 : 8).map((photo, index) => (
           <figure key={photo.url + index} className={`group relative overflow-hidden rounded-2xl bg-[#e7e2d8] ${compact ? "h-24 sm:h-32" : "h-36 sm:h-56"} `}>
             <img src={photo.url} alt={photo.alt} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
