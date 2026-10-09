@@ -39,7 +39,7 @@ export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
           </a>
           <Button
             asChild
-            className="rounded-full bg-[#171714] px-5 text-sm font-medium text-white shadow-sm hover:bg-[#292925]"
+            className="hidden rounded-full bg-[#171714] px-5 text-sm font-medium text-white shadow-sm hover:bg-[#292925] sm:inline-flex"
           >
             <a href={BOOKING_URL}>
               Boka behandling
