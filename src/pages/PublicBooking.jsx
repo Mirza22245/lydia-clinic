@@ -240,7 +240,7 @@ export default function PublicBooking() {
         <div className="rounded-2xl border border-black/10 bg-white p-3 shadow-sm sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/45">Steg {Math.min(step, 4)} av 4</p>
-          <p className="truncate text-xs font-medium text-black/65">{steps[Math.min(step - 1, 3)]?.label || "Bokning"}</p>
+          <p className="truncate text-xs font-medium text-black/65">{pendingBooking && step === 5 ? "Betalning" : steps[Math.min(step - 1, 3)]?.label || "Bokning"}</p>
         </div>
         <div className="flex items-center gap-2">
           {steps.slice(0, 4).map((s, i) => {
