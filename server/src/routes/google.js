@@ -150,9 +150,9 @@ googleRouter.post('/gmail/send', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   const { to, subject, text } = req.body || {};
-  if (typeof to !== 'string' || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(to) || typeof subject !== 'string' || !subject.trim() || /[\\r\\n]/.test(subject) || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Ange giltig mottagare, ämne och meddelandetext.' });
+  if (typeof to !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to) || typeof subject !== 'string' || !subject.trim() || /[\r\n]/.test(subject) || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Ange giltig mottagare, ämne och meddelandetext.' });
   if (to.length > 320 || subject.length > 200 || text.length > 20000) return res.status(400).json({ error: 'E-postmeddelandet är för långt.' });
-  const raw = ['To: ' + to, 'Subject: ' + subject.trim(), 'MIME-Version: 1.0', 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: 8bit', '', text].join('\\r\\n');
+  const raw = ['To: ' + to, 'Subject: ' + subject.trim(), 'MIME-Version: 1.0', 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: 8bit', '', text].join('\r\n');
   const result = await gmailRequest(user.id, 'messages/send', { method: 'POST', body: JSON.stringify({ raw: Buffer.from(raw, 'utf8').toString('base64url') }) });
   res.json({ sent: true, id: result.id || null, threadId: result.threadId || null });
 });
@@ -170,5 +170,13 @@ googleRouter.get('/status', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
   const r = await pool.query('SELECT expires_at FROM integration_tokens WHERE user_id = $1 AND provider = $2', [user.id, 'google']);
-  res.json({ connected: !!r.rows[0], expires_at: r.rows[0]?.expires_at || null });
+  let email = null;
+  if (r.rows[0]) {
+    try {
+      const token = await getGoogleToken(user.id);
+      const profile = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${token}` } });
+      if (profile.ok) email = (await profile.json()).email || null;
+    } catch { /* Keep connection status available if profile lookup is temporarily unavailable. */ }
+  }
+  res.json({ connected: !!r.rows[0], email, expires_at: r.rows[0]?.expires_at || null, services: ['gmail.readonly', 'gmail.send', 'calendar.events'] });
 });
