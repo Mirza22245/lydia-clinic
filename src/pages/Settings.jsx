@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Building2 } from "lucide-react";
+import { Loader2, Save, Building2, Globe, Power } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getClinicId } from "@/lib/currentUser";
 import FeatureFlagsPanel from "@/components/FeatureFlagsPanel";
@@ -12,6 +12,80 @@ import IntegrationsPanel from "@/components/IntegrationsPanel";
 import PublicSiteCard from "@/components/settings/PublicSiteCard";
 
 const empty = { name: "", org_number: "", email: "", phone: "", address: "", industry: "", verksamhetschef: "", ivo_registration: "", patient_insurance: "", ssm_notification: "", compliance_contact: "" };
+
+function PublicSiteToggle() {
+  const [flag, setFlag] = useState(null);
+  const [loadingFlag, setLoadingFlag] = useState(true);
+  const [savingFlag, setSavingFlag] = useState(false);
+  const [flagError, setFlagError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    base44.entities.FeatureFlag.filter({}, { limit: 100 })
+      .then((page) => {
+        if (!active) return;
+        const found = (page.items || []).find((item) => item.key === "public_booking");
+        setFlag(found || null);
+      })
+      .catch((err) => {
+        if (active) setFlagError(err?.message || "Kunde inte läsa webbplatsens status.");
+      })
+      .finally(() => { if (active) setLoadingFlag(false); });
+    return () => { active = false; };
+  }, []);
+
+  const isOpen = flag?.status === "enabled";
+
+  const toggle = async () => {
+    if (!flag?.id || savingFlag) return;
+    setSavingFlag(true);
+    setFlagError("");
+    const nextStatus = isOpen ? "disabled" : "enabled";
+    try {
+      await base44.functions.invoke("updateFeatureFlag", {
+        flag_id: flag.id,
+        status: nextStatus,
+        config: flag.config || "{}",
+      });
+      setFlag((current) => ({ ...current, status: nextStatus }));
+    } catch (err) {
+      setFlagError(err?.response?.data?.error || err.message || "Kunde inte ändra webbplatsens status.");
+    } finally {
+      setSavingFlag(false);
+    }
+  };
+
+  return (
+    <section className="max-w-2xl space-y-4 rounded-xl border border-border bg-card p-6">
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <Globe className="h-4 w-4 text-muted-foreground" />
+        <h2 className="font-medium">Startsida och onlinebokning</h2>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Styr om besökare ska se den publika webbplatsen och kunna boka online. Ändringen börjar gälla direkt.
+      </p>
+      <div className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${isOpen ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+            <p className="font-medium">{loadingFlag ? "Läser status…" : !flag ? "Inställning saknas" : isOpen ? "Webbplatsen är öppen" : "Webbplatsen är stängd"}</p>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isOpen ? "Besökare kan se startsidan och gå vidare till bokning." : "Besökare möts av sidan som visar att webbplatsen är tillfälligt stängd."}
+          </p>
+        </div>
+        <Button type="button" onClick={toggle} disabled={loadingFlag || savingFlag || !flag}>
+          {savingFlag ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Power className="mr-2 h-4 w-4" />}
+          {savingFlag ? "Sparar…" : isOpen ? "Stäng webbplatsen" : "Öppna webbplatsen"}
+        </Button>
+      </div>
+      {flagError && <p role="alert" className="text-sm text-destructive">{flagError}</p>}
+      {!loadingFlag && !flag && !flagError && (
+        <p className="text-sm text-amber-600">Feature flaggen public_booking hittades inte. Den behöver skapas innan knappen kan användas.</p>
+      )}
+    </section>
+  );
+}
 
 export default function Settings() {
   const [clinic, setClinic] = useState(null);
@@ -145,6 +219,7 @@ export default function Settings() {
       </form>
 
       <PublicSiteCard key={clinic.id} clinic={clinic} onSaved={setClinic} />
+      <PublicSiteToggle />
 
       <div className="max-w-2xl space-y-6">
         <IntegrationsPanel />
