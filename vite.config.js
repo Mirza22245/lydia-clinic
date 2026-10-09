@@ -6,6 +6,9 @@ const src = path.resolve(process.cwd(), 'src');
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    allowedHosts: ['ta-01m4h1cp1833vhrfs78p38mtpv-5173-m47kgvftnt5kqmjdusyhedqw0.w.modal.host'],
+  },
   resolve: {
     alias: [
       { find: /^@\/functions\/([A-Za-z0-9_]+)$/, replacement: path.join(src, 'lib/functions.js') },
