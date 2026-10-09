@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UnderConstruction from "@/components/UnderConstruction";
+import ClinicPhotoGallery from "@/components/landing/ClinicPhotoGallery";
 
 const steps = [
   { n: 1, label: "Behandling", icon: Sparkles },
@@ -267,6 +268,8 @@ export default function PublicBooking() {
         </div>
         </div>
       </div>
+
+      <ClinicPhotoGallery clinic={init.clinic} compact />
 
       <main className="mx-auto max-w-3xl px-4 py-5 sm:px-6 sm:py-7">
         {step === 1 && (
