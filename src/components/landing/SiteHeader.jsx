@@ -1,10 +1,11 @@
-import React from "react";
-import { ArrowUpRight, Menu } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const BOOKING_URL = "/book";
 
 export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const brand = clinic.brand_name || clinic.name || "Lydia Estetisk";
 
   return (
@@ -45,10 +46,21 @@ export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
               <ArrowUpRight className="ml-1.5 h-4 w-4" />
             </a>
           </Button>
-          <a href="#behandlingar" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 lg:hidden" aria-label="Se behandlingar">
-            <Menu className="h-4 w-4" />
-          </a>
+          <button type="button" onClick={() => setMobileOpen((open) => !open)} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/70 transition hover:bg-white lg:hidden" aria-label={mobileOpen ? "Stäng meny" : "Öppna meny"} aria-expanded={mobileOpen}>
+            {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
+        {mobileOpen && (
+          <nav className="border-t border-black/10 bg-[#f8f6f1] px-5 py-4 lg:hidden" aria-label="Mobilmeny">
+            <div className="mx-auto flex max-w-7xl flex-col gap-1">
+              <a href="#behandlingar" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Behandlingar</a>
+              {hasTeam && <a href="#team" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Team</a>}
+              {hasFaq && <a href="#faq" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Vanliga frågor</a>}
+              <a href="#kontakt" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Kontakt</a>
+              <a href={BOOKING_URL} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-full bg-[#171714] px-5 text-sm font-semibold text-white">Boka behandling <ArrowUpRight className="ml-2 h-4 w-4" /></a>
+            </div>
+          </nav>
+        )}
       </div>
     </header>
   );
