@@ -133,7 +133,7 @@ export default function IntegrationsPanel() {
             {!google.connected&&<button type="button" onClick={connectGoogle} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"><Link2 className="h-3.5 w-3.5"/>Anslut Google Calendar</button>}
             {google.connected&&flag?.status!=="enabled"&&<button type="button" onClick={()=>activateGoogle(flag)} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-accent"><CheckCircle2 className="h-3.5 w-3.5"/>Aktivera Google Calendar</button>}
             {google.connected&&<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5"/>Ansluten: {google.email||"Google-konto"}</span>}
-          </div>
+          </div>}
           {google.connected&&<div className="mt-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium">Gmail-inkorg</p><button type="button" onClick={loadGmail} disabled={gmailLoading} className="rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-50">{gmailLoading?"Hämtar…":"Hämta senaste mejl"}</button></div>
             {gmailError&&<p role="alert" className="text-xs text-destructive">{gmailError}</p>}
