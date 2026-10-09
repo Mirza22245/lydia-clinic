@@ -104,6 +104,67 @@ googleRouter.get('/callback', async (req, res) => {
   res.redirect(state.ret || '/app/settings');
 });
 
+async function gmailRequest(userId, path, options = {}) {
+  const token = await getGoogleToken(userId);
+  if (!token) throw new Error('Anslut Google-kontot först.');
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/' + path, {
+    ...options, headers: { Authorization: 'Bearer ' + token, ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { const error = new Error('Gmail API nekade begäran. Kontrollera att Gmail API är aktiverat och att kontot har godkänt behörigheten.'); error.status = response.status === 429 ? 429 : 502; throw error; }
+  return data;
+}
+
+googleRouter.get('/gmail/messages', async (req, res) => {
+  const user = await loadUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const maxResults = Math.min(30, Math.max(1, Number.parseInt(req.query.maxResults, 10) || 15));
+  const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 200) : '';
+  const params = new URLSearchParams({ maxResults: String(maxResults) }); if (q) params.set('q', q);
+  const list = await gmailRequest(user.id, 'messages?' + params.toString());
+  const messages = await Promise.all((list.messages || []).map(async (m) => {
+    const item = await gmailRequest(user.id, 'messages/' + encodeURIComponent(m.id) + '?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date');
+    const headers = Object.fromEntries((item.payload?.headers || []).map((h) => [h.name.toLowerCase(), h.value]));
+    return { id: item.id, threadId: item.threadId, snippet: item.snippet || '', from: headers.from || '', to: headers.to || '', subject: headers.subject || '(utan ämne)', date: headers.date || '', unread: (item.labelIds || []).includes('UNREAD') };
+  }));
+  res.json({ messages, resultSizeEstimate: list.resultSizeEstimate || 0 });
+});
+
+googleRouter.get('/gmail/messages/:id', async (req, res) => {
+  const user = await loadUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  if (!/^[A-Za-z0-9_-]+$/.test(req.params.id)) return res.status(400).json({ error: 'Ogiltigt meddelande-id.' });
+  const item = await gmailRequest(user.id, 'messages/' + encodeURIComponent(req.params.id) + '?format=full');
+  const headers = Object.fromEntries((item.payload?.headers || []).map((h) => [h.name.toLowerCase(), h.value]));
+  const decodeBody = (part) => {
+    if (part?.mimeType === 'text/plain' && part.body?.data) return Buffer.from(part.body.data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    for (const child of part?.parts || []) { const value = decodeBody(child); if (value) return value; } return '';
+  };
+  res.json({ id: item.id, threadId: item.threadId, snippet: item.snippet || '', from: headers.from || '', to: headers.to || '', subject: headers.subject || '(utan ämne)', date: headers.date || '', body: decodeBody(item.payload) });
+});
+
+googleRouter.post('/gmail/send', async (req, res) => {
+  const user = await loadUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const { to, subject, text } = req.body || {};
+  if (typeof to !== 'string' || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(to) || typeof subject !== 'string' || !subject.trim() || /[\\r\\n]/.test(subject) || typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'Ange giltig mottagare, ämne och meddelandetext.' });
+  if (to.length > 320 || subject.length > 200 || text.length > 20000) return res.status(400).json({ error: 'E-postmeddelandet är för långt.' });
+  const raw = ['To: ' + to, 'Subject: ' + subject.trim(), 'MIME-Version: 1.0', 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: 8bit', '', text].join('\\r\\n');
+  const result = await gmailRequest(user.id, 'messages/send', { method: 'POST', body: JSON.stringify({ raw: Buffer.from(raw, 'utf8').toString('base64url') }) });
+  res.json({ sent: true, id: result.id || null, threadId: result.threadId || null });
+});
+
+googleRouter.post('/disconnect', async (req, res) => {
+  const user = await loadUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!user.staff_role && user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const result = await pool.query("DELETE FROM integration_tokens WHERE user_id = $1 AND provider = 'google'", [user.id]);
+  res.json({ disconnected: result.rowCount > 0 });
+});
+
 googleRouter.get('/status', async (req, res) => {
   const user = await loadUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
