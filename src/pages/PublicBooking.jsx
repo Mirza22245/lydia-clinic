@@ -190,13 +190,14 @@ export default function PublicBooking() {
 
   if (confirmation) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card">
-          <div className="mx-auto max-w-2xl px-4 py-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
+      <div className="min-h-screen bg-[#f8f6f1] text-[#171714]">
+        <header className="border-b border-black/10 bg-white/80">
+          <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
+            <p className="font-heading text-lg font-semibold tracking-tight">{init.clinic.brand_name || init.clinic.name}</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e8eee4] px-3 py-1.5 text-xs font-medium text-[#52634c]"><CheckCircle2 className="h-3.5 w-3.5" /> Bokning klar</span>
           </div>
         </header>
-        <main className="mx-auto max-w-2xl px-4 py-12 text-center">
+        <main className="mx-auto max-w-3xl px-4 py-10 text-center sm:px-6 sm:py-16">
           <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
           <h1 className="text-2xl font-semibold font-heading">Bokning bekräftad!</h1>
           <p className="mt-2 text-muted-foreground">Din tid är nu bokad. Eventuella hälsouppgifter, formulär och betänketider hanteras separat före själva behandlingen.</p>
@@ -224,26 +225,25 @@ export default function PublicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-2xl px-4 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{init.clinic.brand_name || init.clinic.name}</p>
-              <h1 className="text-xl font-semibold font-heading">Boka tid</h1>
-            </div>
-            <div className="flex shrink-0 gap-2 text-sm">
-              <a href="/login" className="text-muted-foreground hover:text-foreground hover:underline">Logga in</a>
-              <span className="text-border">·</span>
-              <a href="/register" className="text-primary hover:underline">Registrera</a>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#f8f6f1] pb-8 text-[#171714]">
+      <header className="sticky top-0 z-30 border-b border-black/10 bg-[#f8f6f1]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
+          <a href="/" className="min-w-0">
+            <p className="truncate font-heading text-lg font-semibold tracking-tight">{init.clinic.brand_name || init.clinic.name}</p>
+            <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-black/45">Onlinebokning</p>
+          </a>
+          <a href="/login" className="shrink-0 rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold transition hover:bg-black/5 sm:text-sm">Logga in</a>
         </div>
       </header>
 
-      <div className="mx-auto max-w-2xl px-4 pt-6">
+      <div className="mx-auto max-w-3xl px-4 pt-5 sm:px-6 sm:pt-8">
+        <div className="rounded-2xl border border-black/10 bg-white p-3 shadow-sm sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/45">Steg {Math.min(step, 4)} av 4</p>
+          <p className="truncate text-xs font-medium text-black/65">{steps[Math.min(step - 1, 3)]?.label || "Bokning"}</p>
+        </div>
         <div className="flex items-center gap-2">
-          {steps.map((s, i) => {
+          {steps.slice(0, 4).map((s, i) => {
             const Icon = s.icon;
             const active = step === s.n;
             const done = step > s.n;
@@ -255,32 +255,38 @@ export default function PublicBooking() {
                   onClick={() => s.n < step && setStep(s.n)}
                   className={cn("flex items-center gap-2", s.n < step ? "cursor-pointer" : "cursor-default")}
                 >
-                  <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium", active ? "border-primary bg-primary text-primary-foreground" : done ? "border-emerald-500 bg-emerald-500 text-white" : "border-border text-muted-foreground")}>
-                    {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-medium transition-colors sm:h-9 sm:w-9", active ? "border-[#171714] bg-[#171714] text-white" : done ? "border-[#65735d] bg-[#65735d] text-white" : "border-black/10 bg-[#f8f6f1] text-black/35")}>
+                    {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                   </span>
-                  <span className={cn("hidden text-sm sm:block", active ? "font-medium" : "text-muted-foreground")}>{s.label}</span>
+                  <span className={cn("hidden text-sm sm:block", active ? "font-semibold text-[#171714]" : done ? "text-[#65735d]" : "text-black/40")}>{s.label}</span>
                 </button>
-                {i < steps.length - 1 && <div className={cn("h-px flex-1", step > s.n ? "bg-emerald-500" : "bg-border")} />}
+                {i < steps.length - 1 && <div className={cn("h-px flex-1", step > s.n ? "bg-[#65735d]" : "bg-black/10")} />}
               </React.Fragment>
             );
           })}
         </div>
+        </div>
       </div>
 
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-3xl px-4 py-5 sm:px-6 sm:py-7">
         {step === 1 && (
           <div>
-            <h2 className="mb-1 text-lg font-semibold">Välj behandling</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Välj den behandling du vill boka.</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#65735d]">Välkommen</p>
+            <h2 className="mb-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Vad vill du boka?</h2>
+            <p className="mb-5 max-w-xl text-sm leading-6 text-black/55 sm:text-base">Välj en behandling för att se tillgängliga tider och hitta det som passar dig.</p>
             {init.treatments.length === 0 ? (
               <p className="text-sm text-muted-foreground">Inga behandlingar tillgängliga just nu.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {init.treatments.map((t) => (
-                  <button key={t.id} type="button" onClick={() => pickTreatment(t)} className={cn("rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary", treatment?.id === t.id && "border-primary ring-1 ring-primary")}>
-                    <p className="font-medium">{t.name}</p>
-                    {t.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{t.description}</p>}
-                    <p className="mt-2 text-sm text-muted-foreground">{t.duration || 30} min{t.price != null ? ` · ${t.price.toLocaleString("sv-SE")} kr` : ""}</p>
+                  <button key={t.id} type="button" onClick={() => pickTreatment(t)} className={cn("group relative flex min-h-[132px] w-full flex-col rounded-2xl border border-black/10 bg-white p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#65735d]/60 hover:shadow-md active:scale-[0.99] sm:p-5", treatment?.id === t.id && "border-[#65735d] ring-2 ring-[#65735d]/15")}>
+                    <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef1e9] text-[#65735d]"><Sparkles className="h-5 w-5" /></span>
+                    <span className="pr-5 font-semibold leading-snug">{t.name}</span>
+                    {t.description && <span className="mt-1.5 line-clamp-2 text-sm leading-5 text-black/55">{t.description}</span>}
+                    <span className="mt-auto flex w-full items-center justify-between gap-2 pt-4 text-sm">
+                      <span className="text-black/50">{t.duration || 30} min</span>
+                      <span className="font-semibold">{t.price != null ? `${t.price.toLocaleString("sv-SE")} kr` : "Pris vid konsultation"} <span className="ml-1 text-[#65735d]">→</span></span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -290,15 +296,15 @@ export default function PublicBooking() {
 
         {step === 2 && (
           <div>
-            <h2 className="mb-1 text-lg font-semibold">Välj behandlare</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Vem vill du bli behandlad av?</p>
+            <h2 className="mb-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Välj behandlare</h2>
+            <p className="mb-5 text-sm leading-6 text-black/55">Vem vill du bli behandlad av?</p>
             {eligibleStaff.length === 0 ? (
               <p className="text-sm text-muted-foreground">Ingen behandlare kan utföra den här behandlingen online just nu. Kontakta kliniken.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {eligibleStaff.map((s) => (
-                  <button key={s.id} type="button" onClick={() => pickStaff(s)} className={cn("flex items-center gap-3 rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary", staff?.id === s.id && "border-primary ring-1 ring-primary")}>
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground"><User className="w-5 h-5" /></span>
+                  <button key={s.id} type="button" onClick={() => pickStaff(s)} className={cn("flex min-h-[84px] items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 text-left shadow-sm transition hover:border-[#65735d]/60 hover:shadow-md", staff?.id === s.id && "border-[#65735d] ring-2 ring-[#65735d]/15")}>
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#eef1e9] text-[#65735d]"><User className="h-5 w-5" /></span>
                     <div>
                       <p className="font-medium">{s.name}</p>
                       {s.title && <p className="text-sm text-muted-foreground">{s.title}</p>}
@@ -313,8 +319,8 @@ export default function PublicBooking() {
 
         {step === 3 && (
           <div>
-            <h2 className="mb-1 text-lg font-semibold">Välj dag och tid</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Välj en ledig tid för din behandling.</p>
+            <h2 className="mb-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Hitta en tid som passar</h2>
+            <p className="mb-5 text-sm leading-6 text-black/55">Välj datum och sedan en av de lediga tiderna.</p>
             <div className="mb-4 rounded-xl border border-border bg-card p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -373,9 +379,9 @@ export default function PublicBooking() {
 
         {step === 4 && (
           <div className="max-w-md">
-            <h2 className="mb-1 text-lg font-semibold">Dina uppgifter</h2>
-            <p className="mb-4 text-sm text-muted-foreground">Bekräfta din bokning.</p>
-            <div className="mb-4 rounded-xl border border-border bg-card p-4 text-sm">
+            <h2 className="mb-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Nästan klart</h2>
+            <p className="mb-5 text-sm leading-6 text-black/55">Fyll i dina uppgifter för att skicka bokningen.</p>
+            <div className="mb-4 rounded-2xl border border-black/10 bg-white p-4 text-sm shadow-sm">
               <p className="font-medium">{treatment.name}</p>
               <p className="text-muted-foreground">{fmtFull(slot)}</p>
               <p className="text-muted-foreground">Behandlare: {staff.name}</p>
@@ -426,7 +432,7 @@ export default function PublicBooking() {
           <div className="max-w-md">
             <h2 className="mb-1 text-lg font-semibold">Betalning</h2>
             <p className="mb-4 text-sm text-muted-foreground">Slutför bokningen genom att betala nu.</p>
-            <div className="mb-4 rounded-xl border border-border bg-card p-4 text-sm">
+            <div className="mb-4 rounded-2xl border border-black/10 bg-white p-4 text-sm shadow-sm">
               <p className="font-medium">{treatment.name}</p>
               <p className="text-muted-foreground">{fmtFull(pendingBooking.start_time)}</p>
               <p className="text-muted-foreground">Behandlare: {pendingBooking.staff_name}</p>
