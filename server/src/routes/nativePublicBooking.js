@@ -66,7 +66,8 @@ export async function createPublicBookingNative(body = {}, req) {
   const email = String(customer.email || '').toLowerCase().trim();
   const phone = String(customer.phone || '').trim().slice(0, 50);
   const birthDate = String(customer.birth_date || '').trim();
-  const personnummer = String(customer.personnummer || '').trim().slice(0, 30);\n  const paymentMethod = body.payment_method === 'online' ? 'online' : 'onsite';
+  const personnummer = String(customer.personnummer || '').trim().slice(0, 30);
+  const paymentMethod = body.payment_method === 'online' ? 'online' : 'onsite';
 
   const bookingGate = await withTx(
     (client) => client.query("SELECT 1 FROM e_feature_flag WHERE clinic_id = $1 AND data->>'key' = 'public_booking' AND data->>'status' = 'enabled' LIMIT 1", [clinicId]),
