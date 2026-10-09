@@ -9,6 +9,7 @@ import TreatmentsSection from "@/components/landing/TreatmentsSection";
 import StaffSection from "@/components/landing/StaffSection";
 import FaqSection from "@/components/landing/FaqSection";
 import ContactSection from "@/components/landing/ContactSection";
+import ClinicPhotoGallery from "@/components/landing/ClinicPhotoGallery";
 import UnderConstruction from "@/components/UnderConstruction";
 
 const BOOKING_URL = "/book";
@@ -50,6 +51,7 @@ export default function Landing() {
       <SiteHeader clinic={clinic} hasTeam={staff.length > 0} hasFaq={clinic.faq.length > 0} />
       <main>
         <Hero clinic={clinic} />
+        <ClinicPhotoGallery clinic={clinic} />
 
         <section className="border-y border-black/10 bg-white">
           <div className="mx-auto grid max-w-7xl gap-px bg-black/10 md:grid-cols-3">
