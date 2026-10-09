@@ -49,7 +49,9 @@ export default function Hero({ clinic }) {
 
         <div className="relative">
           <div className="relative min-h-[420px] overflow-hidden rounded-[2rem] border border-black/10 bg-[#e7e2d8] p-5 shadow-[0_30px_80px_rgba(35,30,20,0.10)] sm:min-h-[500px]">
-            <div className="absolute inset-5 rounded-[1.5rem] border border-white/50 bg-gradient-to-br from-[#f5f0e8] via-[#ddd8cc] to-[#c9c2b5]" />
+            <img src={clinic.hero_image_url || "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=1200&q=85"} alt="Lugn behandlingsmiljö hos Lydia Estetisk" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#171714]/65 via-[#171714]/5 to-white/10" />
+            <div className="absolute inset-5 rounded-[1.5rem] border border-white/35" />
             <div className="absolute inset-x-10 bottom-10 rounded-2xl border border-white/60 bg-white/75 p-5 backdrop-blur-md">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-black/45">Lydia Estetisk</p>
               <p className="mt-2 font-heading text-2xl leading-tight text-[#171714]">Skönhet som känns personlig.</p>
@@ -57,7 +59,7 @@ export default function Hero({ clinic }) {
                 {clinic.address && <><MapPin className="h-3.5 w-3.5" />{String(clinic.address).replace(/^Adress:\s*/i, "").split("\n")[0]}</>}
               </div>
             </div>
-            <div className="absolute right-10 top-10 h-24 w-24 rounded-full border border-white/70 bg-white/25 backdrop-blur-sm" />
+            <div className="absolute right-10 top-10 rounded-full border border-white/60 bg-white/15 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">Lydia Estetisk</div>
           </div>
 
           {clinic.phone && (
