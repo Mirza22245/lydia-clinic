@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, Building2, Globe, Power } from "lucide-react";
+import { Loader2, Save, Building2, Globe, Power, ImagePlus, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getClinicId } from "@/lib/currentUser";
 import FeatureFlagsPanel from "@/components/FeatureFlagsPanel";
@@ -92,6 +92,8 @@ export default function Settings() {
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [gallery, setGallery] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,6 +104,8 @@ export default function Settings() {
         const c = await base44.entities.Clinic.get(id);
         setClinic(c);
         setForm({ ...empty, ...c });
+        const existingGallery = c.gallery_images || c.photo_urls || [];
+        setGallery(Array.isArray(existingGallery) ? existingGallery.map((item) => typeof item === "string" ? { url: item, alt: c.name || "Klinikbild" } : item).filter((item) => item?.url || item?.image_url).map((item) => ({ url: item.url || item.image_url, alt: item.alt || item.caption || "Bild från kliniken" })) : []);
       } catch {
         // Kliniken kunde inte hämtas
       } finally {
@@ -129,6 +133,7 @@ export default function Settings() {
         patient_insurance: form.patient_insurance || undefined,
         ssm_notification: form.ssm_notification || undefined,
         compliance_contact: form.compliance_contact || undefined,
+        gallery_images: gallery,
       };
       const updated = await base44.entities.Clinic.update(clinic.id, data);
       setClinic(updated);
@@ -168,6 +173,37 @@ export default function Settings() {
         <h1 className="text-2xl font-semibold tracking-tight font-heading">Inställningar</h1>
         <p className="text-sm text-muted-foreground">Klinikens uppgifter visas på kvitton och dokument.</p>
       </div>
+
+      <section className="max-w-2xl space-y-4 rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center gap-2 border-b border-border pb-3"><ImagePlus className="h-4 w-4 text-muted-foreground" /><h2 className="font-medium">Bilder på hemsidan och bokningen</h2></div>
+        <p className="text-sm text-muted-foreground">Ladda upp klinikens egna bilder. De visas i bildgalleriet på startsidan och på bokningssidan. JPG, PNG eller WebP, max 8 MB per bild.</p>
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-4 py-6 text-sm font-medium hover:bg-muted/60">
+          {uploadingImages ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploadingImages ? "Laddar upp bilder…" : "Välj bilder från datorn"}
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={uploadingImages} onChange={async (event) => {
+            const files = Array.from(event.target.files || []); event.target.value = ""; if (!files.length) return;
+            const invalid = files.find((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024);
+            if (invalid) { toast({ variant: "destructive", title: "Bilden kan inte laddas upp", description: "Välj JPG, PNG eller WebP under 8 MB per bild." }); return; }
+            setUploadingImages(true);
+            try {
+              const uploaded = [];
+              for (const file of files) {
+                const result = await base44.integrations.Core.UploadPrivateFile({ file });
+                const uri = result.file_uri || result.url || result.file_url;
+                if (!uri) throw new Error("Uppladdningen gav ingen bildadress.");
+                let url = uri;
+                try { const signed = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: uri }); url = signed.signed_url || signed.url || signed.file_url || uri; } catch { /* keep returned URL */ }
+                uploaded.push({ url, alt: file.name.replace(/\\.[^.]+$/, "") });
+              }
+              setGallery((current) => [...current, ...uploaded].slice(0, 12));
+              toast({ title: "Bilder uppladdade", description: "Tryck på Spara ändringar längst ned för att publicera galleriet." });
+            } catch (err) { toast({ variant: "destructive", title: "Uppladdningen misslyckades", description: err?.message || "Försök igen." }); }
+            finally { setUploadingImages(false); }
+          }} />
+        </label>
+        {gallery.length > 0 ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{gallery.map((photo, index) => <div key={photo.url + index} className="overflow-hidden rounded-xl border border-border bg-background"><img src={photo.url} alt={photo.alt || "Klinikbild"} className="h-32 w-full object-cover" /><div className="flex items-center justify-between gap-2 p-2"><input aria-label="Bildtext" className="min-w-0 w-full bg-transparent text-xs outline-none" value={photo.alt || ""} onChange={(e) => setGallery((items) => items.map((item, i) => i === index ? { ...item, alt: e.target.value } : item))} /><Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Ta bort bild" onClick={() => setGallery((items) => items.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div> : <p className="text-sm text-muted-foreground">Inga egna bilder tillagda ännu. Galleriet visar exempelbilder tills ni laddar upp era egna.</p>}
+        {gallery.length > 12 && <p className="text-xs text-muted-foreground">Max 12 bilder visas.</p>}
+      </section>
 
       <form onSubmit={save} className="max-w-2xl space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
