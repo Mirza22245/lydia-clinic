@@ -4,7 +4,9 @@ import { MapPin, Phone, Mail, Clock } from "lucide-react";
 const cleanAddress = (a) => (a || "").replace(/^Adress:\s*/i, "").replace(/\s*\n\s*/g, ", ").trim();
 
 export default function ContactSection({ clinic }) {
-  const address = cleanAddress(clinic.address);
+  const address = cleanAddress(clinic.address) || "Södra Allégatan 1B, 413 01 Göteborg";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  const mapsEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
   const hours = (clinic.opening_hours || "").split("\n").map((l) => l.trim()).filter(Boolean);
   return (
     <section id="kontakt" className="border-t border-black/10 bg-[#f8f6f1]">
@@ -40,14 +42,27 @@ export default function ContactSection({ clinic }) {
               )}
             </ul>
           </div>
-          {address && (
-            <iframe
-              title="Karta"
-              className="h-full min-h-[300px] w-full rounded-2xl border border-black/10"
-              loading="lazy"
-              src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
-            />
-          )}
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+              <iframe
+                title={`Google Maps – ${address}`}
+                className="h-[320px] w-full sm:h-[380px]"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+                src={mapsEmbedUrl}
+              />
+            </div>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#171714] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#292925]"
+            >
+              <MapPin className="h-4 w-4" />
+              Hitta hit med Google Maps
+            </a>
+          </div>
         </div>
       </div>
     </section>
