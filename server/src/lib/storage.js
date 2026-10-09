@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { writeFileSync, readFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve, relative, sep } from 'node:path';
 import { config } from '../config.js';
 
 export const LYDA_SCHEME = 'lydia://';
@@ -39,10 +39,16 @@ export function saveFile({ buffer, clinicId, ext }) {
 }
 
 export function resolvePath(uri) {
-  if (!uri || !uri.startsWith(LYDA_SCHEME)) return null;
+  if (typeof uri !== 'string' || !uri.startsWith(LYDA_SCHEME)) return null;
   const rel = uri.slice(LYDA_SCHEME.length);
-  if (rel.includes('..')) return null;
-  return join(config.storage.dir, rel);
+  // Only accept server-generated opaque file names under a single clinic folder.
+  // This blocks traversal, encoded separators, absolute paths and arbitrary filenames.
+  if (!/^[A-Za-z0-9_-]+\/[a-f0-9]{32}\.(?:jpg|png|pdf|webp)$/.test(rel)) return null;
+  const root = resolve(config.storage.dir);
+  const full = resolve(root, rel);
+  const fromRoot = relative(root, full);
+  if (!fromRoot || fromRoot === '..' || fromRoot.startsWith(`..${sep}`) || resolve(root, fromRoot) !== full) return null;
+  return full;
 }
 
 export function signFileUri(uri, opts = {}) {
