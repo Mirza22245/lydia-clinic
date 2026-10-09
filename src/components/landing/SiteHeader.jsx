@@ -2,7 +2,7 @@ import React from "react";
 import { ArrowUpRight, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const BOOKING_URL = "https://app.lydiaestetisk.se";
+const BOOKING_URL = "/book";
 
 export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
   const brand = clinic.brand_name || clinic.name || "Lydia Estetisk";
