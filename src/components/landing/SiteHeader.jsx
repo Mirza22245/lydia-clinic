@@ -10,12 +10,12 @@ export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-[#f8f6f1]/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 sm:px-8">
+      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8">
         <a href="#top" className="flex items-center gap-3" aria-label={brand}>
           {clinic.logo_url ? (
             <img src={clinic.logo_url} alt={brand} className="h-10 w-auto object-contain" />
           ) : (
-            <span className="font-heading text-2xl font-semibold tracking-[-0.03em]">Lydia</span>
+            <span className="font-heading text-2xl font-semibold tracking-[-0.03em] text-[#171714]">Lydia</span>
           )}
           <span className="hidden h-5 w-px bg-black/15 sm:block" />
           <span className="hidden text-[11px] font-medium uppercase tracking-[0.24em] text-black/55 sm:block">
@@ -50,18 +50,18 @@ export default function SiteHeader({ clinic, hasTeam, hasFaq }) {
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
-        {mobileOpen && (
-          <nav className="border-t border-black/10 bg-[#f8f6f1] px-5 py-4 lg:hidden" aria-label="Mobilmeny">
-            <div className="mx-auto flex max-w-7xl flex-col gap-1">
-              <a href="#behandlingar" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Behandlingar</a>
-              {hasTeam && <a href="#team" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Team</a>}
-              {hasFaq && <a href="#faq" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Vanliga frågor</a>}
-              <a href="#kontakt" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium hover:bg-black/5">Kontakt</a>
-              <a href={BOOKING_URL} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-full bg-[#171714] px-5 text-sm font-semibold text-white">Boka behandling <ArrowUpRight className="ml-2 h-4 w-4" /></a>
-            </div>
-          </nav>
-        )}
       </div>
+      {mobileOpen && (
+        <nav className="border-t border-black/10 bg-[#f8f6f1] lg:hidden" aria-label="Mobilmeny">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4 sm:px-8">
+            <a href="#behandlingar" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium text-black/70 hover:bg-black/5">Behandlingar</a>
+            {hasTeam && <a href="#team" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium text-black/70 hover:bg-black/5">Team</a>}
+            {hasFaq && <a href="#faq" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium text-black/70 hover:bg-black/5">Vanliga frågor</a>}
+            <a href="#kontakt" onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm font-medium text-black/70 hover:bg-black/5">Kontakt</a>
+            <a href={BOOKING_URL} onClick={() => setMobileOpen(false)} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-full bg-[#171714] px-5 text-sm font-semibold text-white">Boka behandling <ArrowUpRight className="ml-2 h-4 w-4" /></a>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

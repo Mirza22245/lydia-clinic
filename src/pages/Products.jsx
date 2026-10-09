@@ -63,6 +63,40 @@ function ProductsContent() {
 
   const remove = async (p) => { if (confirm(`Ta bort "${p.name}"?`)) { await base44.entities.Product.delete(p.id); await load(); } };
 
+  const openStock = async (p) => {
+    setStockProduct(p);
+    setStockType("purchase");
+    setStockQty(1);
+    setStockNote("");
+    setHistory([]);
+    setStockOpen(true);
+    try {
+      const r = await base44.entities.InventoryTransaction.filter({ product_id: p.id }, { sort: "-created_date", limit: 10 });
+      setHistory(r.items || []);
+    } catch { setHistory([]); }
+  };
+
+  const saveStock = async (e) => {
+    e.preventDefault();
+    if (!stockProduct) return;
+    setSaving(true);
+    try {
+      const clinic_id = await getClinicId();
+      const qty = stockType === "purchase" ? Math.abs(stockQty) : -Math.abs(stockQty);
+      await base44.entities.InventoryTransaction.create({
+        product_id: stockProduct.id,
+        product_name: stockProduct.name,
+        type: stockType,
+        quantity: qty,
+        note: stockNote,
+        clinic_id,
+      });
+      await base44.entities.Product.update(stockProduct.id, { stock_quantity: (stockProduct.stock_quantity || 0) + qty });
+      setStockOpen(false);
+      await load();
+    } finally { setSaving(false); }
+  };
+
   const lowStock = items.filter((p) => p.min_stock > 0 && p.stock_quantity <= p.min_stock);
 
   return (

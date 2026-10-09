@@ -12,7 +12,7 @@ export default function Hero({ clinic }) {
       <div className="absolute -right-32 -top-40 h-[520px] w-[520px] rounded-full bg-[#d9e1d5]/70 blur-3xl" />
       <div className="absolute -bottom-48 -left-40 h-[440px] w-[440px] rounded-full bg-[#eadfd3]/70 blur-3xl" />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-16 sm:px-8 md:pb-28 md:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:gap-20">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 pb-16 pt-12 sm:gap-12 sm:px-8 sm:pb-20 sm:pt-16 md:pb-28 md:pt-24 lg:grid-cols-[1.05fr_.95fr] lg:gap-20">
         <div>
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/60 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-black/55">
             <span className="h-1.5 w-1.5 rounded-full bg-[#65735d]" />
@@ -48,18 +48,18 @@ export default function Hero({ clinic }) {
         </div>
 
         <div className="relative">
-          <div className="relative min-h-[420px] overflow-hidden rounded-[2rem] border border-black/10 bg-[#e7e2d8] p-5 shadow-[0_30px_80px_rgba(35,30,20,0.10)] sm:min-h-[500px]">
+          <div className="relative min-h-[360px] overflow-hidden rounded-[2rem] border border-black/10 bg-[#e7e2d8] p-4 shadow-[0_30px_80px_rgba(35,30,20,0.10)] sm:min-h-[500px] sm:p-5">
             <img src={clinic.hero_image_url || "https://images.unsplash.com/photo-1600334129128-685c5582fd35?auto=format&fit=crop&w=1200&q=85"} alt="Lugn behandlingsmiljö hos Lydia Estetisk" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#171714]/65 via-[#171714]/5 to-white/10" />
-            <div className="absolute inset-5 rounded-[1.5rem] border border-white/35" />
-            <div className="absolute inset-x-10 bottom-10 rounded-2xl border border-white/60 bg-white/75 p-5 backdrop-blur-md">
+            <div className="absolute inset-4 rounded-[1.5rem] border border-white/35 sm:inset-5" />
+            <div className="absolute inset-x-6 bottom-6 rounded-2xl border border-white/60 bg-white/75 p-4 backdrop-blur-md sm:inset-x-10 sm:bottom-10 sm:p-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-black/45">Lydia Estetisk</p>
               <p className="mt-2 font-heading text-2xl leading-tight text-[#171714]">Skönhet som känns personlig.</p>
               <div className="mt-4 flex items-center gap-2 text-xs text-black/55">
                 {clinic.address && <><MapPin className="h-3.5 w-3.5" />{String(clinic.address).replace(/^Adress:\s*/i, "").split("\n")[0]}</>}
               </div>
             </div>
-            <div className="absolute right-10 top-10 rounded-full border border-white/60 bg-white/15 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">Lydia Estetisk</div>
+            <div className="absolute right-6 top-6 rounded-full border border-white/60 bg-white/15 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:right-10 sm:top-10 sm:px-4 sm:py-2">Lydia Estetisk</div>
           </div>
 
           {clinic.phone && (
