@@ -72,6 +72,7 @@ export default function PublicBooking() {
   const [pendingBooking, setPendingBooking] = useState(null);
   const [payError, setPayError] = useState(null);
   const [pendingReqs, setPendingReqs] = useState([]);
+  const [paymentChoice, setPaymentChoice] = useState("online");
 
   useEffect(() => {
     (async () => {
@@ -158,15 +159,16 @@ export default function PublicBooking() {
         staff_name: staff.name,
         start_time: slot,
         customer,
+        payment_method: treatment.requires_payment && treatment.price > 0 ? paymentChoice : "onsite",
       });
       const booking = { ...res.data.booking, payment_token: res.data.payment_token };
       setPendingReqs(res.data.requirements || []);
-      if (treatment.requires_payment && treatment.price > 0) {
+      if (treatment.requires_payment && treatment.price > 0 && paymentChoice === "online") {
         setPendingBooking(booking);
         setPayError(null);
         setStep(5);
       } else {
-        setConfirmation(booking);
+        setConfirmation({ ...booking, status: "pending_approval" });
         setStep(5);
       }
     } catch (e) {
@@ -195,13 +197,13 @@ export default function PublicBooking() {
         <header className="border-b border-black/10 bg-white/80">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
             <p className="font-heading text-lg font-semibold tracking-tight">{init.clinic.brand_name || init.clinic.name}</p>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e8eee4] px-3 py-1.5 text-xs font-medium text-[#52634c]"><CheckCircle2 className="h-3.5 w-3.5" /> Bokning klar</span>
+            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium", confirmation.status === "confirmed" ? "bg-[#e8eee4] text-[#52634c]" : "bg-amber-50 text-amber-800")}><CheckCircle2 className="h-3.5 w-3.5" /> {confirmation.status === "confirmed" ? "Bokning klar" : "Inväntar bekräftelse"}</span>
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 py-10 text-center sm:px-6 sm:py-16">
           <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
-          <h1 className="text-2xl font-semibold font-heading">Bokning bekräftad!</h1>
-          <p className="mt-2 text-muted-foreground">Din tid är nu bokad. Eventuella hälsouppgifter, formulär och betänketider hanteras separat före själva behandlingen.</p>
+          <h1 className="text-2xl font-semibold font-heading">{confirmation.status === "confirmed" ? "Bokning bekräftad!" : confirmation.status === "payment_verification" ? "Vi verifierar din betalning" : "Tack – din bokningsförfrågan är skickad"}</h1>
+          <p className="mt-2 text-muted-foreground">{confirmation.status === "confirmed" ? "Din tid är nu bokad." : confirmation.status === "payment_verification" ? "Betalningen har skickats för verifiering. Vi skickar en bekräftelse via e-post när betalningen har kontrollerats." : "Din tid är inte bekräftad ännu. Kliniken behöver godkänna bokningen innan den blir definitiv. Du får besked via e-post."} Eventuella hälsouppgifter, formulär och samtycken behöver hanteras före behandlingen.</p>
           <div className="mx-auto mt-6 max-w-sm rounded-xl border border-border bg-card p-5 text-left">
             <p className="font-medium">{confirmation.treatment_name}</p>
             <p className="text-sm text-muted-foreground">{fmtFull(confirmation.start_time)}</p>
@@ -423,9 +425,22 @@ export default function PublicBooking() {
                 <Input id="personnummer" value={customer.personnummer} onChange={(e) => setCustomer({ ...customer, personnummer: e.target.value })} placeholder="ÅÅMMDD-XXXX" />
               </div>
             </div>
+            {treatment.requires_payment && treatment.price > 0 && (
+              <fieldset className="mt-5 space-y-2">
+                <legend className="mb-2 text-sm font-semibold">Hur vill du betala?</legend>
+                <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors", paymentChoice === "online" ? "border-[#65735d] bg-[#eef1e9]" : "border-black/10 bg-white")}>
+                  <input type="radio" name="paymentChoice" value="online" checked={paymentChoice === "online"} onChange={() => setPaymentChoice("online")} className="mt-1 accent-[#65735d]" />
+                  <span><span className="block text-sm font-medium">Betala online</span><span className="block text-xs text-black/55">Betalningen verifieras innan bokningen bekräftas.</span></span>
+                </label>
+                <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors", paymentChoice === "onsite" ? "border-[#65735d] bg-[#eef1e9]" : "border-black/10 bg-white")}>
+                  <input type="radio" name="paymentChoice" value="onsite" checked={paymentChoice === "onsite"} onChange={() => setPaymentChoice("onsite")} className="mt-1 accent-[#65735d]" />
+                  <span><span className="block text-sm font-medium">Betala på kliniken</span><span className="block text-xs text-black/55">Bokningen skickas till kliniken för godkännande och är inte bekräftad förrän du fått besked.</span></span>
+                </label>
+              </fieldset>
+            )}
             {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
             <Button className="mt-4 w-full" disabled={submitting} onClick={submit}>
-              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Bekräftar...</> : "Bekräfta bokning"}
+              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Skickar...</> : paymentChoice === "onsite" && treatment.requires_payment && treatment.price > 0 ? "Skicka bokningsförfrågan" : "Fortsätt"}
             </Button>
             <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStep(3)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
           </div>
@@ -445,9 +460,8 @@ export default function PublicBooking() {
             <StripePaymentStep
               booking={pendingBooking}
               amountLabel={`${treatment.price.toLocaleString("sv-SE")} kr`}
-              onPaid={() => { setConfirmation(pendingBooking); setStep(5); }}
+              onPaid={() => { setConfirmation({ ...pendingBooking, status: "payment_verification" }); setStep(5); }}
               onError={(m) => setPayError(m)}
-              onSkip={() => { setConfirmation(pendingBooking); setStep(5); }}
             />
             <Button variant="ghost" size="sm" className="mt-4 w-full" onClick={() => setStep(4)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
           </div>

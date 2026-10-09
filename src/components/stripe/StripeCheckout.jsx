@@ -5,7 +5,7 @@ import { Loader2, Lock } from "lucide-react";
 
 // Inbäddat kortbetalningsformulär (Stripe Elements). Visar kort, Apple Pay/
 // Google Pay och Klarna automatiskt via automatic_payment_methods.
-export default function StripeCheckout({ amountLabel, onSuccess, onError, onSkip }) {
+export default function StripeCheckout({ amountLabel, onSuccess, onError }) {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -46,11 +46,7 @@ export default function StripeCheckout({ amountLabel, onSuccess, onError, onSkip
         <Lock className="w-3 h-3" />
         Säker betalning via Stripe
       </div>
-      {onSkip && (
-        <button type="button" onClick={onSkip} className="w-full text-sm text-muted-foreground underline hover:text-foreground">
-          Betala på plats istället
-        </button>
-      )}
+
     </div>
   );
 }

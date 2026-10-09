@@ -66,7 +66,7 @@ export async function createPublicBookingNative(body = {}, req) {
   const email = String(customer.email || '').toLowerCase().trim();
   const phone = String(customer.phone || '').trim().slice(0, 50);
   const birthDate = String(customer.birth_date || '').trim();
-  const personnummer = String(customer.personnummer || '').trim().slice(0, 30);
+  const personnummer = String(customer.personnummer || '').trim().slice(0, 30);\n  const paymentMethod = body.payment_method === 'online' ? 'online' : 'onsite';
 
   const bookingGate = await withTx(
     (client) => client.query("SELECT 1 FROM e_feature_flag WHERE clinic_id = $1 AND data->>'key' = 'public_booking' AND data->>'status' = 'enabled' LIMIT 1", [clinicId]),
@@ -318,11 +318,6 @@ export async function createPublicBookingNative(body = {}, req) {
       [clinicId, email]
     );
     let cust = customerQ.rows[0] && normalize(customerQ.rows[0]);
-
-    if (cust && !guestOwnsEmail) {
-      const e = new Error('Det finns redan en kund med den här e-postadressen. Logga in och boka igen.');
-      e.status = 409; throw e;
-    }
 
     if (!cust) {
       const data = {
