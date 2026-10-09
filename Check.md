@@ -48,7 +48,8 @@ Use PASS only with recorded evidence; FAIL for a confirmed issue; NOT TESTED whe
 | 2026-10-09 | Project sandbox | npm run build | PASS | Vite production build and 32 backend functions compiled in sandbox. | Engineering |
 | 2026-10-09 | Project sandbox | npm run lint + npm run typecheck + npm run check:system | PASS | All three commands passed after CSP and document-language changes. | Engineering |
 | 2026-10-09 | Project sandbox | Content Security Policy | FIXED IN CODE | Google Maps iframe, Google Fonts, Unsplash hero image and Wix-hosted images were blocked by the prior CSP; explicit origins added. Must verify response headers in deployed environment. | Engineering |
-| 2026-10-09 | Project sandbox | npm audit --omit=dev | FAIL / TRIAGE REQUIRED | 46 production dependency advisories: 38 high, 5 moderate, 3 low, 0 critical. Several fixes require major upgrades or have no automatic fix; no blind dependency upgrades applied. | Engineering |
+| 2026-10-09 | Project sandbox | npm audit --omit=dev | FAIL / TRIAGE REQUIRED | After non-breaking npm audit fix: 44 production dependency advisories remain (37 high, 5 moderate, 2 low, 0 critical). High-risk direct dependencies include Nodemailer and MJML; remediation requires major-version changes and regression tests. Tailwind dependency chain also remains vulnerable. | Engineering |
+| 2026-10-09 | Project sandbox | File path validation | FIXED IN CODE | Signed file retrieval now accepts only generated 32-hex filenames in a single clinic folder and resolves paths under the configured storage root. Build/lint/typecheck/system checks pass. | Engineering |
 | 2026-10-09 | Production | AuthZ, tenant isolation, file access, payment webhook, backup restore, full penetration test | NOT TESTED | Cannot be marked PASS without authenticated staging/production tests and recorded evidence. | Assign owner |
 
 ## Release gate
