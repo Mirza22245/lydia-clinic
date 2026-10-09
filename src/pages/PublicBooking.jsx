@@ -440,7 +440,7 @@ export default function PublicBooking() {
             )}
             {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
             <Button className="mt-4 w-full" disabled={submitting} onClick={submit}>
-              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Skickar...</> : paymentChoice === "onsite" && treatment.requires_payment && treatment.price > 0 ? "Skicka bokningsförfrågan" : "Fortsätt"}
+              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Skickar...</> : treatment.requires_payment && treatment.price > 0 && paymentChoice === "online" ? "Fortsätt till betalning" : "Skicka bokningsförfrågan"}
             </Button>
             <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStep(3)}><ArrowLeft className="w-4 h-4 mr-1" />Tillbaka</Button>
           </div>
