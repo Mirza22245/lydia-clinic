@@ -11,7 +11,7 @@ import FaqSection from "@/components/landing/FaqSection";
 import ContactSection from "@/components/landing/ContactSection";
 import UnderConstruction from "@/components/UnderConstruction";
 
-const BOOKING_URL = "https://app.lydiaestetisk.se";
+const BOOKING_URL = "/book";
 
 export default function Landing() {
   const [data, setData] = useState(null);
