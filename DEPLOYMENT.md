@@ -46,7 +46,7 @@ Följande måste finnas i Hostinger:
 | `SMTP_PORT` | För e-post | Vanligen 465 eller 587 |
 | `SMTP_USER` / `SMTP_PASS` | För e-post | SMTP-inloggning |
 | `SMTP_FROM_EMAIL` | För e-post | Avsändare |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | För Google-login | Google OAuth |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth för Gmail + Calendar | Google OAuth |
 | `STRIPE_SECRET_KEY` | För betalning | Stripe |
 | `STRIPE_PUBLISHABLE_KEY` | För betalning | Stripe frontend |
 | `STRIPE_WEBHOOK_SECRET` | För betalning | Stripe webhook |
@@ -92,6 +92,14 @@ Vid en 502/504 ska deploymenten kontrolleras mot dessa tre saker i första hand:
 - Audit-logg
 - Rate limiting och CSRF-skydd
 - Klinikisolering/RLS
+
+## Google OAuth (Gmail + Calendar)
+
+Registrera följande **Authorized redirect URI** exakt i Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID:
+
+`https://app.lydiaestetisk.se/api/google/callback`
+
+Sätt `APP_BASE_URL=https://app.lydiaestetisk.se` i Hostinger (utan avslutande snedstreck). Aktivera Gmail API och Google Calendar API i samma Google Cloud-projekt. OAuth-begäran ber om `gmail.readonly`, `gmail.send` och `calendar.events`; dessa är känsliga/begränsade behörigheter och kan kräva OAuth-verifiering innan alla externa användare kan ansluta. Under testning ska användarnas Google-konton läggas till som test users i OAuth consent screen. Efter att behörigheterna ändrats måste varje tidigare anslutet konto ansluta på nytt.
 
 ## Stripe
 
