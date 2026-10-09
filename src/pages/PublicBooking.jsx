@@ -201,7 +201,7 @@ export default function PublicBooking() {
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 py-10 text-center sm:px-6 sm:py-16">
-          <CheckCircle2 className="mx-auto mb-4 w-12 h-12 text-emerald-500" />
+          <CheckCircle2 className={cn("mx-auto mb-4 w-12 h-12", confirmation.status === "confirmed" ? "text-emerald-500" : "text-amber-600")} />
           <h1 className="text-2xl font-semibold font-heading">{confirmation.status === "confirmed" ? "Bokning bekräftad!" : confirmation.status === "payment_verification" ? "Vi verifierar din betalning" : "Tack – din bokningsförfrågan är skickad"}</h1>
           <p className="mt-2 text-muted-foreground">{confirmation.status === "confirmed" ? "Din tid är nu bokad." : confirmation.status === "payment_verification" ? "Betalningen har skickats för verifiering. Vi skickar en bekräftelse via e-post när betalningen har kontrollerats." : "Din tid är inte bekräftad ännu. Kliniken behöver godkänna bokningen innan den blir definitiv. Du får besked via e-post."} Eventuella hälsouppgifter, formulär och samtycken behöver hanteras före behandlingen.</p>
           <div className="mx-auto mt-6 max-w-sm rounded-xl border border-border bg-card p-5 text-left">
@@ -216,7 +216,7 @@ export default function PublicBooking() {
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-amber-800">
                 {pendingReqs.map((r) => <li key={r}>{r}</li>)}
               </ul>
-              <p className="mt-2 text-amber-700">Skapa ett konto med samma e-postadress ({customer.email}) – <a href="/register" className="underline">registrera dig</a> eller <a href="/login" className="underline">logga in</a> – för att komplettera i kundportalen.</p>
+              <p className="mt-2 text-amber-700">Kliniken kontaktar dig om något behöver kompletteras. Du behöver inte skapa ett konto för att skicka bokningsförfrågan.</p>
             </div>
           )}
           <p className="mt-6 text-xs text-muted-foreground">

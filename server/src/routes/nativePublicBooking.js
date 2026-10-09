@@ -351,6 +351,8 @@ export async function createPublicBookingNative(body = {}, req) {
       clinic_id: clinicId, customer_id: cust.id, customer_name: cust.name || name,
       treatment_id: treatment.id, treatment_name: treatment.name, staff_name: staffName,
       start_time: start.toISOString(), end_time: end.toISOString(), status: 'pending',
+      payment_method: paymentMethod,
+      payment_status: paymentMethod === 'online' && treatment.requires_payment && Number(treatment.price) > 0 ? 'unpaid' : 'not_required',
       price: Number(treatment.price) || 0, room_id: treatment.room_id || '',
       resource_ids: resourceIds, deposit_amount: Number(treatment.deposit_amount) || 0,
       pay_token_hash: paymentHash,
@@ -385,6 +387,7 @@ export async function createPublicBookingNative(body = {}, req) {
     return {
       booking: {
         id: booking.id, treatment_name: treatment.name, staff_name: staffName,
+        payment_method: paymentMethod, status: 'pending',
         start_time: booking.start_time, end_time: booking.end_time, price: Number(treatment.price) || 0,
       },
       requirements,
@@ -396,23 +399,7 @@ export async function createPublicBookingNative(body = {}, req) {
     };
   }, { bypassRls: true });
 
-  try {
-    await sendMail({
-      to: result.email,
-      template_name: 'BookingConfirmation',
-      variables: {
-        customer_name: result.customer_name,
-        treatment_name: result.booking.treatment_name,
-        staff_name: result.booking.staff_name,
-        start_time: new Date(result.booking.start_time).toLocaleString('sv-SE', { timeZone: TZ, day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }),
-        price: String(result.booking.price || ''),
-        portal_url: result.portal_url,
-        clinic_name: result.clinic_name,
-      },
-    });
-  } catch (e) {
-    console.error('[public-booking] confirmation mail:', e.message);
-  }
+  // Do not send a confirmation email here: payment and/or clinic approval may still be pending.
 
   return {
     booking: result.booking,
