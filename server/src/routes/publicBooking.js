@@ -128,6 +128,8 @@ export async function getPublicBookingData(body = {}) {
       description: t.description,
       requires_health_declaration: !!t.requires_health_declaration,
       requires_consent: t.requires_consent !== false,
+      consent_mode: t.consent_mode || (t.requires_consent !== false ? (t.requires_health_declaration ? "full" : "simple") : "none"),
+      simple_consent_text: t.simple_consent_text || "Jag har tagit del av informationen och godkänner att kliniken kontaktar mig om bokningen.",
       requires_treatment_info: !!t.requires_treatment_info,
       requires_aftercare: !!t.requires_aftercare,
       requires_payment: !!t.requires_payment,
