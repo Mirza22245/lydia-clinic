@@ -12,7 +12,7 @@ export default async function(req) {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
     const body = await req.json().catch(() => ({}));
-    const { clinic_id, treatment_id, staff_name, start_time, customer } = body;
+    const { clinic_id, treatment_id, staff_name, start_time, customer, simple_consent_accepted } = body;
 
     if (!clinic_id || !treatment_id || !staff_name || !start_time || !customer?.name || !customer?.email) {
       return Response.json({ error: 'Alla obligatoriska fält måste fyllas i' }, { status: 400 });
@@ -21,6 +21,10 @@ export default async function(req) {
     const treatment = await svc.entities.Treatment.get(treatment_id);
     if (!treatment || treatment.clinic_id !== clinic_id) {
       return Response.json({ error: 'Ogiltig behandling' }, { status: 400 });
+    }
+    const consentMode = treatment.consent_mode || (treatment.requires_consent !== false ? (treatment.requires_health_declaration ? "full" : "simple") : "none");
+    if (consentMode === "simple" && simple_consent_accepted !== true) {
+      return Response.json({ error: "Du måste godkänna bokningsinformationen för att fortsätta.", code: "booking_acknowledgement_required" }, { status: 400 });
     }
     // Behandlaren måste vara aktiv och behörig att utföra just denna behandling.
     const bookable = await checkStaffBookable(svc, { clinic_id, staff_name, treatment_id });
@@ -160,6 +164,7 @@ export default async function(req) {
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       status: treatment.requires_payment && (treatment.price || 0) > 0 ? 'pending' : 'confirmed',
+      ...(consentMode === 'simple' ? { booking_acknowledgement_text: treatment.simple_consent_text || 'Jag har tagit del av informationen och godkänner att kliniken kontaktar mig om bokningen.', booking_acknowledgement_at: new Date().toISOString(), booking_acknowledgement_version: 'booking-ack-v1' } : {}),
       price: treatment.price,
       room_id: treatment.room_id || '',
       resource_ids: treatment.required_resource_ids || '[]',
