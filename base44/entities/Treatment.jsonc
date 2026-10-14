@@ -77,6 +77,8 @@
       "default": false,
       "title": "Kr\u00e4ver h\u00e4lsodeklaration"
     },
+    "consent_mode": { "type": "string", "enum": ["none", "simple", "full"], "default": "simple", "title": "Samtyckesflöde" },
+    "simple_consent_text": { "type": "string", "title": "Kort bokningssamtycke" },
     "requires_consent": {
       "type": "boolean",
       "default": true,
