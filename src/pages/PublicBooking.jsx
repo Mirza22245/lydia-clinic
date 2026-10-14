@@ -7,6 +7,7 @@ import { canPerform } from "@/lib/staffCompetence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Sparkles, CalendarDays, User, Check, ArrowLeft, Loader2, CheckCircle2,
 } from "lucide-react";
@@ -73,6 +74,7 @@ export default function PublicBooking() {
   const [payError, setPayError] = useState(null);
   const [pendingReqs, setPendingReqs] = useState([]);
   const [paymentChoice, setPaymentChoice] = useState("online");
+  const [simpleConsentAccepted, setSimpleConsentAccepted] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -139,7 +141,7 @@ export default function PublicBooking() {
     }
   };
 
-  const pickTreatment = (t) => { setTreatment(t); setStaff(null); setSlot(null); setStep(2); };
+  const pickTreatment = (t) => { setTreatment(t); setSimpleConsentAccepted(false); setStaff(null); setSlot(null); setStep(2); };
   const pickStaff = (s) => { setStaff(s); setSlot(null); setStep(3); loadSlots(s.name, date, treatment); };
   const onDateChange = (e) => {
     const d = e.target.value;
@@ -151,6 +153,7 @@ export default function PublicBooking() {
   const submit = async () => {
     setSubmitError(null);
     if (!customer.name || !customer.email) { setSubmitError("Namn och e-post krävs"); return; }
+    if ((treatment?.consent_mode || (treatment?.requires_consent ? "simple" : "none")) === "simple" && !simpleConsentAccepted) { setSubmitError("Du måste godkänna bokningsinformationen för att fortsätta."); return; }
     setSubmitting(true);
     try {
       const res = await createPublicBooking({
@@ -159,6 +162,7 @@ export default function PublicBooking() {
         staff_name: staff.name,
         start_time: slot,
         customer,
+        simple_consent_accepted: simpleConsentAccepted,
         payment_method: treatment.requires_payment && treatment.price > 0 ? paymentChoice : "onsite",
       });
       const booking = { ...res.data.booking, payment_token: res.data.payment_token };
@@ -399,6 +403,15 @@ export default function PublicBooking() {
                 <ul className="mt-2 list-disc space-y-0.5 pl-5 text-amber-800">
                   {treatmentRequirements(treatment).map((r) => <li key={r}>{r}</li>)}
                 </ul>
+              </div>
+            )}
+            {(treatment?.consent_mode || (treatment?.requires_consent ? "simple" : "none")) === "simple" && (
+              <div className="mb-4 rounded-xl border border-black/10 p-4">
+                <label className="flex items-start gap-3 text-sm leading-6">
+                  <Checkbox checked={simpleConsentAccepted} onCheckedChange={(v) => setSimpleConsentAccepted(v === true)} />
+                  <span>{treatment.simple_consent_text || "Jag har tagit del av informationen och godkänner att kliniken kontaktar mig om bokningen."}</span>
+                </label>
+                <p className="mt-2 text-xs text-muted-foreground">Detta gäller bokningsinformationen och ersätter inte separat behandlingssamtycke eller hälsodeklaration.</p>
               </div>
             )}
             <div className="space-y-3">
