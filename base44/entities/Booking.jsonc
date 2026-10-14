@@ -32,6 +32,9 @@
       "format": "date-time",
       "title": "Slut"
     },
+    "booking_acknowledgement_text": { "type": "string", "title": "Text för bokningsbekräftelse" },
+    "booking_acknowledgement_at": { "type": "string", "format": "date-time", "title": "Tid för bokningsbekräftelse" },
+    "booking_acknowledgement_version": { "type": "string", "title": "Version av bokningsbekräftelse" },
     "status": {
       "type": "string",
       "enum": [
