@@ -14,7 +14,7 @@ const empty = {
   name: "", description: "", duration: 30, price: 0, category: "", vat: 25,
   treatment_type: "annan", betanketid_hours: 0, information_version: "", repeat_treatment_months: 0,
   requires_identity_verification: false, requires_ordination: false,
-  requires_health_declaration: false, requires_consent: true, requires_treatment_info: false,
+  requires_health_declaration: false, requires_consent: true, consent_mode: "simple", simple_consent_text: "Jag har tagit del av informationen och godkänner att kliniken kontaktar mig om bokningen.", requires_treatment_info: false,
   requires_aftercare: false, requires_payment: false, guest_booking_allowed: true,
   min_age: 0, waiting_period_days: 0, cancellation_hours: 24, no_show_fee: 0, required_form_ids: "",
 };
@@ -65,7 +65,7 @@ export default function Treatments() {
   const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (t) => {
     setEditing(t);
-    setForm({ ...empty, ...t, required_form_ids: t.required_form_ids || "" });
+    setForm({ ...empty, ...t, consent_mode: t.consent_mode || (t.requires_consent ? (t.requires_health_declaration ? "full" : "simple") : "none"), simple_consent_text: t.simple_consent_text || empty.simple_consent_text, required_form_ids: t.required_form_ids || "" });
     setOpen(true);
   };
   const set = (f) => (e) => setForm((s) => ({ ...s, [f]: numFields.has(f) ? Number(e.target.value) : e.target.value }));
@@ -215,6 +215,16 @@ export default function Treatments() {
             <div className="rounded-lg border border-border p-3 space-y-3">
               <p className="text-sm font-medium">Bokningsregler & krav</p>
               <p className="text-xs text-muted-foreground">Systemet kontrollerar automatiskt ålder och väntetid vid bokning. Övriga krav visas för kunden och måste kompletteras i kundportalen innan behandling.</p>
+              <div className="space-y-2 rounded-md bg-muted/40 p-3">
+                <Label htmlFor="consent_mode">Samtycke vid bokning</Label>
+                <select id="consent_mode" value={form.consent_mode || "simple"} onChange={set("consent_mode")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
+                  <option value="none">Inget extra bokningssamtycke</option>
+                  <option value="simple">Kort text med kryssruta</option>
+                  <option value="full">Fullständigt samtycke i kundportalen</option>
+                </select>
+                <p className="text-xs text-muted-foreground">Kryssrutan bekräftar endast bokningsinformationen. Den ersätter inte medicinskt behandlingssamtycke, hälsodeklaration eller lagstadgad betänketid.</p>
+                {form.consent_mode === "simple" && <div className="space-y-1"><Label htmlFor="simple_consent_text">Text som kunden godkänner</Label><Textarea id="simple_consent_text" value={form.simple_consent_text || ""} onChange={set("simple_consent_text")} rows={3} required /></div>}
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 {switches.map((s) => (
                   <div key={s.key} className="flex items-center justify-between">
