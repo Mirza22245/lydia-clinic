@@ -415,7 +415,7 @@ export async function createPublicBookingNative(body = {}, req) {
     sendMail({ to: result.email, subject, html: customerHtml, text: `Hej ${result.customer_name}! Vi har tagit emot din bokningsförfrågan hos ${result.clinic_name}. Behandling: ${result.booking.treatment_name}. Behandlare: ${result.booking.staff_name}. Tid: ${startLabel}. Bokningen inväntar eventuell betalning eller klinikens bekräftelse.` })
       .catch((e) => console.error('[public-booking] customer email failed:', e?.message || e)),
   ];
-  if (/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(result.clinic_email)) {
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(result.clinic_email)) {
     emailTasks.push(sendMail({ to: result.clinic_email, subject, html: clinicHtml, text: `Ny bokningsförfrågan. Kund: ${result.customer_name} (${result.email}). Behandling: ${result.booking.treatment_name}. Behandlare: ${result.booking.staff_name}. Tid: ${startLabel}. Status: väntar på betalning/bekräftelse.` })
       .catch((e) => console.error('[public-booking] clinic email failed:', e?.message || e)));
   } else {
