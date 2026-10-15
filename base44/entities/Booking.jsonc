@@ -32,6 +32,9 @@
       "format": "date-time",
       "title": "Slut"
     },
+    "staff_consent_confirmed": { "type": "boolean", "default": false, "title": "Samtycke bekräftat av personal" },
+    "staff_consent_confirmed_at": { "type": "string", "format": "date-time", "title": "Tid för personalbekräftat samtycke" },
+    "staff_consent_confirmed_by": { "type": "string", "title": "Användar-ID som bekräftade samtycke" },
     "booking_acknowledgement_text": { "type": "string", "title": "Text för bokningsbekräftelse" },
     "booking_acknowledgement_at": { "type": "string", "format": "date-time", "title": "Tid för bokningsbekräftelse" },
     "booking_acknowledgement_version": { "type": "string", "title": "Version av bokningsbekräftelse" },
