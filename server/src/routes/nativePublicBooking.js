@@ -395,7 +395,7 @@ export async function createPublicBookingNative(body = {}, req) {
       email: email,
       clinic_email: clinic.booking_email || clinic.contact_email || clinic.email || process.env.BOOKING_NOTIFICATION_EMAIL || process.env.SMTP_USER || '',
       clinic_name: clinic.name || clinic.brand_name || 'Lydia',
-      portal_url: (() => { const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https'; const host = req?.headers?.['x-forwarded-host'] || req?.protocol || req?.headers?.host || process.env.PUBLIC_APP_URL || ''; return host ? `${proto}://${host}/portal` : '/portal'; })(),
+      portal_url: (() => { const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https'; const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || process.env.PUBLIC_APP_URL || ''; return host ? `${proto}://${host}/portal` : '/portal'; })(),
       customer_name: cust.name || name,
     };
   }, { bypassRls: true });
