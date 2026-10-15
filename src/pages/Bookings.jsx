@@ -34,7 +34,7 @@ const filters = [
   { key: "completed", label: "Klart" },
   { key: "cancelled", label: "Inställd" },
 ];
-const emptyForm = { customer_id: "", treatment_id: "", staff_name: "", start_time: "", status: "pending", notes: "" };
+const emptyForm = { customer_id: "", treatment_id: "", staff_name: "", start_time: "", status: "pending", notes: "", confirm_customer_consent: false };
 
 const toLocalInput = (iso) => {
   if (!iso) return "";
@@ -103,6 +103,7 @@ export default function Bookings() {
       start_time: b.start_time ? toLocalInput(b.start_time) : "",
       status: b.status || "pending",
       notes: b.notes || "",
+      confirm_customer_consent: !!b.staff_consent_confirmed,
     });
     await fetchOptions();
     setOpen(true);
@@ -127,6 +128,7 @@ export default function Bookings() {
         start_time: new Date(form.start_time).toISOString(),
         status: form.status,
         notes: form.notes || "",
+        confirm_customer_consent: form.confirm_customer_consent,
       });
       const saved = res.data.booking;
       const blocked = res.data.status_blocked;
@@ -298,6 +300,10 @@ export default function Bookings() {
               </select>
             </div>
             <div className="space-y-2"><Label htmlFor="notes">Anteckningar</Label><Textarea id="notes" value={form.notes} onChange={set("notes")} rows={2} /></div>
+            <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
+              <input type="checkbox" checked={form.confirm_customer_consent} onChange={(e) => setForm((s) => ({ ...s, confirm_customer_consent: e.target.checked }))} className="mt-1" />
+              <span><strong>Kunden har uttryckligen lämnat samtycke</strong><br />Markera endast efter att kunden faktiskt har samtyckt. Skriv exakt <strong>OK</strong> i anteckningar. Detta ersätter inte hälsodeklaration eller betänketid.</span>
+            </label>
             {saveError && <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-sm text-rose-700">{saveError}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>Avbryt</Button>

@@ -23,6 +23,12 @@ export default async function(req) {
 
     const body = await req.json().catch(() => ({}));
     const { booking_id, customer_id, treatment_id, staff_name, start_time, notes } = body;
+    const confirmCustomerConsent = body.confirm_customer_consent === true;
+    // Personal får bara registrera samtycke efter att kunden faktiskt har lämnat det.
+    // Fältet kräver en uttrycklig bekräftelse i UI och en revisionslogg; texten OK ensam räcker inte.
+    if (confirmCustomerConsent && String(notes || '').trim().toUpperCase() !== 'OK') {
+      return Response.json({ error: 'Skriv OK i anteckningar för att bekräfta att kunden uttryckligen har lämnat samtycke.' }, { status: 400 });
+    }
     if (!customer_id || !treatment_id || !start_time) {
       return Response.json({ error: 'Kund, behandling och starttid krävs' }, { status: 400 });
     }
@@ -103,12 +109,31 @@ export default async function(req) {
     }
 
     const requestedStatus = body.status || existing?.status || 'pending';
+    const consentFields = confirmCustomerConsent ? {
+      staff_consent_confirmed: true,
+      staff_consent_confirmed_at: new Date().toISOString(),
+      staff_consent_confirmed_by: user.id || '',
+    } : (existing?.staff_consent_confirmed ? {
+      staff_consent_confirmed: true,
+      staff_consent_confirmed_at: existing.staff_consent_confirmed_at,
+      staff_consent_confirmed_by: existing.staff_consent_confirmed_by,
+    } : {});
+    const requirementsForStaffApproval = async (bookingRecord) => {
+      const check = await computeBookingRequirements(svc, bookingRecord, treatment);
+      if (consentFields.staff_consent_confirmed) {
+        const consent = check.requirements.find((r) => r.key === 'consent');
+        if (consent) { consent.completed = true; consent.completed_by_staff = true; }
+        check.allCompleted = check.requirements.filter((r) => r.required).every((r) => r.completed);
+        check.missing = check.requirements.filter((r) => r.required && !r.completed).map((r) => r.label);
+      }
+      return check;
+    };
     const statusChanging = !existing || requestedStatus !== existing.status;
     const needsGate = statusChanging && ADVANCING_STATUSES.includes(requestedStatus);
 
     // Ändring av befintlig bokning: kravkontroll FÖRE skrivning så att inget sparas om den nekas.
     if (existing && needsGate) {
-      const check = await computeBookingRequirements(svc, { ...existing, treatment_id }, treatment);
+      const check = await requirementsForStaffApproval({ ...existing, ...consentFields, treatment_id });
       if (check.enforceableCount > 0 && !check.allCompleted) {
         return Response.json({
           error: 'Bokningen kan inte gå till ' + requestedStatus + ' — ofullständiga krav.',
@@ -129,6 +154,7 @@ export default async function(req) {
       room_id: treatment.room_id || '',
       resource_ids: treatment.required_resource_ids || '[]',
       notes: notes || '',
+      ...consentFields,
     };
     if (!existing || existing.treatment_id !== treatment_id) {
       fields.price = treatment.price ?? 0;
@@ -144,7 +170,7 @@ export default async function(req) {
       booking = await svc.entities.Booking.create({ ...fields, status: 'pending' });
       if (requestedStatus !== 'pending') {
         if (needsGate) {
-          const check = await computeBookingRequirements(svc, booking, treatment);
+          const check = await requirementsForStaffApproval({ ...booking, ...consentFields });
           if (check.enforceableCount > 0 && !check.allCompleted) {
             statusBlocked = { status: requestedStatus, missing: check.missing };
           }
@@ -159,7 +185,7 @@ export default async function(req) {
       entity_id: booking.id,
       clinic_id,
       description: `Bokning för ${customer.name} (${treatment.name}, ${staff_name}) ${existing ? 'uppdaterad' : 'skapad'}`,
-      metadata: { status: booking.status, from_status: existing?.status || null, staff_name, start_time: booking.start_time },
+      metadata: { status: booking.status, from_status: existing?.status || null, staff_name, start_time: booking.start_time, staff_consent_confirmed: !!consentFields.staff_consent_confirmed, staff_consent_confirmed_at: consentFields.staff_consent_confirmed_at || null },
     });
 
     return Response.json({ booking, status_blocked: statusBlocked });
