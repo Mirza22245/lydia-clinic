@@ -393,13 +393,35 @@ export async function createPublicBookingNative(body = {}, req) {
       requirements,
       payment_token: treatment.requires_payment && Number(treatment.price) > 0 ? paymentToken : undefined,
       email: email,
+      clinic_email: clinic.booking_email || clinic.contact_email || clinic.email || process.env.BOOKING_NOTIFICATION_EMAIL || process.env.SMTP_USER || '',
       clinic_name: clinic.name || clinic.brand_name || 'Lydia',
-      portal_url: (() => { const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https'; const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || process.env.PUBLIC_APP_URL || ''; return host ? `${proto}://${host}/portal` : '/portal'; })(),
+      portal_url: (() => { const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https'; const host = req?.headers?.['x-forwarded-host'] || req?.protocol || req?.headers?.host || process.env.PUBLIC_APP_URL || ''; return host ? `${proto}://${host}/portal` : '/portal'; })(),
       customer_name: cust.name || name,
     };
   }, { bypassRls: true });
 
-  // Do not send a confirmation email here: payment and/or clinic approval may still be pending.
+  // Booking remains pending until any required payment/clinic approval is complete.
+  // Notify both sides, but never let mail failure roll back a successfully saved booking.
+  const startLabel = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: TZ, dateStyle: 'long', timeStyle: 'short',
+  }).format(new Date(result.booking.start_time));
+  const safe = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+  const subject = `Bokningsförfrågan – ${result.clinic_name}`;
+  const customerHtml = `<p>Hej ${safe(result.customer_name)}!</p><p>Vi har tagit emot din bokningsförfrågan hos ${safe(result.clinic_name)}.</p><ul><li>Behandling: ${safe(result.booking.treatment_name)}</li><li>Behandlare: ${safe(result.booking.staff_name)}</li><li>Tid: ${safe(startLabel)}</li></ul><p><strong>Obs:</strong> Bokningen inväntar eventuell betalning eller klinikens bekräftelse. Du får ett nytt besked om statusen ändras.</p><p>Du kan se dina bokningar i <a href="${safe(result.portal_url)}">kundportalen</a>.</p>`;
+  const clinicHtml = `<p>En ny bokningsförfrågan har kommit in till ${safe(result.clinic_name)}.</p><ul><li>Kund: ${safe(result.customer_name)}</li><li>Kundens e-post: ${safe(result.email)}</li><li>Behandling: ${safe(result.booking.treatment_name)}</li><li>Behandlare: ${safe(result.booking.staff_name)}</li><li>Tid: ${safe(startLabel)}</li><li>Status: Väntar på betalning/bekräftelse</li></ul><p>Öppna Lydia Clinic för att hantera bokningen.</p>`;
+  const emailTasks = [
+    sendMail({ to: result.email, subject, html: customerHtml, text: `Hej ${result.customer_name}! Vi har tagit emot din bokningsförfrågan hos ${result.clinic_name}. Behandling: ${result.booking.treatment_name}. Behandlare: ${result.booking.staff_name}. Tid: ${startLabel}. Bokningen inväntar eventuell betalning eller klinikens bekräftelse.` })
+      .catch((e) => console.error('[public-booking] customer email failed:', e?.message || e)),
+  ];
+  if (/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(result.clinic_email)) {
+    emailTasks.push(sendMail({ to: result.clinic_email, subject, html: clinicHtml, text: `Ny bokningsförfrågan. Kund: ${result.customer_name} (${result.email}). Behandling: ${result.booking.treatment_name}. Behandlare: ${result.booking.staff_name}. Tid: ${startLabel}. Status: väntar på betalning/bekräftelse.` })
+      .catch((e) => console.error('[public-booking] clinic email failed:', e?.message || e)));
+  } else {
+    console.error('[public-booking] clinic notification email missing; configure clinic email or BOOKING_NOTIFICATION_EMAIL/SMTP_USER');
+  }
+  await Promise.all(emailTasks);
 
   return {
     booking: result.booking,
